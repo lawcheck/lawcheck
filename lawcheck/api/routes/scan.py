@@ -11,6 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResult
 from lawcheck.checks.pd_152.policy_presence import PolicyPresenceCheck
+from lawcheck.checks.pd_152.policy_validity import PolicyValidityCheck
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
 
@@ -19,7 +20,7 @@ log = logging.getLogger(__name__)
 
 _STORE: dict[str, ScanResult] = {}
 
-CHECKS = [PolicyPresenceCheck()]
+CHECKS = [PolicyPresenceCheck(), PolicyValidityCheck()]
 
 
 async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:

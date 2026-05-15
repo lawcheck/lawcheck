@@ -1,24 +1,6 @@
-import re
-
 from lawcheck.checks.base import Check, Finding, Severity
+from lawcheck.checks.pd_152._policy_finder import find_policy_links
 from lawcheck.crawler.snapshot import SiteSnapshot
-from lawcheck.utils.text import normalize_ru
-
-# Признаки ссылки на Политику обработки ПДн — в тексте якоря или в URL
-_POLICY_RE = re.compile(
-    r"(политик[аи][^.]{0,40}(персональн|конфиденциальн|приватн))"
-    r"|(privacy[-_ ]?polic)"
-    r"|(обработк[аеи]\s+персональн)"
-    r"|(personal[-_ ]?data)"
-    r"|(\bконфиденциальност[ьи]\b)"
-    r"|(\bприватност[ьи]\b)"
-    r"|(\bprivacy\b)",
-    re.I,
-)
-_POLICY_URL_RE = re.compile(
-    r"(privacy|polic[yi]|persdata|persdannye|personal[-_]?data|политик|персональн|konfidencial|confidential|privat)",
-    re.I,
-)
 
 LAW_REF = "ст. 18.1 ч. 2 152-ФЗ"
 TITLE = "Наличие ссылки на Политику обработки ПДн"
@@ -33,36 +15,33 @@ class PolicyPresenceCheck(Check):
         if not snapshot.pages:
             return [Finding(
                 check_id=self.id, severity=Severity.CRITICAL, title=self.title,
-                evidence="Сайт недоступен — не удалось загрузить ни одной страницы",
+                evidence="Сайт недоступен — не удалось загрузить ни одной страницы.",
                 location=snapshot.start_url, law_reference=LAW_REF,
                 recommendation="Проверьте доступность сайта.",
             )]
 
-        policy_url: str | None = None
-        pages_without: list[str] = []
-
-        for page in snapshot.pages:
-            if page.error or page.status >= 400:
-                continue
-            page_has = False
-            for link in page.links:
-                if _POLICY_RE.search(normalize_ru(link.text)) or _POLICY_URL_RE.search(link.url):
-                    page_has = True
-                    if not policy_url:
-                        policy_url = link.url
-                    break
-            if not page_has:
-                pages_without.append(page.url)
-
-        if not policy_url:
+        valid_pages = [p for p in snapshot.pages if not p.error and p.status < 400]
+        if not valid_pages:
             return [Finding(
                 check_id=self.id, severity=Severity.CRITICAL, title=self.title,
-                evidence=f"На {len(snapshot.pages)} проверенных страницах не найдено ссылки на Политику обработки ПДн.",
+                evidence="Все страницы сайта вернули ошибку — проверка невозможна.",
+                location=snapshot.start_url, law_reference=LAW_REF,
+            )]
+
+        pages_with = find_policy_links(snapshot)
+        pages_with_set = {p for p, _ in pages_with}
+        pages_without = [p.url for p in valid_pages if p.url not in pages_with_set]
+
+        if not pages_with:
+            return [Finding(
+                check_id=self.id, severity=Severity.CRITICAL, title=self.title,
+                evidence=f"На {len(valid_pages)} проверенных страницах не найдено ссылки на Политику обработки ПДн.",
                 location=snapshot.start_url, law_reference=LAW_REF,
                 recommendation="Разместите ссылку на Политику обработки персональных данных в подвале сайта так, "
                                "чтобы она была доступна с любой страницы.",
             )]
 
+        policy_url = pages_with[0][1]
         if pages_without:
             sample = ", ".join(pages_without[:5])
             extra = f" (и ещё {len(pages_without) - 5})" if len(pages_without) > 5 else ""
@@ -71,7 +50,7 @@ class PolicyPresenceCheck(Check):
                 evidence=f"Политика найдена ({policy_url}), но ссылка отсутствует на {len(pages_without)} "
                          f"страницах: {sample}{extra}",
                 location=policy_url, law_reference=LAW_REF,
-                recommendation="Перенесите ссылку в общий footer, чтобы она присутствовала на всех страницах сайта.",
+                recommendation="Перенесите ссылку в общий footer, чтобы она присутствовала на всех страницах.",
                 extra={"policy_url": policy_url, "pages_without": pages_without},
             )]
 

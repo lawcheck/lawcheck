@@ -1,4 +1,5 @@
 import logging
+import re
 from urllib.parse import urlparse
 
 import tldextract
@@ -11,15 +12,49 @@ log = logging.getLogger(__name__)
 
 # Чем меньше priority — тем раньше посетим. Приоритезируем юридически значимые страницы.
 PRIORITY_KEYWORDS = [
-    "polic", "privacy", "политик", "персональн", "конфиденциальн",
+    "polic", "privacy", "confidential", "konfidencial", "personal-data", "persdata",
+    "политик", "персональн", "конфиденциальн", "приватн",
     "contact", "контакт", "ofert", "оферт", "соглашен", "согласи",
     "cookie", "куки", "rules", "правил",
 ]
+
+# Сегменты пути, которые не являются «контентом» с точки зрения комплаенса
+# (auth-flow, API, статика, технические endpoints). На таких страницах не ждём
+# ни Политики в футере, ни форм сбора ПДн — отсекаем сразу.
+_SKIP_PATH_RE = re.compile(
+    r"(^|/)("
+    r"auth|login|logout|signin|signout|signup|register|registration|"
+    r"oauth|sso|callback|"
+    r"api|v\d+|graphql|rss|sitemap|"
+    r"_next|_nuxt|static|assets|build|dist|cdn|"
+    r"admin|wp-admin|wp-json|wp-login|"
+    r"feed|atom|amp|"
+    r"download|upload|export|import"
+    r")(/|$)",
+    re.I,
+)
+_SKIP_EXT_RE = re.compile(
+    r"\.(jpg|jpeg|png|gif|webp|svg|ico|bmp|"
+    r"mp4|mp3|webm|avi|mov|wav|"
+    r"pdf|doc|docx|xls|xlsx|ppt|pptx|"
+    r"zip|tar|gz|rar|7z|"
+    r"css|js|mjs|map|json|xml|woff2?|ttf|otf|eot)$",
+    re.I,
+)
 
 
 def _registered_domain(url: str) -> str:
     ext = tldextract.extract(url)
     return f"{ext.domain}.{ext.suffix}".lower() if ext.suffix else ext.domain.lower()
+
+
+def _is_content_url(url: str) -> bool:
+    path = urlparse(url).path or "/"
+    if _SKIP_EXT_RE.search(path):
+        return False
+    if _SKIP_PATH_RE.search(path):
+        return False
+    return True
 
 
 def _score_url(url: str) -> int:
@@ -60,6 +95,8 @@ class Crawler:
                 if link.url in visited:
                     continue
                 if _registered_domain(link.url) != base_domain:
+                    continue
+                if not _is_content_url(link.url):
                     continue
                 queue.append((_score_url(link.url), link.url))
 
