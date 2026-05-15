@@ -31,12 +31,26 @@ lawcheck/
 
 ## Разработка
 
+Требуется Python 3.12. Менеджер — [uv](https://docs.astral.sh/uv/) (или pip в venv).
+
 ```bash
-# TODO: poetry install / uv sync
-# TODO: docker-compose up -d
-# TODO: alembic upgrade head
-# TODO: uvicorn lawcheck.api.main:app --reload
+# окружение
+uv venv --python 3.12
+uv pip install -e ".[dev]"
+.venv/bin/playwright install chromium
+
+# тесты
+.venv/bin/python -m pytest tests/ -q
+
+# запуск API
+.venv/bin/uvicorn lawcheck.api.main:app --reload
 ```
+
+Открыть http://127.0.0.1:8000/docs и сделать `POST /scan` с телом `{"url": "https://example.ru", "max_pages": 10}`.
+
+В ответ — `scan_id`. Результат читать через `GET /scan/{scan_id}`.
+
+> На текущей итерации результат хранится в памяти процесса, очередь — `BackgroundTasks`. Postgres + Redis + RQ подключим следующей итерацией без изменений API.
 
 ## Дисклеймер
 
