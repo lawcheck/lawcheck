@@ -1,0 +1,22 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lawcheck
+      POSTGRES_PASSWORD: lawcheck
+      POSTGRES_DB: lawcheck
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # api и worker добавим, когда появится Dockerfile с playwright
+
+volumes:
+  pgdata:

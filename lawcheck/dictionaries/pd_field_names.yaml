@@ -1,0 +1,29 @@
+# Признаки полей форм, собирающих ПДн.
+# Сравниваем по input.type, name, id, placeholder, связанному <label>.
+# Если хоть один паттерн матчит — поле относим к ПДн-категории.
+
+pd_field_patterns:
+
+  email:
+    types: [email]
+    name_patterns: [email, e-mail, mail, почт]
+
+  phone:
+    types: [tel]
+    name_patterns: [phone, tel, телефон, моб]
+
+  full_name:
+    name_patterns: [name, fio, фио, имя, фамил, отчеств]
+
+  address:
+    name_patterns: [address, адрес, город, индекс, zip, postal]
+
+  birthdate:
+    types: [date]
+    name_patterns: [birth, dob, рожден, др]
+
+  passport:
+    name_patterns: [passport, паспорт, серия]
+
+  inn_snils:
+    name_patterns: [snils, снилс, инн]

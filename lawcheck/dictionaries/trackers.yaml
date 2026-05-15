@@ -1,0 +1,211 @@
+# Справочник известных трекеров и сторонних сервисов
+# jurisdiction: ru | foreign | mixed
+# category: analytics | ads | social | chat | cdn | tagmanager | ab_testing | heatmap | captcha
+# sets_pd_identifiers: ставит ли cookie/идентификатор, который трактуется как ПДн (ip, cookie-id и т.п.)
+# cross_border_risk: low | medium | high — для зарубежных, оценка риска нарушения ст. 12 152-ФЗ
+
+trackers:
+
+  # === Российские аналитика и реклама ===
+  - name: "Яндекс.Метрика"
+    domains: ["mc.yandex.ru", "mc.yandex.com", "yandex.ru/metrika"]
+    category: analytics
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "Яндекс.Директ / РСЯ"
+    domains: ["an.yandex.ru", "yandex.ru/ads", "awaps.yandex.net", "yabs.yandex.ru"]
+    category: ads
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "VK Pixel (ВКонтакте)"
+    domains: ["vk.com/rtrg", "vk.com/js/api/openapi.js"]
+    category: ads
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "Top.Mail.Ru"
+    domains: ["top-fwz1.mail.ru", "top.mail.ru"]
+    category: analytics
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "MyTracker (VK)"
+    domains: ["trackeram.com", "tracker.mail.ru"]
+    category: analytics
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "Roistat"
+    domains: ["cloud.roistat.com", "roistat.com"]
+    category: analytics
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "CallTouch"
+    domains: ["calltouch.ru", "mod.calltouch.ru"]
+    category: analytics
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  # === Зарубежные аналитика и реклама ===
+  - name: "Google Analytics 4"
+    domains:
+      - "www.google-analytics.com"
+      - "ssl.google-analytics.com"
+      - "analytics.google.com"
+      - "stats.g.doubleclick.net"
+    category: analytics
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "Google Tag Manager"
+    domains: ["www.googletagmanager.com"]
+    category: tagmanager
+    jurisdiction: foreign
+    sets_pd_identifiers: false
+    cross_border_risk: medium
+
+  - name: "Google Ads / DoubleClick"
+    domains:
+      - "googleads.g.doubleclick.net"
+      - "googlesyndication.com"
+      - "adservice.google.com"
+    category: ads
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "Meta Pixel (Facebook)"
+    domains: ["connect.facebook.net", "www.facebook.com/tr"]
+    category: ads
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "TikTok Pixel"
+    domains: ["analytics.tiktok.com", "business-api.tiktok.com"]
+    category: ads
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "Hotjar"
+    domains: ["static.hotjar.com", "script.hotjar.com", "vars.hotjar.com"]
+    category: heatmap
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "Microsoft Clarity"
+    domains: ["www.clarity.ms", "c.clarity.ms"]
+    category: heatmap
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "LinkedIn Insight Tag"
+    domains: ["snap.licdn.com", "px.ads.linkedin.com"]
+    category: ads
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  # === Чаты, поддержка ===
+  - name: "JivoSite"
+    domains: ["code.jivosite.com", "node.jivosite.com"]
+    category: chat
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "Carrot quest"
+    domains: ["cdn.carrotquest.app", "api.carrotquest.io"]
+    category: chat
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "Intercom"
+    domains: ["widget.intercom.io", "api-iam.intercom.io"]
+    category: chat
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "Tawk.to"
+    domains: ["embed.tawk.to"]
+    category: chat
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  # === Соц.виджеты ===
+  - name: "ВКонтакте — виджеты"
+    domains: ["vk.com/js/api/", "vk.com/widget"]
+    category: social
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "Telegram Widgets"
+    domains: ["telegram.org/js/telegram-widget.js"]
+    category: social
+    jurisdiction: foreign
+    sets_pd_identifiers: false
+
+  # === Капчи ===
+  - name: "Google reCAPTCHA"
+    domains: ["www.google.com/recaptcha", "www.gstatic.com/recaptcha"]
+    category: captcha
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: medium
+
+  - name: "Яндекс SmartCaptcha"
+    domains: ["smartcaptcha.yandexcloud.net"]
+    category: captcha
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  # === CDN — не трекеры, но фиксируем для оценки локализации ===
+  - name: "Cloudflare"
+    domains: ["cloudflare.com", "cdnjs.cloudflare.com"]
+    category: cdn
+    jurisdiction: foreign
+    sets_pd_identifiers: false
+    cross_border_risk: low
+
+  - name: "jsDelivr"
+    domains: ["cdn.jsdelivr.net"]
+    category: cdn
+    jurisdiction: foreign
+    sets_pd_identifiers: false
+    cross_border_risk: low
+
+  # === A/B тестирование ===
+  - name: "VWO"
+    domains: ["dev.visualwebsiteoptimizer.com"]
+    category: ab_testing
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  # === Email/CRM-пиксели ===
+  - name: "Mailchimp"
+    domains: ["chimpstatic.com", "list-manage.com"]
+    category: ads
+    jurisdiction: foreign
+    sets_pd_identifiers: true
+    cross_border_risk: high
+
+  - name: "SendPulse"
+    domains: ["login.sendpulse.com", "cdn.sendpulse.com"]
+    category: ads
+    jurisdiction: ru
+    sets_pd_identifiers: true
+
+  - name: "UniSender"
+    domains: ["cdn.unisender.com", "go1.unisender.ru"]
+    category: ads
+    jurisdiction: ru
+    sets_pd_identifiers: true

@@ -1,0 +1,39 @@
+[project]
+name = "lawcheck"
+version = "0.1.0"
+description = "Сервис проверки сайтов на соответствие 152-ФЗ и смежному законодательству РФ"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "playwright>=1.48",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.3",
+    "httpx>=0.27",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.13",
+    "redis>=5.2",
+    "rq>=2.0",
+    "pyyaml>=6.0",
+    "python-whois>=0.9",
+    "tldextract>=5.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
