@@ -13,6 +13,9 @@ class FormField:
     type: str
     placeholder: str = ""
     label: str = ""
+    id: str = ""
+    checked: bool = False  # для checkbox/radio — состояние по умолчанию
+    required: bool = False
 
 
 @dataclass
@@ -21,6 +24,8 @@ class Form:
     method: str
     fields: list[FormField] = field(default_factory=list)
     surrounding_text: str = ""
+    page_url: str = ""  # на какой странице форма найдена
+    has_policy_link: bool = False  # есть ли в радиусе формы ссылка на Политику
 
 
 @dataclass
@@ -48,3 +53,6 @@ class PageSnapshot:
 class SiteSnapshot:
     start_url: str
     pages: list[PageSnapshot] = field(default_factory=list)
+
+    def all_forms(self) -> list[Form]:
+        return [f for p in self.pages for f in p.forms]

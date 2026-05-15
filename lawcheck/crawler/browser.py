@@ -3,7 +3,48 @@ from urllib.parse import urljoin, urlparse
 from playwright.async_api import Browser as PWBrowser, async_playwright
 
 from lawcheck.config import settings
-from lawcheck.crawler.snapshot import Link, NetworkRequest, PageSnapshot
+from lawcheck.crawler.snapshot import Form, FormField, Link, NetworkRequest, PageSnapshot
+
+_FORMS_JS = """
+() => {
+  const PD_RE = /(privacy|polic|persdata|persdannye|personal-data|политик|персональн|konfidencial|confidential|privat)/i;
+  return Array.from(document.querySelectorAll('form')).map(form => {
+    const fields = Array.from(form.querySelectorAll('input, select, textarea')).map(el => {
+      let label = '';
+      if (el.id) {
+        const lbl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (lbl) label = (lbl.innerText || lbl.textContent || '').trim();
+      }
+      if (!label) {
+        const wrap = el.closest('label');
+        if (wrap) label = (wrap.innerText || wrap.textContent || '').trim();
+      }
+      return {
+        name: el.name || '',
+        id: el.id || '',
+        type: (el.type || el.tagName.toLowerCase()).toLowerCase(),
+        placeholder: el.placeholder || '',
+        checked: !!el.checked,
+        required: !!el.required,
+        label: label.slice(0, 300),
+      };
+    });
+    // ближайший общий контейнер — родитель формы; даёт текст рядом с submit
+    const parent = form.parentElement || form;
+    const surrounding = (parent.innerText || parent.textContent || '').slice(0, 3000);
+    // ссылки на Политику в окрестности формы
+    const links = Array.from(parent.querySelectorAll('a[href]'));
+    const policyLink = links.some(a => PD_RE.test(a.href) || PD_RE.test(a.innerText || ''));
+    return {
+      action: form.action || '',
+      method: (form.method || 'get').toLowerCase(),
+      fields,
+      surrounding,
+      hasPolicyLink: policyLink,
+    };
+  });
+}
+"""
 
 
 class Browser:
@@ -73,6 +114,27 @@ class Browser:
             text = await page.evaluate("() => document.body ? document.body.innerText : ''")
             cookies = await ctx.cookies()
 
+            raw_forms = await page.evaluate(_FORMS_JS)
+            forms: list[Form] = []
+            for rf in raw_forms or []:
+                fields = [FormField(
+                    name=f.get("name") or "",
+                    type=f.get("type") or "",
+                    placeholder=f.get("placeholder") or "",
+                    label=f.get("label") or "",
+                    id=f.get("id") or "",
+                    checked=bool(f.get("checked")),
+                    required=bool(f.get("required")),
+                ) for f in rf.get("fields") or []]
+                forms.append(Form(
+                    action=rf.get("action") or "",
+                    method=rf.get("method") or "get",
+                    fields=fields,
+                    surrounding_text=rf.get("surrounding") or "",
+                    page_url=url,
+                    has_policy_link=bool(rf.get("hasPolicyLink")),
+                ))
+
             return PageSnapshot(
                 url=url,
                 status=status,
@@ -80,6 +142,7 @@ class Browser:
                 html=html,
                 text=text or "",
                 links=links,
+                forms=forms,
                 network=network,
                 cookies=cookies,
             )

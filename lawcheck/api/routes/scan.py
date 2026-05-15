@@ -10,6 +10,8 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResult
+from lawcheck.checks.pd_152.form_consent import FormConsentCheck
+from lawcheck.checks.pd_152.forms_inventory import FormsInventoryCheck
 from lawcheck.checks.pd_152.policy_presence import PolicyPresenceCheck
 from lawcheck.checks.pd_152.policy_sections import PolicySectionsCheck
 from lawcheck.checks.pd_152.policy_validity import PolicyValidityCheck
@@ -21,7 +23,13 @@ log = logging.getLogger(__name__)
 
 _STORE: dict[str, ScanResult] = {}
 
-CHECKS = [PolicyPresenceCheck(), PolicyValidityCheck(), PolicySectionsCheck()]
+CHECKS = [
+    PolicyPresenceCheck(),
+    PolicyValidityCheck(),
+    PolicySectionsCheck(),
+    FormsInventoryCheck(),
+    FormConsentCheck(),
+]
 
 
 async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
