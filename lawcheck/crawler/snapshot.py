@@ -36,6 +36,13 @@ class NetworkRequest:
 
 
 @dataclass
+class CookieBanner:
+    text: str = ""
+    buttons: list[str] = field(default_factory=list)
+    has_decline_option: bool = False
+
+
+@dataclass
 class PageSnapshot:
     url: str
     status: int
@@ -46,6 +53,7 @@ class PageSnapshot:
     forms: list[Form] = field(default_factory=list)
     network: list[NetworkRequest] = field(default_factory=list)
     cookies: list[dict] = field(default_factory=list)
+    cookie_banner: CookieBanner | None = None
     error: str = ""
 
 

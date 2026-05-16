@@ -10,6 +10,8 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResult
+from lawcheck.checks.cookies.banner import CookieBannerCheck
+from lawcheck.checks.cookies.inventory import TrackersInventoryCheck
 from lawcheck.checks.pd_152.form_consent import FormConsentCheck
 from lawcheck.checks.pd_152.forms_inventory import FormsInventoryCheck
 from lawcheck.checks.pd_152.policy_presence import PolicyPresenceCheck
@@ -29,6 +31,8 @@ CHECKS = [
     PolicySectionsCheck(),
     FormsInventoryCheck(),
     FormConsentCheck(),
+    TrackersInventoryCheck(),
+    CookieBannerCheck(),
 ]
 
 

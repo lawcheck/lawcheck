@@ -3,7 +3,40 @@ from urllib.parse import urljoin, urlparse
 from playwright.async_api import Browser as PWBrowser, async_playwright
 
 from lawcheck.config import settings
-from lawcheck.crawler.snapshot import Form, FormField, Link, NetworkRequest, PageSnapshot
+from lawcheck.crawler.snapshot import (
+    CookieBanner, Form, FormField, Link, NetworkRequest, PageSnapshot,
+)
+
+_BANNER_JS = """
+() => {
+  const COOKIE_RE = /cookie|куки|кук[аи]\\b|cookies/i;
+  const DECLINE_RE = /(отклонить|отказаться|только\\s+необходим|только\\s+обязательн|reject|decline|necessary\\s+only|deny|refuse)/i;
+  const candidates = [];
+  for (const el of document.querySelectorAll('div, section, aside, footer, dialog')) {
+    const style = getComputedStyle(el);
+    if (style.position !== 'fixed' && style.position !== 'sticky') continue;
+    if (style.display === 'none' || style.visibility === 'hidden') continue;
+    const text = (el.innerText || '').trim();
+    if (!text || text.length > 4000) continue;
+    if (!COOKIE_RE.test(text)) continue;
+    const btns = Array.from(el.querySelectorAll('button, a, [role="button"]'))
+      .map(b => (b.innerText || b.textContent || '').trim())
+      .filter(t => t && t.length < 200);
+    if (btns.length === 0) continue;
+    candidates.push({
+      area: (el.offsetWidth || 0) * (el.offsetHeight || 0),
+      text: text.slice(0, 500),
+      buttons: btns.slice(0, 20),
+      hasDecline: btns.some(b => DECLINE_RE.test(b)),
+    });
+  }
+  if (candidates.length === 0) return null;
+  // самый маленький fixed-элемент с упоминанием cookie обычно и есть баннер
+  candidates.sort((a, b) => a.area - b.area);
+  const best = candidates[0];
+  return { text: best.text, buttons: best.buttons, hasDecline: best.hasDecline };
+}
+"""
 
 _FORMS_JS = """
 () => {
@@ -114,6 +147,15 @@ class Browser:
             text = await page.evaluate("() => document.body ? document.body.innerText : ''")
             cookies = await ctx.cookies()
 
+            raw_banner = await page.evaluate(_BANNER_JS)
+            cookie_banner: CookieBanner | None = None
+            if raw_banner:
+                cookie_banner = CookieBanner(
+                    text=raw_banner.get("text") or "",
+                    buttons=list(raw_banner.get("buttons") or []),
+                    has_decline_option=bool(raw_banner.get("hasDecline")),
+                )
+
             raw_forms = await page.evaluate(_FORMS_JS)
             forms: list[Form] = []
             for rf in raw_forms or []:
@@ -145,6 +187,7 @@ class Browser:
                 forms=forms,
                 network=network,
                 cookies=cookies,
+                cookie_banner=cookie_banner,
             )
         except Exception as e:
             return PageSnapshot(url=url, status=0, error=str(e), network=network)
