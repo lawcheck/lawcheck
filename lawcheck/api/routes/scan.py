@@ -17,6 +17,7 @@ from lawcheck.checks.pd_152.forms_inventory import FormsInventoryCheck
 from lawcheck.checks.pd_152.policy_presence import PolicyPresenceCheck
 from lawcheck.checks.pd_152.policy_sections import PolicySectionsCheck
 from lawcheck.checks.pd_152.policy_validity import PolicyValidityCheck
+from lawcheck.checks.requisites.presence import RequisitesPresenceCheck
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
 
@@ -33,6 +34,7 @@ CHECKS = [
     FormConsentCheck(),
     TrackersInventoryCheck(),
     CookieBannerCheck(),
+    RequisitesPresenceCheck(),
 ]
 
 
