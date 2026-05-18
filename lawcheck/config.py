@@ -15,5 +15,9 @@ class Settings(BaseSettings):
     # В проде указываем postgresql+psycopg://... через env.
     database_url: str = "sqlite:///lawcheck.db"
 
+    # Если пусто — задачи выполняются через FastAPI BackgroundTasks (dev-режим).
+    # В проде: redis://redis:6379/0 — задачи идут в RQ-воркер.
+    redis_url: str = ""
+
 
 settings = Settings()

@@ -10,13 +10,45 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lawcheck"]
+      interval: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
 
-  # api и worker добавим, когда появится Dockerfile с playwright
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://lawcheck:lawcheck@postgres:5432/lawcheck
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "lawcheck.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://lawcheck:lawcheck@postgres:5432/lawcheck
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "lawcheck"]
 
 volumes:
   pgdata:
