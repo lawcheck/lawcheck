@@ -6,6 +6,7 @@ import tldextract
 
 from lawcheck.config import settings
 from lawcheck.crawler.browser import Browser
+from lawcheck.crawler.pdf_fetcher import fetch_pdf
 from lawcheck.crawler.snapshot import SiteSnapshot
 
 log = logging.getLogger(__name__)
@@ -48,7 +49,21 @@ def _registered_domain(url: str) -> str:
     return f"{ext.domain}.{ext.suffix}".lower() if ext.suffix else ext.domain.lower()
 
 
+def _is_pdf(url: str) -> bool:
+    return (urlparse(url).path or "").lower().endswith(".pdf")
+
+
+def _is_priority_pdf(url: str) -> bool:
+    """PDF, который выглядит как Политика/Согласие/Оферта — стоит скачать и распарсить."""
+    if not _is_pdf(url):
+        return False
+    u = url.lower()
+    return any(kw in u for kw in PRIORITY_KEYWORDS)
+
+
 def _is_content_url(url: str) -> bool:
+    if _is_priority_pdf(url):
+        return True  # PDF-политику пропускаем через fetch_pdf, не через браузер
     path = urlparse(url).path or "/"
     if _SKIP_EXT_RE.search(path):
         return False
@@ -88,7 +103,13 @@ class Crawler:
             visited.add(url)
 
             log.info("crawling [%d/%d] %s", len(snapshot.pages) + 1, self.max_pages, url)
-            page = await self.browser.fetch(url)
+            if _is_pdf(url):
+                # PDF не рендерится в Chromium — качаем через httpx и парсим pypdf.
+                # Делаем в threadpool, чтобы не блокировать event loop.
+                import asyncio
+                page = await asyncio.to_thread(fetch_pdf, url)
+            else:
+                page = await self.browser.fetch(url)
             snapshot.pages.append(page)
 
             for link in page.links:
