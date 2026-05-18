@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Проверить сайт</h2>
+  <p style="color: var(--muted); margin-top: 0;">
+    Сервис проверяет сайт на соответствие 152-ФЗ «О персональных данных»:
+    наличие Политики, обязательных разделов, согласий у форм, корректность
+    реквизитов владельца и его регистрацию в реестре операторов РКН.
+  </p>
+  <form action="/scan" method="post">
+    <div class="form-row">
+      <input type="url" name="url" placeholder="https://example.ru" required autofocus>
+      <input type="number" name="max_pages" value="10" min="1" max="100" title="страниц для обхода">
+      <button type="submit">Проверить</button>
+    </div>
+  </form>
+</div>
+
+{% if recent %}
+<div class="card recent">
+  <h3 style="margin-top:0">Последние проверки</h3>
+  {% for s in recent %}
+    <div class="row">
+      <div>
+        <a href="/report/{{ s.id }}">{{ s.url }}</a>
+        <div class="url">{{ s.id[:8] }} · {{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</div>
+      </div>
+      <div>
+        <span class="pill {% if s.status == 'done' %}ok{% elif s.status == 'error' %}critical{% else %}info{% endif %}">
+          {{ s.status }}
+        </span>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

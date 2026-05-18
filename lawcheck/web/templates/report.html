@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Отчёт · {{ scan.url }} · LawCheck{% endblock %}
+
+{% block head_extra %}
+{% if is_active %}<meta http-equiv="refresh" content="3">{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+    <div>
+      <h2 style="margin:0 0 4px;">{{ scan.url }}</h2>
+      <div style="color: var(--muted); font-size: 13px;">
+        scan {{ scan.id[:8] }} · {{ scan.created_at.strftime('%d.%m.%Y %H:%M') }}
+        {% if scan.pages_crawled %}· обработано страниц: {{ scan.pages_crawled }}{% endif %}
+      </div>
+    </div>
+    <a href="/" style="color: var(--accent); text-decoration: none; font-size: 14px;">← новая проверка</a>
+  </div>
+</div>
+
+{% if scan.status == 'pending' or scan.status == 'running' %}
+  <div class="status-banner running">
+    <span class="spinner"></span>
+    {% if scan.status == 'pending' %}Скан в очереди…{% else %}Идёт сканирование. Страница обновится автоматически.{% endif %}
+  </div>
+{% elif scan.status == 'error' %}
+  <div class="status-banner error">
+    <strong>Ошибка:</strong> {{ scan.error or 'неизвестная' }}
+  </div>
+{% else %}
+  <div class="summary">
+    {% if counts.critical %}<div class="stat critical"><span class="n">{{ counts.critical }}</span>критичных</div>{% endif %}
+    {% if counts.warning  %}<div class="stat warning"><span class="n">{{ counts.warning }}</span>предупреждений</div>{% endif %}
+    {% if counts.info     %}<div class="stat info"><span class="n">{{ counts.info }}</span>информация</div>{% endif %}
+    {% if counts.ok       %}<div class="stat ok"><span class="n">{{ counts.ok }}</span>в порядке</div>{% endif %}
+  </div>
+
+  {% set seen_blocks = [] %}
+  {% for prefix in ['A1', 'A2', 'A3', 'B1', 'B2', 'D1', 'D2', 'E1', 'E2', 'C2'] %}
+    {% set block = block_titles.get(prefix, prefix) %}
+    {% if prefix in grouped and block not in seen_blocks %}
+      {% set _ = seen_blocks.append(block) %}
+      <h3 class="block-title">{{ block }}</h3>
+    {% endif %}
+    {% if prefix in grouped %}
+      {% for f in grouped[prefix] %}
+      <div class="finding {{ f.severity }}">
+        <div class="head">
+          <span class="pill {{ f.severity }}">{{ f.severity }}</span>
+          <span class="title">{{ f.title }}</span>
+          <span class="check-id">{{ f.check_id }}</span>
+        </div>
+        <div class="evidence">{{ f.evidence }}</div>
+        <div class="meta">
+          норма: {{ f.law_reference }}
+          {% if f.location and f.location != scan.url %}
+            · <a href="{{ f.location }}" target="_blank" rel="noopener">источник</a>
+          {% endif %}
+        </div>
+        {% if f.recommendation %}
+          <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% endblock %}

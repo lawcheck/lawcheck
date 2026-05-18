@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from lawcheck.api.routes import scan
 from lawcheck.db.session import init_db
+from lawcheck.web import routes as web_routes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
@@ -13,7 +14,8 @@ app = FastAPI(
     version="0.1.0",
 )
 
-app.include_router(scan.router, tags=["scan"])
+app.include_router(scan.router, prefix="/api", tags=["scan"])
+app.include_router(web_routes.router, tags=["web"])
 
 
 @app.on_event("startup")
