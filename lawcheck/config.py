@@ -11,5 +11,9 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
+    # По умолчанию — локальный sqlite, чтобы dev не требовал Docker.
+    # В проде указываем postgresql+psycopg://... через env.
+    database_url: str = "sqlite:///lawcheck.db"
+
 
 settings = Settings()

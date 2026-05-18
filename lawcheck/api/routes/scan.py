@@ -1,8 +1,8 @@
 """HTTP-эндпойнты сканирования.
 
-TODO: для прода вынести запуск проверки в RQ-воркер и хранить результат в БД.
-Сейчас — FastAPI BackgroundTasks + in-memory store, чтобы вертикальный срез работал
-без зависимостей от Redis/PostgreSQL.
+Хранение результатов: SQLAlchemy (sqlite по умолчанию, postgres в проде).
+Запуск сканирования: FastAPI BackgroundTasks (RQ-воркер планируется
+следующей итерацией).
 """
 import asyncio
 import logging
@@ -10,7 +10,8 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
-from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResult
+from lawcheck.api.schemas import FindingOut, ScanCreated, ScanResult
+from lawcheck.api.schemas import ScanRequest
 from lawcheck.checks.cookies.banner import CookieBannerCheck
 from lawcheck.checks.cookies.inventory import TrackersInventoryCheck
 from lawcheck.checks.pd_152.form_consent import FormConsentCheck
@@ -23,11 +24,10 @@ from lawcheck.checks.requisites.presence import RequisitesPresenceCheck
 from lawcheck.checks.requisites.rkn_match import RknOperatorCheck
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
+from lawcheck.db import repo
 
 router = APIRouter()
 log = logging.getLogger(__name__)
-
-_STORE: dict[str, ScanResult] = {}
 
 CHECKS = [
     PolicyPresenceCheck(),
@@ -43,50 +43,50 @@ CHECKS = [
 ]
 
 
+def _scan_to_result(scan) -> ScanResult:
+    return ScanResult(
+        scan_id=scan.id, status=scan.status, url=scan.url,
+        pages_crawled=scan.pages_crawled, error=scan.error,
+        findings=[FindingOut(
+            check_id=f.check_id, severity=f.severity, title=f.title,
+            evidence=f.evidence, location=f.location,
+            law_reference=f.law_reference, recommendation=f.recommendation,
+        ) for f in scan.findings],
+    )
+
+
 async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
-    result = _STORE[scan_id]
-    result.status = "running"
+    await asyncio.to_thread(repo.mark_running, scan_id)
     try:
         async with Browser() as browser:
             crawler = Crawler(browser, max_pages=max_pages)
             snapshot = await crawler.crawl(url)
 
-        # Проверки выполняем в отдельном потоке: некоторые из них (E2/C2) ходят
-        # в синхронные внешние сервисы (httpx.Client), что заблокировало бы
-        # event loop FastAPI и подвесило бы всё API.
-        def _run_all_checks() -> list[FindingOut]:
-            out: list[FindingOut] = []
+        # Проверки и запись в БД — синхронные. Гоним в threadpool, чтобы не
+        # блокировать event loop FastAPI (E2/C2 ходят в httpx.Client).
+        def _run_all_checks_and_save() -> None:
+            all_findings = []
             for check in CHECKS:
-                for f in check.run(snapshot):
-                    out.append(FindingOut(
-                        check_id=f.check_id, severity=f.severity.value, title=f.title,
-                        evidence=f.evidence, location=f.location,
-                        law_reference=f.law_reference, recommendation=f.recommendation,
-                    ))
-            return out
+                all_findings.extend(check.run(snapshot))
+            repo.mark_done(scan_id, pages_crawled=len(snapshot.pages), findings=all_findings)
 
-        findings = await asyncio.to_thread(_run_all_checks)
-
-        result.pages_crawled = len(snapshot.pages)
-        result.findings = findings
-        result.status = "done"
+        await asyncio.to_thread(_run_all_checks_and_save)
     except Exception as e:
         log.exception("scan failed")
-        result.status = "error"
-        result.error = str(e)
+        await asyncio.to_thread(repo.mark_error, scan_id, str(e))
 
 
 @router.post("/scan", response_model=ScanCreated, status_code=202)
 async def create_scan(req: ScanRequest, bg: BackgroundTasks) -> ScanCreated:
     scan_id = uuid.uuid4().hex
-    _STORE[scan_id] = ScanResult(scan_id=scan_id, status="pending", url=str(req.url))
+    await asyncio.to_thread(repo.create_scan, scan_id, str(req.url), req.max_pages)
     bg.add_task(_run_scan, scan_id, str(req.url), req.max_pages)
     return ScanCreated(scan_id=scan_id)
 
 
 @router.get("/scan/{scan_id}", response_model=ScanResult)
 async def get_scan(scan_id: str) -> ScanResult:
-    result = _STORE.get(scan_id)
-    if not result:
+    scan = await asyncio.to_thread(repo.get_scan, scan_id)
+    if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
-    return result
+    return _scan_to_result(scan)

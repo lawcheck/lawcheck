@@ -36,6 +36,7 @@ test-results/
 
 # DB / runtime
 *.db
+*.db-journal
 *.sqlite
 data/
 logs/
