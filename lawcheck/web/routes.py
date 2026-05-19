@@ -78,6 +78,9 @@ async def report(request: Request, scan_id: str):
         "E1": "Реквизиты владельца",
         "E2": "Реквизиты владельца",
         "C2": "Реестр операторов РКН",
+        "F1": "ЗОЗПП и Правила продажи",
+        "F2": "ЗОЗПП и Правила продажи",
+        "F3": "ЗОЗПП и Правила продажи",
     }
 
     return templates.TemplateResponse(request, "report.html", {
