@@ -37,7 +37,7 @@
   </div>
 
   {% set seen_blocks = [] %}
-  {% for prefix in ['A1', 'A2', 'A3', 'B1', 'B2', 'D1', 'D2', 'E1', 'E2', 'C2', 'F1', 'F2', 'F3'] %}
+  {% for prefix in ['A1', 'A2', 'A3', 'B1', 'B2', 'D1', 'D2', 'E1', 'E2', 'C2', 'F1', 'F2', 'F3', 'G1', 'G2', 'G3'] %}
     {% set block = block_titles.get(prefix, prefix) %}
     {% if prefix in grouped and block not in seen_blocks %}
       {% set _ = seen_blocks.append(block) %}
