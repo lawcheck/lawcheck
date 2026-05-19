@@ -84,6 +84,7 @@ async def report(request: Request, scan_id: str):
         "G1": "ФЗ «О рекламе»",
         "G2": "ФЗ «О рекламе»",
         "G3": "ФЗ «О рекламе»",
+        "H1": "Защита детей (436-ФЗ)",
     }
 
     return templates.TemplateResponse(request, "report.html", {
