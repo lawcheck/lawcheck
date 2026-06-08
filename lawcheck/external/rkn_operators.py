@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 _BASE_URL = "https://pd.rkn.gov.ru"
 _SEARCH_PATH = "/operators-registry/operators-list/"
-_UA = "Mozilla/5.0 (LawCheck/0.1; +https://lawcheck.ru/bot)"
+_UA = "Mozilla/5.0 (LawCheck/0.1; +https://lawchek.ru/bot)"
 _TIMEOUT = httpx.Timeout(20.0, connect=8.0)
 
 # Маркер найденной записи в HTML: ряд таблицы results имеет класс clmn1.

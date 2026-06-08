@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     crawler_max_pages: int = 30
     crawler_timeout_sec: int = 30
-    crawler_user_agent: str = "LawCheckBot/0.1 (+https://lawcheck.ru/bot)"
+    crawler_user_agent: str = "LawCheckBot/0.1 (+https://lawchek.ru/bot)"
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000

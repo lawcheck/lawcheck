@@ -17,7 +17,7 @@ import httpx
 log = logging.getLogger(__name__)
 
 _BASE_URL = "https://egrul.nalog.ru"
-_UA = "Mozilla/5.0 (LawCheck/0.1; +https://lawcheck.ru/bot)"
+_UA = "Mozilla/5.0 (LawCheck/0.1; +https://lawchek.ru/bot)"
 _TIMEOUT = httpx.Timeout(15.0, connect=5.0)
 
 
