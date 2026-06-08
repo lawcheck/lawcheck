@@ -43,3 +43,6 @@ logs/
 
 # Snapshots (большие, в git не нужны)
 snapshots/
+
+# Local Claude Code tooling (preview config, local permissions)
+.claude/

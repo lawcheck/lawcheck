@@ -2,12 +2,12 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: lawcheck
-      POSTGRES_PASSWORD: lawcheck
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lawcheck}
       POSTGRES_DB: lawcheck
-    ports:
-      - "5432:5432"
+    # Порт наружу НЕ публикуем — доступ только внутри compose-сети.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,8 +17,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    # Порт наружу НЕ публикуем — доступ только внутри compose-сети.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -26,22 +26,25 @@ services:
 
   api:
     build: .
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://lawcheck:lawcheck@postgres:5432/lawcheck
+      DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    # Наружу не публикуем — Caddy проксирует внутри сети по имени api:8000.
+    expose:
+      - "8000"
     command: ["uvicorn", "lawcheck.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   worker:
     build: .
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://lawcheck:lawcheck@postgres:5432/lawcheck
+      DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
@@ -50,5 +53,20 @@ services:
         condition: service_healthy
     command: ["rq", "worker", "--url", "redis://redis:6379/0", "lawcheck"]
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

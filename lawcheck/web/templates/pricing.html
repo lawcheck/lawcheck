@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Тарифы · LawCheck{% endblock %}
+{% block nav_pricing %}active{% endblock %}
+
+{% block content %}
+<section class="price-hero">
+  <span class="badge-pill"><span class="dot"></span>цены в рублях, без автопродления</span>
+  <h1>Тариф для вашего сайта</h1>
+  <p>Начните с бесплатной проверки. Платные тарифы добавляют PDF-заключение, шаблоны и мониторинг.</p>
+</section>
+
+<section class="plans">
+  <div class="plan">
+    <div class="name">Free</div>
+    <div class="price">0 ₽</div>
+    <div class="price-note">навсегда</div>
+    <ul>
+      <li>1 сайт до 25 страниц</li>
+      <li>веб-отчёт по ссылке</li>
+      <li>выгрузка JSON через API</li>
+      <li>5 проверок в сутки</li>
+    </ul>
+    <a href="/" class="plan-cta ghost">Запустить проверку</a>
+  </div>
+
+  <div class="plan featured">
+    <span class="rec-badge">рекомендуем</span>
+    <div class="name">Pro</div>
+    <div class="price">990 ₽ <small>/ мес</small></div>
+    <div class="price-note">или 9 900 ₽ в год</div>
+    <ul>
+      <li>до 5 сайтов / 200 страниц</li>
+      <li>PDF-заключение с подписью юриста</li>
+      <li>шаблоны: Политика, Согласие, уведомление в РКН</li>
+      <li>еженедельный мониторинг</li>
+      <li>diff отчётов между проверками</li>
+      <li>поддержка в Telegram</li>
+    </ul>
+    <a href="/" class="plan-cta primary">Попробовать 7 дней</a>
+  </div>
+
+  <div class="plan">
+    <div class="name">Business</div>
+    <div class="price">от 9 900 ₽ <small>/ мес</small></div>
+    <div class="price-note">по объёму и SLA</div>
+    <ul>
+      <li>безлимит сайтов и страниц</li>
+      <li>API без лимитов + webhook</li>
+      <li>white-label отчёты</li>
+      <li>SLA 99.9%</li>
+      <li>юрист в Slack</li>
+      <li>custom-правила под ваш бизнес</li>
+    </ul>
+    <a href="#" class="plan-cta ghost">Связаться</a>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Сравнение тарифов</h2>
+  <div class="cmp-wrap">
+    <table class="cmp">
+      <thead>
+        <tr><th>Возможность</th><th>Free</th><th>Pro</th><th>Business</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Сайтов</td><td class="val">1</td><td class="val">5</td><td class="val">∞</td></tr>
+        <tr><td>Страниц на проверку</td><td class="val">25</td><td class="val">200</td><td class="val">∞</td></tr>
+        <tr><td>Проверок в сутки</td><td class="val">5</td><td class="val">∞</td><td class="val">∞</td></tr>
+        <tr><td>Веб-отчёт по ссылке</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>JSON API</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ + webhook</td></tr>
+        <tr><td>PDF-заключение с подписью юриста</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Шаблоны документов</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Еженедельный мониторинг и diff</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>White-label и SLA</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Custom-правила</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Кто готовит PDF-заключение</h2>
+  {% include "_expert.html" %}
+</section>
+
+<section class="section faq">
+  <h2>Частые вопросы</h2>
+  <details>
+    <summary>Это юридическая консультация?</summary>
+    <div class="ans">Нет. Отчёт — автоматическая проверка и оценка рисков. Суммы штрафов ориентировочные. PDF-заключение на тарифе Pro готовит юрист-партнёр.</div>
+  </details>
+  <details>
+    <summary>Нужно ли подтверждать владение сайтом?</summary>
+    <div class="ans">Для бесплатной проверки — нет. Для мониторинга и PDF-заключения потребуется подтвердить владение через DNS TXT или meta-тег.</div>
+  </details>
+  <details>
+    <summary>Откуда берутся суммы штрафов?</summary>
+    <div class="ans">Это ориентировочные диапазоны по статьям КоАП РФ для оценки порядка риска, а не точный расчёт. Реальный размер определяет регулятор.</div>
+  </details>
+  <details>
+    <summary>Храните ли вы содержимое моего сайта?</summary>
+    <div class="ans">Нет. После генерации отчёта содержимое страниц не сохраняется — остаются только findings и цитаты-доказательства.</div>
+  </details>
+  <details>
+    <summary>Есть ли автопродление подписки?</summary>
+    <div class="ans">Нет. Оплата разовая за период, продление — вручную.</div>
+  </details>
+</section>
+
+<div class="footer-cta">
+  <h2>Начните с бесплатной проверки</h2>
+  <p>Посмотрите, что найдёт движок, и решите, нужен ли платный тариф.</p>
+  <div class="row">
+    <a href="/" class="btn-dark">Проверить сайт</a>
+    {% if example %}<a href="/report/{{ example.id }}" class="btn-ghost">Пример отчёта</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

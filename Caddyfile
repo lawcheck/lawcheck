@@ -1,0 +1,12 @@
+# Caddy автоматически выпускает и продлевает TLS-сертификат Let's Encrypt
+# для доменов ниже. Требуется, чтобы A-записи lawcheck.ru и www.lawcheck.ru
+# указывали на этот сервер и были открыты порты 80/443.
+
+lawcheck.ru {
+	reverse_proxy api:8000
+	encode zstd gzip
+}
+
+www.lawcheck.ru {
+	redir https://lawcheck.ru{uri} permanent
+}
