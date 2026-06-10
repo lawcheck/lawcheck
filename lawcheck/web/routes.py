@@ -31,9 +31,9 @@ templates.env.globals["fine_group"] = fines.group_for  # вызывается в
 OPERATOR = {
     "name": "ИП Подольский Максим Александрович",
     "short_name": "ИП Подольский М.А.",
-    "inn": None,      # TODO: заполнить реальным ИНН
-    "ogrnip": None,   # TODO: заполнить реальным ОГРНИП
-    "email": None,    # TODO: контактный email для обращений
+    "inn": "771481979800",
+    "ogrnip": "322774600250213",
+    "email": "juristlawer@gmail.com",
     "policy_date": "10 июня 2026 г.",
 }
 templates.env.globals["operator"] = OPERATOR
