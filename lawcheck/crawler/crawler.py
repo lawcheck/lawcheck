@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import tldextract
 
@@ -57,7 +57,9 @@ def _is_priority_pdf(url: str) -> bool:
     """PDF, который выглядит как Политика/Согласие/Оферта — стоит скачать и распарсить."""
     if not _is_pdf(url):
         return False
-    u = url.lower()
+    # Декодируем percent-encoding: путь вроде /uploads/%D0%9F%D0%BE%D0%BB...pdf
+    # («Политика….pdf») иначе не совпадёт с кириллическими ключевыми словами.
+    u = unquote(url).lower()
     return any(kw in u for kw in PRIORITY_KEYWORDS)
 
 
@@ -74,7 +76,7 @@ def _is_content_url(url: str) -> bool:
 
 def _score_url(url: str) -> int:
     """Меньше = выше приоритет."""
-    u = url.lower()
+    u = unquote(url).lower()  # учитываем кириллицу в percent-encoded путях
     for kw in PRIORITY_KEYWORDS:
         if kw in u:
             return 0

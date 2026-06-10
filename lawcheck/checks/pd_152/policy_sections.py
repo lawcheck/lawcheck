@@ -66,7 +66,7 @@ class PolicySectionsCheck(Check):
                 findings.append(Finding(
                     check_id=f"{self.id}.{key}", severity=Severity.OK,
                     title=f"{TITLE}: {section_title}",
-                    evidence=f"Раздел присутствует. Найдены маркеры: {', '.join(repr(h) for h in hits_sample)}.",
+                    evidence=f"Раздел присутствует. Найдены формулировки: {', '.join(repr(h) for h in hits_sample)}.",
                     location=policy_url, law_reference=law_ref,
                     extra={"strong_hits": strong_n, "weak_hits": weak_n},
                 ))
@@ -74,8 +74,9 @@ class PolicySectionsCheck(Check):
                 findings.append(Finding(
                     check_id=f"{self.id}.{key}", severity=_missing_severity(section),
                     title=f"{TITLE}: {section_title}",
-                    evidence=f"Раздел не найден в тексте Политики (проверено {len(section.get('strong', []))} "
-                             f"strong + {len(section.get('weak', []))} weak маркеров).",
+                    evidence=f"Раздел не найден в тексте Политики (искали по "
+                             f"{len(section.get('strong', []))} точным и "
+                             f"{len(section.get('weak', []))} косвенным формулировкам).",
                     location=policy_url, law_reference=law_ref,
                     recommendation=f"Добавьте в Политику раздел «{section_title}».",
                     extra={"strong_hits": 0, "weak_hits": weak_n},
