@@ -3,6 +3,9 @@
 # category: analytics | ads | social | chat | cdn | tagmanager | ab_testing | heatmap | captcha
 # sets_pd_identifiers: ставит ли cookie/идентификатор, который трактуется как ПДн (ip, cookie-id и т.п.)
 # cross_border_risk: low | medium | high — для зарубежных, оценка риска нарушения ст. 12 152-ФЗ
+# serves_creatives: для category=ads — отдаёт ли сеть рекламные креативы НА сайт (рекламные блоки).
+#   false/нет поля = это пиксель рекламодателя (сайт продвигает себя в чужой сети) — обязанность
+#   маркировки erid у владельца сайта при этом НЕ возникает.
 
 trackers:
 
@@ -18,6 +21,7 @@ trackers:
     category: ads
     jurisdiction: ru
     sets_pd_identifiers: true
+    serves_creatives: true
 
   - name: "VK Pixel (ВКонтакте)"
     domains: ["vk.com/rtrg", "vk.com/js/api/openapi.js"]
@@ -77,6 +81,7 @@ trackers:
     jurisdiction: foreign
     sets_pd_identifiers: true
     cross_border_risk: high
+    serves_creatives: true
 
   - name: "Meta Pixel (Facebook)"
     domains: ["connect.facebook.net", "www.facebook.com/tr"]

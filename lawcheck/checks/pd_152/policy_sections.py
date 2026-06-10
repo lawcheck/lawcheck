@@ -10,6 +10,7 @@
 не нашла валидной Политики — тогда A3 возвращает пустой список.
 """
 from lawcheck.checks.base import Check, Finding, Severity
+from lawcheck.checks.cookies._tracker_matcher import match_trackers
 from lawcheck.checks.pd_152._policy_finder import find_policy_links, find_policy_page
 from lawcheck.crawler.snapshot import SiteSnapshot
 from lawcheck.dictionaries import loader
@@ -71,6 +72,13 @@ class PolicySectionsCheck(Check):
                     extra={"strong_hits": strong_n, "weak_hits": weak_n},
                 ))
             else:
+                # Гейт применимости для трансграничной передачи: раздел обязателен,
+                # только если передача реально происходит. Признак — иностранные
+                # сервисы, собирающие идентификаторы (факты из инвентаризации D1).
+                if key == "cross_border":
+                    findings.append(self._missing_cross_border(
+                        snapshot, section_title, law_ref, policy_url, weak_n))
+                    continue
                 findings.append(Finding(
                     check_id=f"{self.id}.{key}", severity=_missing_severity(section),
                     title=f"{TITLE}: {section_title}",
@@ -83,3 +91,33 @@ class PolicySectionsCheck(Check):
                 ))
 
         return findings
+
+    def _missing_cross_border(self, snapshot: SiteSnapshot, section_title: str,
+                              law_ref: str, policy_url: str, weak_n: int) -> Finding:
+        """Раздел о трансграничной передаче отсутствует — но обязателен ли он?"""
+        foreign_pd = [h for h in match_trackers(snapshot)
+                      if h.jurisdiction == "foreign" and h.sets_pd_identifiers]
+        if foreign_pd:
+            names = sorted({h.name for h in foreign_pd})
+            return Finding(
+                check_id=f"{self.id}.cross_border", severity=Severity.WARNING,
+                title=f"{TITLE}: {section_title}",
+                evidence=f"На сайте работают иностранные сервисы, передающие данные "
+                         f"посетителей за рубеж ({', '.join(names[:5])}), но раздела "
+                         f"о трансграничной передаче в Политике нет.",
+                location=policy_url, law_reference=law_ref,
+                recommendation=f"Добавьте в Политику раздел «{section_title}» с перечнем "
+                               f"иностранных получателей данных, либо откажитесь от "
+                               f"зарубежных сервисов.",
+                extra={"strong_hits": 0, "weak_hits": weak_n,
+                       "foreign_trackers": names},
+            )
+        return Finding(
+            check_id=f"{self.id}.cross_border", severity=Severity.OK,
+            title=f"{TITLE}: {section_title}",
+            evidence="Раздел о трансграничной передаче в Политике отсутствует, "
+                     "но признаков передачи данных за рубеж на сайте не обнаружено — "
+                     "отдельный раздел в этом случае не обязателен.",
+            location=policy_url, law_reference=law_ref,
+            extra={"strong_hits": 0, "weak_hits": weak_n, "foreign_trackers": []},
+        )
