@@ -6,9 +6,8 @@
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/favicon.svg">
   <title>{% block title %}LawCheck{% endblock %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Шрифты самохостятся: без запросов к Google → нет передачи IP за рубеж -->
+  <link href="/static/fonts/fonts.css" rel="stylesheet">
   <style>
     :root {
       --page: #f7f7f8;
@@ -299,7 +298,18 @@
     footer .col a { display: block; color: var(--ink-soft); text-decoration: none; font-size: 14px; padding: 3px 0; }
     footer .col a:hover { color: var(--brand); }
     footer .legal { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line2); padding-top: 16px; }
-    footer .legal .build { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+    footer .legal .requisites { margin-top: 8px; color: var(--ink-soft); }
+    footer .legal .requisites a { color: var(--ink-soft); }
+    footer .legal .build { font-family: var(--mono); font-size: 12px; color: var(--faint); margin-top: 8px; }
+    footer .legal .build a { color: var(--faint); }
+
+    /* --- Страница Политики обработки ПДн --- */
+    .policy { max-width: 760px; margin: 0 auto; }
+    .policy h1 { font-size: 28px; margin: 8px 0 4px; }
+    .policy .policy-meta { font-family: var(--mono); font-size: 13px; color: var(--faint); margin: 0 0 24px; }
+    .policy h2 { font-size: 18px; margin: 28px 0 8px; }
+    .policy p, .policy li { font-size: 15px; line-height: 1.65; color: var(--ink-soft); }
+    .policy ul { padding-left: 22px; margin: 8px 0; }
   </style>
   {% block head_extra %}{% endblock %}
 </head>
@@ -336,13 +346,18 @@
         </div>
         <div class="col">
           <h4>Компания</h4>
-          <a href="/">О сервисе</a>
-          <a href="/">Документация</a>
+          <a href="/pricing">Тарифы и услуги</a>
+          <a href="/privacy">Политика обработки ПДн</a>
         </div>
       </div>
       <div class="legal">
-        Результаты анализа носят информационный и рекомендательный характер. Сервис не оказывает юридических услуг.
-        <div class="build">© 2026 LawCheck · beta</div>
+        Результаты автоматической проверки носят информационный характер и не заменяют
+        индивидуальную юридическую консультацию. Юридические услуги (заключения, консультации)
+        оказывает {{ operator.short_name }}.
+        <div class="requisites">
+          {{ operator.name }}{% if operator.inn %} · ИНН {{ operator.inn }}{% endif %}{% if operator.ogrnip %} · ОГРНИП {{ operator.ogrnip }}{% endif %}{% if operator.email %} · <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>{% endif %}
+        </div>
+        <div class="build">© 2026 LawCheck · beta · <a href="/privacy">политика обработки ПДн</a></div>
       </div>
     </div>
   </footer>

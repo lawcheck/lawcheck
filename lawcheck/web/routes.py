@@ -26,6 +26,18 @@ def _money(value: int) -> str:
 templates.env.filters["money"] = _money
 templates.env.globals["fine_group"] = fines.group_for  # вызывается внутри Jinja-макроса
 
+# Реквизиты оператора сервиса — единый источник для подвала и /privacy.
+# None = реквизит ещё не указан, шаблоны не выводят пустые поля.
+OPERATOR = {
+    "name": "ИП Подольский Максим Александрович",
+    "short_name": "ИП Подольский М.А.",
+    "inn": None,      # TODO: заполнить реальным ИНН
+    "ogrnip": None,   # TODO: заполнить реальным ОГРНИП
+    "email": None,    # TODO: контактный email для обращений
+    "policy_date": "10 июня 2026 г.",
+}
+templates.env.globals["operator"] = OPERATOR
+
 
 # === Главная: форма + список последних сканов ===
 
@@ -33,6 +45,11 @@ templates.env.globals["fine_group"] = fines.group_for  # вызывается в
 async def index(request: Request):
     recent = await asyncio.to_thread(repo.list_recent_scans, 10)
     return templates.TemplateResponse(request, "index.html", {"recent": recent})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request):
+    return templates.TemplateResponse(request, "privacy.html", {})
 
 
 @router.get("/pricing", response_class=HTMLResponse)
