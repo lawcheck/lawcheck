@@ -1,5 +1,6 @@
-"""Web-UI: главная с формой, страница ожидания и отчёт."""
+"""Web-UI: главная с формой, страница ожидания, отчёт и оплата."""
 import asyncio
+import logging
 import uuid
 from collections import defaultdict
 from pathlib import Path
@@ -10,8 +11,11 @@ from fastapi.templating import Jinja2Templates
 
 from lawcheck.api.routes.scan import _run_scan
 from lawcheck.db import repo
+from lawcheck.payments import tochka
 from lawcheck.reporting import fines
 from lawcheck.workers.queue import get_queue
+
+log = logging.getLogger(__name__)
 
 router = APIRouter()
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -50,6 +54,76 @@ async def index(request: Request):
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
+
+
+# === Оплата: Pro через эквайринг Точки ===
+
+_PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
+
+
+@router.post("/buy/{plan}", response_class=HTMLResponse)
+async def buy(request: Request, plan: str):
+    if plan not in _PLANS:
+        raise HTTPException(status_code=404, detail="unknown plan")
+    purpose, amount = _PLANS[plan]
+
+    if not tochka.is_configured():
+        # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
+        return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
+
+    order_id = uuid.uuid4().hex
+    await asyncio.to_thread(repo.create_order, order_id, plan, amount)
+    try:
+        link = await asyncio.to_thread(
+            tochka.create_payment,
+            amount_rub=amount, purpose=f"{purpose} (заказ {order_id[:8]})", order_id=order_id,
+        )
+    except Exception:
+        log.exception("tochka: не удалось создать платёжную ссылку")
+        return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
+    await asyncio.to_thread(repo.set_order_payment, order_id, link.operation_id, link.url)
+    return RedirectResponse(url=link.url, status_code=303)
+
+
+@router.get("/pay/success", response_class=HTMLResponse)
+async def pay_success(request: Request, order: str = ""):
+    paid = False
+    o = await asyncio.to_thread(repo.get_order, order) if order else None
+    if o and o.operation_id:
+        # Не верим redirect'у: подтверждаем оплату запросом к API банка.
+        paid = await asyncio.to_thread(tochka.is_paid, o.operation_id)
+        if paid:
+            await asyncio.to_thread(repo.mark_order_paid, order)
+    return templates.TemplateResponse(request, "pay_result.html", {"ok": paid, "order": o})
+
+
+@router.get("/pay/fail", response_class=HTMLResponse)
+async def pay_fail(request: Request, order: str = ""):
+    o = await asyncio.to_thread(repo.get_order, order) if order else None
+    return templates.TemplateResponse(request, "pay_result.html", {"ok": False, "order": o})
+
+
+@router.post("/webhooks/tochka")
+async def tochka_webhook(request: Request):
+    """Вебхук acquiringInternetPayment. Тело — JWT; используем его только как
+    триггер: вытаскиваем operationId без проверки подписи и перепроверяем
+    статус авторизованным запросом к API банка."""
+    raw = (await request.body()).decode("utf-8", errors="replace").strip()
+    operation_id = ""
+    try:
+        import base64
+        import json
+        payload_b64 = raw.split(".")[1]
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64 + "=" * (-len(payload_b64) % 4)))
+        operation_id = payload.get("operationId") or payload.get("Data", {}).get("operationId", "")
+    except Exception:
+        log.warning("tochka webhook: не удалось разобрать тело: %.200s", raw)
+    if operation_id:
+        order = await asyncio.to_thread(repo.get_order_by_operation, operation_id)
+        if order and await asyncio.to_thread(tochka.is_paid, operation_id):
+            await asyncio.to_thread(repo.mark_order_paid, order.id)
+            log.info("заказ %s оплачен (операция %s)", order.id, operation_id)
+    return {"ok": True}
 
 
 @router.get("/pricing", response_class=HTMLResponse)

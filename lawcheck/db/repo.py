@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import Finding, Scan, utcnow
+from lawcheck.db.models import Finding, Order, Scan, utcnow
 from lawcheck.db.session import session_scope
 
 
@@ -64,3 +64,39 @@ def list_recent_scans(limit: int = 50) -> list[Scan]:
             .limit(limit)
         ).scalars().all()
         return list(rows)
+
+
+# === Заказы (оплата тарифов) ===
+
+def create_order(order_id: str, plan: str, amount: int, email: str = "") -> None:
+    with session_scope() as sess:
+        sess.add(Order(id=order_id, plan=plan, amount=amount, email=email))
+
+
+def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> None:
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order:
+            order.operation_id = operation_id
+            order.payment_link = payment_link
+            order.status = "pending"
+
+
+def mark_order_paid(order_id: str) -> None:
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order and order.status != "paid":
+            order.status = "paid"
+            order.paid_at = utcnow()
+
+
+def get_order(order_id: str) -> Order | None:
+    with session_scope() as sess:
+        return sess.get(Order, order_id)
+
+
+def get_order_by_operation(operation_id: str) -> Order | None:
+    with session_scope() as sess:
+        return sess.execute(
+            select(Order).where(Order.operation_id == operation_id)
+        ).scalar_one_or_none()

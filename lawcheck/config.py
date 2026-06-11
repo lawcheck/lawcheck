@@ -19,5 +19,13 @@ class Settings(BaseSettings):
     # В проде: redis://redis:6379/0 — задачи идут в RQ-воркер.
     redis_url: str = ""
 
+    # Интернет-эквайринг Точка (https://developers.tochka.com).
+    # Пока tochka_jwt пуст — оплата работает в fallback-режиме (заявка на email).
+    tochka_jwt: str = ""
+    tochka_customer_code: str = ""
+    tochka_merchant_id: str = ""
+    tochka_base_url: str = "https://enter.tochka.com/uapi"
+    site_base_url: str = "https://lawchek.ru"
+
 
 settings = Settings()

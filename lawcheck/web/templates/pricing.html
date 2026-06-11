@@ -36,7 +36,9 @@
       <li>diff отчётов между проверками</li>
       <li>поддержка в Telegram</li>
     </ul>
-    <a href="/" class="plan-cta primary">Попробовать 7 дней</a>
+    <form class="buy-form" action="/buy/pro" method="post">
+      <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽</button>
+    </form>
   </div>
 
   <div class="plan">
@@ -51,7 +53,7 @@
       <li>юрист в Slack</li>
       <li>custom-правила под ваш бизнес</li>
     </ul>
-    <a href="#" class="plan-cta ghost">Связаться</a>
+    <a href="mailto:{{ operator.email }}?subject=LawCheck Business" class="plan-cta ghost">Связаться</a>
   </div>
 </section>
 
