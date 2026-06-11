@@ -63,10 +63,33 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+      - goaccess_report:/srv/goaccess:ro
     depends_on:
       - api
+
+  # Серверная аналитика: раз в 10 минут перечитывает access-лог Caddy и
+  # обновляет HTML-отчёт. Без JS на страницах и без cookie — политика ПДн
+  # сервиса не затрагивается. Отчёт: https://lawchek.ru/stats (basic auth).
+  goaccess:
+    image: allinurl/goaccess
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        while true; do
+          goaccess /srv/logs/access.log --log-format=CADDY \
+            -o /srv/report/index.html --no-query-string || true
+          sleep 600
+        done
+    volumes:
+      - caddy_logs:/srv/logs:ro
+      - goaccess_report:/srv/report
 
 volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  caddy_logs:
+  goaccess_report:

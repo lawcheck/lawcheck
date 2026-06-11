@@ -3,8 +3,28 @@
 # указывали на этот сервер и были открыты порты 80/443.
 
 lawchek.ru {
-	reverse_proxy api:8000
 	encode zstd gzip
+
+	# Access-лог для серверной аналитики (GoAccess читает его из общего тома).
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50mb
+			roll_keep 5
+		}
+	}
+
+	# Отчёт GoAccess — под basic auth (логин maxim).
+	handle_path /stats* {
+		basic_auth {
+			maxim $2a$14$O0CaflJ9VbOnzyrqTifz6.W1e1r6bCQ9YYJE.CXVHfUaNrqzeN6uW
+		}
+		root * /srv/goaccess
+		file_server
+	}
+
+	handle {
+		reverse_proxy api:8000
+	}
 }
 
 www.lawchek.ru {
