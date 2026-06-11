@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import Finding, Order, Scan, utcnow
+from lawcheck.db.models import Finding, Lead, Order, Scan, utcnow
 from lawcheck.db.session import session_scope
 
 
@@ -100,3 +100,14 @@ def get_order_by_operation(operation_id: str) -> Order | None:
         return sess.execute(
             select(Order).where(Order.operation_id == operation_id)
         ).scalar_one_or_none()
+
+
+# === Лиды (email со страницы отчёта) ===
+
+def create_lead(scan_id: str, url: str, email: str) -> None:
+    with session_scope() as sess:
+        exists = sess.execute(
+            select(Lead).where(Lead.scan_id == scan_id, Lead.email == email)
+        ).scalar_one_or_none()
+        if not exists:
+            sess.add(Lead(scan_id=scan_id, url=url, email=email))

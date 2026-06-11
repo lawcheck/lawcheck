@@ -3,7 +3,7 @@
 
 {% block head_extra %}{% endblock %}
 
-{% macro finding_card(f, scan) %}
+{% macro finding_card(f, scan, rec_open=true, locked_total=0) %}
 <div class="finding {{ f.severity }}">
   <div class="head">
     <span class="pill {{ f.severity }}">{{ f.severity }}</span>
@@ -20,7 +20,14 @@
   {% endif %}
   {% if f.evidence %}<div class="quote">{{ f.evidence }}</div>{% endif %}
   {% if f.recommendation %}
-    <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}</div>
+    {% if rec_open %}
+      <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}</div>
+    {% else %}
+      <div class="rec locked">
+        <strong>🔒 Как исправить</strong> — готовый текст в Pro.
+        <a href="/pricing">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
+      </div>
+    {% endif %}
   {% endif %}
 </div>
 {% endmacro %}
@@ -67,6 +74,24 @@
     </div>
     <a href="/pricing" class="upsell-cta">Получить PDF</a>
   </div>
+  {% endif %}
+
+  {% if subscribed %}
+  <div class="subscribe-box done">
+    ✅ Готово — пришлём отчёт на почту и предупредим, если найдём новые нарушения.
+  </div>
+  {% else %}
+  <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post">
+    <div class="sub-text">
+      <strong>Получить отчёт на почту</strong>
+      <span>и узнать первым, если на сайте появятся новые нарушения</span>
+    </div>
+    <div class="sub-row">
+      <input type="email" name="email" placeholder="you@company.ru" required
+             aria-label="Email для отправки отчёта">
+      <button type="submit">Прислать</button>
+    </div>
+  </form>
   {% endif %}
   {% endif %}
 </div>
@@ -129,7 +154,7 @@
         <h3 class="block-title">{{ b.title }}</h3>
 
         {% for f in b.problems %}
-          {{ finding_card(f, scan) }}
+          {{ finding_card(f, scan, rec_open=(f.id in open_rec_ids or not f.recommendation), locked_total=locked_count) }}
         {% endfor %}
 
         {% if b.oks %}

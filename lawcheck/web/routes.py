@@ -170,8 +170,13 @@ _BLOCK_DEFS = [
 ]
 
 
+# Сколько рекомендаций «Как исправить» открыто в бесплатном отчёте.
+# Диагноз (что сломано, цитата, штраф) открыт всегда; рецепты сверх лимита — в Pro.
+_FREE_RECIPES = 2
+
+
 @router.get("/report/{scan_id}", response_class=HTMLResponse)
-async def report(request: Request, scan_id: str):
+async def report(request: Request, scan_id: str, sub: int = 0):
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
     if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
@@ -199,6 +204,14 @@ async def report(request: Request, scan_id: str):
     total = sum(counts.values())
     compliance = round(counts["ok"] / total * 100) if total else 0
 
+    # Gate рецептов: открываем «Как исправить» у первых N самых тяжёлых находок.
+    all_problems = sorted(
+        (f for f in scan.findings if f.severity != "ok" and f.recommendation),
+        key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id),
+    )
+    open_rec_ids = {f.id for f in all_problems[:_FREE_RECIPES]}
+    locked_count = max(0, len(all_problems) - _FREE_RECIPES)
+
     return templates.TemplateResponse(request, "report.html", {
         "scan": scan,
         "blocks": blocks,
@@ -207,4 +220,19 @@ async def report(request: Request, scan_id: str):
         "risk": fines.risk_total(scan.findings),
         "is_https": scan.url.startswith("https://"),
         "is_active": scan.status in ("pending", "running"),
+        "open_rec_ids": open_rec_ids,
+        "locked_count": locked_count,
+        "subscribed": bool(sub),
     })
+
+
+@router.post("/report/{scan_id}/subscribe", response_class=HTMLResponse)
+async def report_subscribe(request: Request, scan_id: str, email: str = Form(...)):
+    scan = await asyncio.to_thread(repo.get_scan, scan_id)
+    if scan is None:
+        raise HTTPException(status_code=404, detail="scan not found")
+    email = email.strip().lower()
+    if "@" in email and "." in email.split("@")[-1]:
+        await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email)
+        log.info("lead: %s (скан %s, %s)", email, scan_id[:8], scan.url)
+    return RedirectResponse(url=f"/report/{scan_id}?sub=1", status_code=303)

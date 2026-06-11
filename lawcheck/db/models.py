@@ -45,6 +45,18 @@ class Finding(Base):
     scan: Mapped["Scan"] = relationship(back_populates="findings")
 
 
+class Lead(Base):
+    """Email, оставленный на странице отчёта («прислать отчёт + следить за сайтом»).
+    Рассылка пока ручная — это точка захвата контакта."""
+    __tablename__ = "leads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scan_id: Mapped[str] = mapped_column(String(32), index=True)
+    url: Mapped[str] = mapped_column(String(2048), default="")
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
 class Order(Base):
     """Заказ платного тарифа. Создаётся при клике «Оплатить», оплачивается
     через интернет-эквайринг Точки (платёжная ссылка); статус обновляет
