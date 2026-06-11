@@ -4,6 +4,7 @@ import logging
 import uuid
 from collections import defaultdict
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -47,7 +48,22 @@ templates.env.globals["operator"] = OPERATOR
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    recent = await asyncio.to_thread(repo.list_recent_scans, 10)
+    raw_recent = await asyncio.to_thread(repo.list_recent_scans, 50)
+    # Анти-соцдоказательство: один и тот же домен 10 раз подряд выглядит как
+    # «сервисом пользуется только владелец». Дедуплицируем по домену и
+    # показываем блок только при достаточном разнообразии.
+    seen: set[str] = set()
+    recent = []
+    for s in raw_recent:
+        domain = urlparse(s.url).netloc.lower().removeprefix("www.")
+        if domain in seen:
+            continue
+        seen.add(domain)
+        recent.append(s)
+        if len(recent) >= 10:
+            break
+    if len(recent) < 5:
+        recent = []
     return templates.TemplateResponse(request, "index.html", {"recent": recent})
 
 
