@@ -72,6 +72,11 @@ async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+@router.get("/oferta", response_class=HTMLResponse)
+async def oferta(request: Request):
+    return templates.TemplateResponse(request, "oferta.html", {})
+
+
 # === Оплата: Pro через эквайринг Точки ===
 
 _PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
