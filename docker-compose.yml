@@ -27,6 +27,11 @@ services:
   api:
     build: .
     restart: unless-stopped
+    # .env хоста пробрасывается в контейнер целиком (METRIKA_ID, TOCHKA_* и т.д.):
+    # сам файл в образ не копируется, pydantic-settings читает переменные окружения.
+    env_file:
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
       REDIS_URL: redis://redis:6379/0
@@ -43,6 +48,9 @@ services:
   worker:
     build: .
     restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
       REDIS_URL: redis://redis:6379/0

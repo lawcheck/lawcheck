@@ -46,6 +46,7 @@
   </div>
 
   {% if not is_active and scan.status == 'done' %}
+  <script>lcGoal('report_view');</script>
   <div class="progress-wrap">
     <div class="progress-label">
       <span>Соответствие требованиям</span>
@@ -72,7 +73,7 @@
       <strong>PDF-заключение с подписью юриста — 990 ₽</strong>
       <span>Готовый документ с шаблонами исправлений. Первые 7 дней бесплатно.</span>
     </div>
-    <a href="/pricing" class="upsell-cta">Получить PDF</a>
+    <a href="/pricing" class="upsell-cta" data-goal="pay_click">Получить PDF</a>
   </div>
   {% endif %}
 
@@ -81,7 +82,7 @@
     ✅ Готово — пришлём отчёт на почту и предупредим, если найдём новые нарушения.
   </div>
   {% else %}
-  <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post">
+  <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post" data-goal="email_subscribe">
     <div class="sub-text">
       <strong>Получить отчёт на почту</strong>
       <span>и узнать первым, если на сайте появятся новые нарушения</span>

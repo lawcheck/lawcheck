@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Кабинет заказа · LawCheck{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="scan-head">
+    <div>
+      <h1 style="font-size: 22px; margin: 0 0 4px;">Кабинет заказа <span class="mono">{{ order.id[:8] }}</span></h1>
+      <div class="stamp">
+        тариф {{ order.plan|capitalize }} · {{ order.created_at.strftime('%d.%m.%Y') }} ·
+        {% if order.status == 'paid' %}<span class="pill ok">оплачен</span>
+        {% else %}<span class="pill warning">{{ 'ожидает оплаты' if order.status in ('created','pending') else order.status }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <p class="account-note">Сохраните ссылку на эту страницу — это ваш доступ к функциям тарифа.
+    Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
+
+  {% if order.status != 'paid' %}
+  <div class="status-banner error" style="margin-top: 12px;">
+    Заказ не оплачен. <a href="/pricing">Вернуться к тарифам</a> или написать нам, если оплата уже прошла.
+  </div>
+  {% endif %}
+</div>
+
+{% if order.status == 'paid' %}
+<div class="card">
+  <h2 style="font-size: 18px; margin: 0 0 10px;">Еженедельный мониторинг</h2>
+  {% if attached %}
+  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Сайт подключён — первая проверка уже запущена.</div>
+  {% endif %}
+  {% if order.monitored_url %}
+    <p>Под наблюдением: <strong class="mono">{{ order.monitored_url }}</strong>.
+      Проверяем раз в неделю; изменения видны ниже.</p>
+  {% else %}
+    <p>Укажите сайт — будем проверять его каждую неделю и фиксировать изменения.</p>
+  {% endif %}
+  <form class="monitor-form" action="/account/{{ order.id }}/monitor" method="post">
+    <div class="url-field" style="max-width: 420px;">
+      <span class="scheme">https://</span>
+      <input type="text" name="url" placeholder="mystore.ru"
+             value="{{ order.monitored_url|replace('https://','')|replace('http://','') }}"
+             aria-label="Сайт для мониторинга">
+    </div>
+    <button type="submit">{{ 'Сменить сайт' if order.monitored_url else 'Подключить' }}</button>
+  </form>
+
+  {% if diff %}
+  <div class="diff-wrap">
+    <h3 style="font-size: 15px; margin: 18px 0 8px;">Изменения с прошлой проверки
+      <span class="stamp">({{ diff.prev.created_at.strftime('%d.%m') }} → {{ diff.last.created_at.strftime('%d.%m.%Y') }})</span></h3>
+    {% if not diff.new and not diff.fixed %}
+      <p class="diff-none">Изменений нет — {{ diff.same }} наход{{ 'ка' if diff.same == 1 else ('ки' if diff.same in (2,3,4) else 'ок') }} без движения.</p>
+    {% endif %}
+    {% if diff.new %}
+      <div class="diff-group bad"><strong>Новые проблемы ({{ diff.new|length }}):</strong>
+        <ul>{% for f in diff.new %}<li><span class="pill {{ f.severity }}">{{ f.severity }}</span> {{ f.title }}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+    {% if diff.fixed %}
+      <div class="diff-group good"><strong>Исправлено ({{ diff.fixed|length }}):</strong>
+        <ul>{% for f in diff.fixed %}<li>{{ f.title }}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if scans %}
+  <h3 style="font-size: 15px; margin: 18px 0 8px;">История проверок</h3>
+  <div class="recent">
+    {% for s in scans %}
+    <div class="row">
+      <div><a href="/report/{{ s.id }}">отчёт от {{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</a></div>
+      <div><span class="pill ok">done</span></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size: 18px; margin: 0 0 10px;">Шаблоны документов</h2>
+  <p>Политика обработки ПДн, согласие на обработку, уведомление в РКН — болванки
+    под ваш сайт.</p>
+  <a class="btn-pay" href="/account/{{ order.id }}/templates">Открыть шаблоны</a>
+</div>
+
+<div class="card">
+  <h2 style="font-size: 18px; margin: 0 0 10px;">PDF-заключение юриста</h2>
+  <p>Входит в тариф. Напишите на <a href="mailto:{{ operator.email }}?subject=PDF-заключение, заказ {{ order.id[:8] }}">{{ operator.email }}</a> —
+    укажите сайт и номер заказа; заключение готовится до 5 рабочих дней.</p>
+</div>
+{% endif %}
+{% endblock %}

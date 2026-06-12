@@ -335,6 +335,40 @@
     form.buy-form { margin: 0; }
     form.buy-form button.plan-cta { width: 100%; border: 0; cursor: pointer; font-size: 15px; }
 
+    /* --- Cookie-баннер --- */
+    .cookie-bar { position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 50;
+      max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+      padding: 14px 18px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .cookie-bar .cookie-text { flex: 1 1 320px; min-width: 0; font-size: 13px; color: var(--ink-soft); }
+    .cookie-bar .cookie-text a { color: var(--brand); }
+    .cookie-bar .cookie-actions { display: flex; gap: 8px; }
+    .cookie-bar button { padding: 9px 16px; font-size: 14px; border-radius: 9px; }
+    .cookie-bar button.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+    .cookie-bar button.ghost:hover { background: var(--page); }
+
+    /* --- Кабинет заказа (Pro) --- */
+    .account-note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+    .monitor-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; margin-top: 6px; }
+    .monitor-form .url-field { flex: 1 1 280px; }
+    .monitor-form button { background: var(--brand); color: #fff; border: 0; border-radius: 10px; padding: 0 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .monitor-form button:hover { background: var(--brand-hover); }
+    .diff-wrap { margin-top: 6px; }
+    .diff-none { color: var(--muted); font-size: 14px; }
+    .diff-group { border-radius: 10px; padding: 12px 14px; margin: 8px 0; font-size: 14px; }
+    .diff-group.bad { background: var(--crit-soft); border: 1px solid #f3c9c4; }
+    .diff-group.good { background: var(--ok-soft); border: 1px solid #b7e4c7; }
+    .diff-group ul { margin: 6px 0 0; padding-left: 18px; }
+    .diff-group li { margin: 4px 0; }
+
+    /* --- Шаблоны документов (Pro) --- */
+    .tpl { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 10px 0; }
+    .tpl summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+    .tpl-body { margin-top: 10px; }
+    .tpl-body blockquote { background: var(--page); border-left: 3px solid var(--brand); margin: 10px 0; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 14px; }
+    .tpl-hint { font-size: 13px; color: var(--muted); }
+    .tpl-footer { margin-top: 20px; color: var(--ink-soft); }
+
     /* --- Страница Политики обработки ПДн --- */
     .policy { max-width: 760px; margin: 0 auto; }
     .policy h1 { font-size: 28px; margin: 8px 0 4px; }
@@ -343,6 +377,63 @@
     .policy p, .policy li { font-size: 15px; line-height: 1.65; color: var(--ink-soft); }
     .policy ul { padding-left: 22px; margin: 8px 0; }
   </style>
+  {% if metrika_id %}
+  <script>
+    // Яндекс.Метрика грузится ТОЛЬКО после «Принять» в cookie-баннере —
+    // иначе сайт не пройдёт собственную проверку D2 (трекеры до согласия).
+    (function () {
+      var MID = Number("{{ metrika_id }}");
+      var KEY = "lc_cookie_consent"; // "all" | "necessary"
+      var queue = [];
+
+      function flush() {
+        if (!window.ym) return;
+        while (queue.length) ym(MID, "reachGoal", queue.shift());
+      }
+      window.lcGoal = function (name) { queue.push(name); flush(); };
+
+      function loadMetrika() {
+        (function (m, e, t, r, i, k, a) {
+          m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+          m[i].l = 1 * new Date();
+          k = e.createElement(t); a = e.getElementsByTagName(t)[0];
+          k.async = 1; k.src = r; a.parentNode.insertBefore(k, a);
+        })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+        // webvisor выключен сознательно: записи сессий = лишние ПДн
+        ym(MID, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+        flush();
+      }
+
+      // Цели на кликах и сабмитах: любой элемент с data-goal="имя_цели"
+      document.addEventListener("click", function (e) {
+        var el = e.target.closest && e.target.closest("[data-goal]");
+        if (el && el.tagName !== "FORM") lcGoal(el.getAttribute("data-goal"));
+      });
+      document.addEventListener("submit", function (e) {
+        var g = e.target.getAttribute && e.target.getAttribute("data-goal");
+        if (g) lcGoal(g);
+      });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        var bar = document.getElementById("cookie-bar");
+        var choice = null;
+        try { choice = localStorage.getItem(KEY); } catch (e) {}
+        if (choice === "all") { loadMetrika(); return; }
+        if (choice === "necessary" || !bar) return;
+        bar.hidden = false;
+        function decide(value) {
+          try { localStorage.setItem(KEY, value); } catch (e) {}
+          bar.hidden = true;
+          if (value === "all") loadMetrika();
+        }
+        document.getElementById("cookie-accept").addEventListener("click", function () { decide("all"); });
+        document.getElementById("cookie-decline").addEventListener("click", function () { decide("necessary"); });
+      });
+    })();
+  </script>
+  {% else %}
+  <script>window.lcGoal = function () {};</script>
+  {% endif %}
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -394,5 +485,17 @@
       </div>
     </div>
   </footer>
+  {% if metrika_id %}
+  <div class="cookie-bar" id="cookie-bar" hidden>
+    <div class="cookie-text">
+      Используем cookie Яндекс.Метрики, чтобы понимать, как пользуются сервисом.
+      Можно отказаться — сервис будет работать так же. <a href="/privacy">Подробнее</a>
+    </div>
+    <div class="cookie-actions">
+      <button type="button" id="cookie-accept">Принять</button>
+      <button type="button" id="cookie-decline" class="ghost">Только необходимые</button>
+    </div>
+  </div>
+  {% endif %}
 </body>
 </html>
