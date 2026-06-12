@@ -1,38 +1,174 @@
 {% extends "base.html" %}
+{% block title %}LawCheck — проверка сайта на штрафы по 152-ФЗ{% endblock %}
+{% block nav_home %}active{% endblock %}
 
 {% block content %}
-<div class="card">
-  <h2 style="margin-top:0">Проверить сайт</h2>
-  <p style="color: var(--muted); margin-top: 0;">
-    Сервис проверяет сайт на соответствие 152-ФЗ «О персональных данных»:
-    наличие Политики, обязательных разделов, согласий у форм, корректность
-    реквизитов владельца и его регистрацию в реестре операторов РКН.
-  </p>
-  <form action="/scan" method="post">
-    <div class="form-row">
-      <input type="url" name="url" placeholder="https://example.ru" required autofocus>
-      <input type="number" name="max_pages" value="10" min="1" max="100" title="страниц для обхода">
-      <button type="submit">Проверить</button>
+<section class="hero">
+  <div>
+    <span class="badge-pill"><span class="dot"></span>30 проверок · 6 законов</span>
+    <h1>Проверьте сайт на нарушения, за которые штрафуют по <span class="accent">152-ФЗ</span> — за 60 секунд.</h1>
+    <p class="sub">
+      Обходим сайт и находим нарушения по 152-ФЗ, ЗОЗПП, рекламе и защите детей.
+      Не галочки, а конкретные цитаты со страниц, ссылки на нормы и оценка штрафа —
+      по одной статье КоАП до <strong>700 000 ₽</strong>.
+    </p>
+    <div class="trust">
+      <span>без регистрации</span>
+      <span>отчёт публичный по ссылке</span>
+      <span>не храним содержимое страниц</span>
     </div>
-  </form>
+  </div>
+
+  <div class="form-card">
+    <h3>Запустить проверку</h3>
+    <form action="/scan" method="post" id="scan-form" novalidate>
+      <div class="url-field">
+        <span class="scheme">https://</span>
+        <input type="text" name="url" id="scan-url" placeholder="mystore.ru" autofocus
+               aria-label="Адрес сайта для проверки" autocomplete="off"
+               autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field-error" id="scan-error" role="alert" hidden></div>
+      <button type="submit" id="scan-submit">Проверить за 60 секунд</button>
+    </form>
+    <div class="note">Не храним содержимое страниц после генерации отчёта.</div>
+    <script>
+      (function () {
+        var form = document.getElementById('scan-form');
+        var input = document.getElementById('scan-url');
+        var error = document.getElementById('scan-error');
+        var btn = document.getElementById('scan-submit');
+        function showError(msg) {
+          error.textContent = msg;
+          error.hidden = false;
+          input.setAttribute('aria-invalid', 'true');
+          input.focus();
+        }
+        function clearError() {
+          error.hidden = true;
+          input.removeAttribute('aria-invalid');
+        }
+        input.addEventListener('input', clearError);
+        form.addEventListener('submit', function (e) {
+          var raw = input.value.trim().replace(/^https?:\/\//i, '');
+          if (!raw) {
+            e.preventDefault();
+            showError('Введите адрес сайта.');
+            return;
+          }
+          if (!/^[^\s.]+(\.[^\s.]+)+/.test(raw)) {
+            e.preventDefault();
+            showError('Похоже на неполный адрес — нужен домен вида mystore.ru.');
+            return;
+          }
+          input.value = raw;
+          btn.disabled = true;
+          btn.classList.add('loading');
+          btn.textContent = 'Проверяем…';
+        });
+      })();
+    </script>
+  </div>
+</section>
+
+<div class="mini-cards">
+  <div class="mc"><div class="t">Политика ПДн</div><div class="d">наличие, валидность и обязательные разделы</div></div>
+  <div class="mc"><div class="t">Формы и реквизиты</div><div class="d">согласия у форм, ИНН/ОГРН, реестр РКН</div></div>
+  <div class="mc"><div class="t">Cookies и реклама</div><div class="d">трекеры, трансграничная передача, маркировка</div></div>
 </div>
 
+<section class="section">
+  <div class="kicker">01 · цена вопроса</div>
+  <h2>Сколько стоят нарушения</h2>
+  <p class="lead">Ориентировочные диапазоны штрафов для юрлиц по КоАП РФ. Не точный расчёт — оценка порядка риска, который находит проверка.</p>
+  <div class="fine-cards">
+    <div class="fine-card">
+      <div class="amount">до 700 000 ₽</div>
+      <div class="reason">Сбор ПДн без надлежащего согласия</div>
+      <div class="src">ст. 13.11 ч. 2 КоАП РФ</div>
+    </div>
+    <div class="fine-card">
+      <div class="amount">до 6 000 000 ₽</div>
+      <div class="reason">Нарушение локализации и трансграничной передачи ПДн</div>
+      <div class="src">ст. 13.11 ч. 8 КоАП РФ</div>
+    </div>
+    <div class="fine-card">
+      <div class="amount">до 500 000 ₽</div>
+      <div class="reason">Реклама без маркировки и нарушения 38-ФЗ</div>
+      <div class="src">ст. 14.3 КоАП РФ</div>
+    </div>
+  </div>
+  <div class="fine-disclaimer">Суммы ориентировочные и требуют юридической проверки: редакции статей КоАП меняются (в т.ч. реформа ответственности за ПДн — 420-ФЗ от 30.05.2025).</div>
+</section>
+
+<section class="section">
+  <div class="kicker">02 · что попадает в отчёт</div>
+  <h2>Не «соответствует / нет», а конкретика по каждой находке</h2>
+  <p class="lead">По каждому нарушению — где нашли, цитата со страницы, какая норма нарушена и готовый текст для исправления.</p>
+  <div class="what-grid">
+    <ul class="checklist">
+      <li><span class="num">1</span><div><div class="ct">URL и цитата</div><div class="cd">точная страница и фрагмент, который вызвал срабатывание</div></div></li>
+      <li><span class="num">2</span><div><div class="ct">Норма закона</div><div class="cd">статья и пункт + внутренний код правила</div></div></li>
+      <li><span class="num">3</span><div><div class="ct">Severity</div><div class="cd">критично / предупреждение / информация</div></div></li>
+      <li><span class="num">4</span><div><div class="ct">Шаблон замены</div><div class="cd">готовый текст, который можно вставить на сайт</div></div></li>
+      <li><span class="num">5</span><div><div class="ct">Оценка штрафа</div><div class="cd">ориентировочный диапазон по статье КоАП</div></div></li>
+    </ul>
+
+    <div class="finding critical" style="background: var(--surface);">
+      <div class="head">
+        <span class="pill critical">critical</span>
+        <span class="title">Форма заявки собирает ПДн без согласия на обработку</span>
+      </div>
+      <div class="law">ст. 9 152-ФЗ · B2.consent</div>
+      <div class="fine-line">риск штрафа: <strong>300 000–700 000 ₽</strong> <span class="koap">(ст. 13.11 ч. 2 КоАП РФ)</span></div>
+      <div class="where">где: mystore.ru/contacts</div>
+      <div class="quote">&lt;form&gt; … &lt;input name="phone"&gt; — рядом нет чекбокса согласия и ссылки на Политику</div>
+      <div class="rec"><strong>Как исправить:</strong> добавьте обязательный чекбокс «Согласен на обработку ПДн» со ссылкой на Политику перед кнопкой отправки.</div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="numbers">
+    <div class="n"><div class="big">30</div><div class="cap">автоматических проверок</div><div class="src">152-ФЗ, ЗОЗПП, реклама, дети</div></div>
+    <div class="n"><div class="big">6</div><div class="cap">законов и подзаконных актов</div><div class="src">152-ФЗ · ЗОЗПП · ПП №2463 · 38-ФЗ · 436-ФЗ · ГК/129-ФЗ</div></div>
+    <div class="n"><div class="big crit">700 000 ₽</div><div class="cap">штраф по одной статье</div><div class="src">ст. 13.11 ч. 2 КоАП РФ (ориентировочно)</div></div>
+  </div>
+</section>
+
 {% if recent %}
-<div class="card recent">
-  <h3 style="margin-top:0">Последние проверки</h3>
-  {% for s in recent %}
+<section class="section">
+  <div class="kicker">04 · соцдоказательство</div>
+  <h2>Последние публичные проверки</h2>
+  <div class="card recent" style="margin-top: 12px;">
+    {% for s in recent %}
     <div class="row">
       <div>
         <a href="/report/{{ s.id }}">{{ s.url }}</a>
         <div class="url">{{ s.id[:8] }} · {{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</div>
       </div>
       <div>
-        <span class="pill {% if s.status == 'done' %}ok{% elif s.status == 'error' %}critical{% else %}info{% endif %}">
-          {{ s.status }}
-        </span>
+        <span class="pill {% if s.status == 'done' %}ok{% elif s.status == 'error' %}critical{% else %}info{% endif %}">{{ s.status }}</span>
       </div>
     </div>
-  {% endfor %}
-</div>
+    {% endfor %}
+  </div>
+</section>
 {% endif %}
+
+<section class="section">
+  <div class="kicker">05 · кто за этим стоит</div>
+  <h2>Заключения готовит практикующий юрист</h2>
+  <p class="lead">Движок находит нарушения автоматически, а PDF-заключение на платном тарифе проверяет и подписывает юрист-партнёр.</p>
+  {% include "_expert.html" %}
+</section>
+
+<div class="footer-cta">
+  <h2>Юрист в фоне — пока вы развиваете продукт</h2>
+  <p>Запустите бесплатную проверку и посмотрите, что найдёт движок на вашем сайте.</p>
+  <div class="row">
+    <a href="/pricing" class="btn-ghost">Тарифы</a>
+    <a href="#top" class="btn-dark" onclick="document.querySelector('.form-card input').focus()">Проверить сайт</a>
+  </div>
+</div>
 {% endblock %}

@@ -2,16 +2,18 @@ from lawcheck.checks.base import Severity
 from lawcheck.checks.pd_152.policy_sections import (
     MIN_TEXT_LEN, PolicySectionsCheck,
 )
-from lawcheck.crawler.snapshot import Link, PageSnapshot, SiteSnapshot
+from lawcheck.crawler.snapshot import Link, NetworkRequest, PageSnapshot, SiteSnapshot
 from lawcheck.dictionaries import loader
 
 POLICY_URL = "https://example.com/privacy"
 
 
-def _snap(policy_text: str) -> SiteSnapshot:
+def _snap(policy_text: str, network: list[str] | None = None) -> SiteSnapshot:
     return SiteSnapshot(start_url="https://example.com/", pages=[
         PageSnapshot(url="https://example.com/", status=200,
-                     links=[Link(url=POLICY_URL, text="Политика конфиденциальности")]),
+                     links=[Link(url=POLICY_URL, text="Политика конфиденциальности")],
+                     network=[NetworkRequest(url=u, domain="", resource_type="")
+                              for u in (network or [])]),
         PageSnapshot(url=POLICY_URL, status=200, text=policy_text),
     ])
 
@@ -56,12 +58,30 @@ def test_missing_section_critical():
 
 def test_optional_section_warning_or_info():
     # security_measures помечен severity_if_missing: warning
-    # cross_border помечен severity_if_missing: info
     text = "оператор персональных данных " * 200
     findings = PolicySectionsCheck().run(_snap(text))
     by_id = {f.check_id: f for f in findings}
     assert by_id["A3.security_measures"].severity == Severity.WARNING
-    assert by_id["A3.cross_border"].severity == Severity.INFO
+
+
+def test_cross_border_missing_ok_when_no_foreign_trackers():
+    # Раздела о трансграничке нет, но и передачи за рубеж нет → OK (не обязателен)
+    text = "оператор персональных данных " * 200
+    findings = PolicySectionsCheck().run(_snap(text))
+    by_id = {f.check_id: f for f in findings}
+    assert by_id["A3.cross_border"].severity == Severity.OK
+    assert "не обязателен" in by_id["A3.cross_border"].evidence
+
+
+def test_cross_border_missing_warning_when_foreign_pd_trackers():
+    # Google Analytics (foreign + PD-идентификаторы) → раздел обязателен → WARNING
+    text = "оператор персональных данных " * 200
+    findings = PolicySectionsCheck().run(_snap(
+        text, network=["https://www.google-analytics.com/collect?v=1"]))
+    by_id = {f.check_id: f for f in findings}
+    f = by_id["A3.cross_border"]
+    assert f.severity == Severity.WARNING
+    assert "Google Analytics" in f.evidence
 
 
 def test_two_weak_markers_make_section_present():

@@ -8,9 +8,16 @@
 Это эвристика: мы ловим употребления и эмитим WARNING, а не CRITICAL —
 финальная квалификация (есть ли подтверждение в виде ссылки на исследование)
 требует ручной проверки.
+
+Гейт применимости: ст. 5 38-ФЗ применяется к РЕКЛАМЕ. Информация
+о собственных товарах/услугах на собственном сайте по практике ФАС,
+как правило, рекламой не является. Поэтому без признаков размещения
+рекламы (см. _ad_signs.py) находка понижается до INFO с условной
+формулировкой, а не вменяется как нарушение.
 """
 import re
 
+from lawcheck.checks.advertising._ad_signs import detect_ad_signs
 from lawcheck.checks.base import Check, Finding, Severity
 from lawcheck.crawler.snapshot import SiteSnapshot
 from lawcheck.utils.text import normalize_ru
@@ -74,6 +81,24 @@ class SuperlativesCheck(Check):
             )]
 
         sample = "; ".join(f"«…{ctx}…»" for _, ctx in examples[:3])
+        extra = {"examples": [{"page": u, "context": c} for u, c in examples]}
+
+        # Гейт применимости: если сайт не размещает рекламу, ст. 5 38-ФЗ
+        # к его собственным страницам, как правило, не применяется.
+        if not detect_ad_signs(snapshot).site_places_ads:
+            return [Finding(
+                check_id=self.id, severity=Severity.INFO, title=self.title,
+                evidence=f"Найдено {len(examples)} употреблений превосходной степени "
+                         f"({sample}), но признаков размещения рекламы на сайте нет. "
+                         f"Информация о собственных товарах на собственном сайте, как правило, "
+                         f"рекламой не является — требования ст. 5 38-ФЗ к ней не применяются.",
+                location=examples[0][0], law_reference=LAW_REF,
+                recommendation="Если эти формулировки используются и в рекламных материалах "
+                               "(баннеры, объявления, рассылки) — там потребуется конкретный "
+                               "критерий сравнения и источник данных (исследование, рейтинг).",
+                extra=extra,
+            )]
+
         sev = Severity.INFO if has_disclaimer else Severity.WARNING
         return [Finding(
             check_id=self.id, severity=sev, title=self.title,
@@ -84,5 +109,5 @@ class SuperlativesCheck(Check):
             recommendation="При использовании 'лучший', 'самый', '№1' и т. п. укажите конкретный "
                            "критерий сравнения и источник данных (исследование, рейтинг, опрос). "
                            "Иначе ФАС может квалифицировать рекламу как недостоверную.",
-            extra={"examples": [{"page": u, "context": c} for u, c in examples]},
+            extra=extra,
         )]

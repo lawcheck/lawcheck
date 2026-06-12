@@ -1,29 +1,127 @@
 {% extends "base.html" %}
 {% block title %}Отчёт · {{ scan.url }} · LawCheck{% endblock %}
 
-{% block head_extra %}
-{% if is_active %}<meta http-equiv="refresh" content="3">{% endif %}
-{% endblock %}
+{% block head_extra %}{% endblock %}
+
+{% macro finding_card(f, scan, rec_open=true, locked_total=0) %}
+<div class="finding {{ f.severity }}">
+  <div class="head">
+    <span class="pill {{ f.severity }}">{{ f.severity }}</span>
+    <span class="title">{{ f.title }}</span>
+  </div>
+  {% if f.law_reference or f.check_id %}
+    <div class="law">{{ f.law_reference }}{% if f.check_id %} · {{ f.check_id }}{% endif %}</div>
+  {% endif %}
+  {% if f.severity != 'ok' %}{% set g = fine_group(f.check_id) %}{% if g %}
+    <div class="fine-line">риск штрафа: <strong>{{ g.min|money }}–{{ g.max|money }} ₽</strong> <span class="koap">({{ g.koap }})</span></div>
+  {% endif %}{% endif %}
+  {% if f.location and f.location != scan.url %}
+    <div class="where">где: <a href="{{ f.location }}" target="_blank" rel="noopener">{{ f.location }}</a></div>
+  {% endif %}
+  {% if f.evidence %}<div class="quote">{{ f.evidence }}</div>{% endif %}
+  {% if f.recommendation %}
+    {% if rec_open %}
+      <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}</div>
+    {% else %}
+      <div class="rec locked">
+        <strong>🔒 Как исправить</strong> — готовый текст в Pro.
+        <a href="/pricing">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endmacro %}
 
 {% block content %}
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+  <div class="scan-head">
     <div>
-      <h2 style="margin:0 0 4px;">{{ scan.url }}</h2>
-      <div style="color: var(--muted); font-size: 13px;">
+      <div class="url">{{ scan.url }}{% if is_https %}<span class="badge https">HTTPS</span>{% endif %}</div>
+      <div class="stamp">
         scan {{ scan.id[:8] }} · {{ scan.created_at.strftime('%d.%m.%Y %H:%M') }}
         {% if scan.pages_crawled %}· обработано страниц: {{ scan.pages_crawled }}{% endif %}
       </div>
     </div>
-    <a href="/" style="color: var(--accent); text-decoration: none; font-size: 14px;">← новая проверка</a>
+    <a href="/" style="color: var(--brand); text-decoration: none; font-size: 14px;">← новая проверка</a>
   </div>
+
+  {% if not is_active and scan.status == 'done' %}
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Соответствие требованиям</span>
+      <span><strong>{{ compliance }}%</strong></span>
+    </div>
+    <div class="progress-bar"><div class="fill" style="width: {{ compliance }}%"></div></div>
+  </div>
+  {% if risk %}
+  <div class="risk-banner">
+    <div>
+      <div class="risk-label">Суммарный риск штрафа</div>
+      <div class="risk-sum">до {{ risk.max|money }} ₽</div>
+    </div>
+    <div class="risk-note">
+      Ориентировочно по {{ risk.groups|length }} стат{{ 'ье' if risk.groups|length == 1 else 'ьям' }} КоАП РФ
+      (от {{ risk.min|money }} ₽). Оценка порядка риска, не юридическая консультация.
+    </div>
+  </div>
+  {% endif %}
+
+  {% if counts.critical or counts.warning %}
+  <div class="upsell">
+    <div class="upsell-text">
+      <strong>PDF-заключение с подписью юриста — 990 ₽</strong>
+      <span>Готовый документ с шаблонами исправлений. Первые 7 дней бесплатно.</span>
+    </div>
+    <a href="/pricing" class="upsell-cta">Получить PDF</a>
+  </div>
+  {% endif %}
+
+  {% if subscribed %}
+  <div class="subscribe-box done">
+    ✅ Готово — пришлём отчёт на почту и предупредим, если найдём новые нарушения.
+  </div>
+  {% else %}
+  <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post">
+    <div class="sub-text">
+      <strong>Получить отчёт на почту</strong>
+      <span>и узнать первым, если на сайте появятся новые нарушения</span>
+    </div>
+    <div class="sub-row">
+      <input type="email" name="email" placeholder="you@company.ru" required
+             aria-label="Email для отправки отчёта">
+      <button type="submit">Прислать</button>
+    </div>
+  </form>
+  {% endif %}
+  {% endif %}
 </div>
 
-{% if scan.status == 'pending' or scan.status == 'running' %}
+{% if is_active %}
   <div class="status-banner running">
     <span class="spinner"></span>
-    {% if scan.status == 'pending' %}Скан в очереди…{% else %}Идёт сканирование. Страница обновится автоматически.{% endif %}
+    {% if scan.status == 'pending' %}Скан в очереди…{% else %}Идёт сканирование<span id="pages-live">{% if scan.pages_crawled %} · обработано страниц: {{ scan.pages_crawled }}{% endif %}</span>. Страница обновится автоматически.{% endif %}
   </div>
+  <script>
+    (function () {
+      function poll() {
+        fetch('/api/scan/' + {{ scan.id|tojson }})
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.status === 'done' || d.status === 'error') {
+              location.reload();
+              return;
+            }
+            var el = document.getElementById('pages-live');
+            if (el && d.pages_crawled) {
+              el.textContent = ' · обработано страниц: ' + d.pages_crawled;
+            }
+            setTimeout(poll, 3000);
+          })
+          .catch(function () { setTimeout(poll, 5000); });
+      }
+      setTimeout(poll, 3000);
+    })();
+  </script>
 {% elif scan.status == 'error' %}
   <div class="status-banner error">
     <strong>Ошибка:</strong> {{ scan.error or 'неизвестная' }}
@@ -36,34 +134,40 @@
     {% if counts.ok       %}<div class="stat ok"><span class="n">{{ counts.ok }}</span>в порядке</div>{% endif %}
   </div>
 
-  {% set seen_blocks = [] %}
-  {% for prefix in ['A1', 'A2', 'A3', 'B1', 'B2', 'D1', 'D2', 'E1', 'E2', 'C2', 'F1', 'F2', 'F3', 'G1', 'G2', 'G3', 'H1'] %}
-    {% set block = block_titles.get(prefix, prefix) %}
-    {% if prefix in grouped and block not in seen_blocks %}
-      {% set _ = seen_blocks.append(block) %}
-      <h3 class="block-title">{{ block }}</h3>
-    {% endif %}
-    {% if prefix in grouped %}
-      {% for f in grouped[prefix] %}
-      <div class="finding {{ f.severity }}">
-        <div class="head">
-          <span class="pill {{ f.severity }}">{{ f.severity }}</span>
-          <span class="title">{{ f.title }}</span>
-          <span class="check-id">{{ f.check_id }}</span>
-        </div>
-        <div class="evidence">{{ f.evidence }}</div>
-        <div class="meta">
-          норма: {{ f.law_reference }}
-          {% if f.location and f.location != scan.url %}
-            · <a href="{{ f.location }}" target="_blank" rel="noopener">источник</a>
-          {% endif %}
-        </div>
-        {% if f.recommendation %}
-          <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}</div>
+  <div class="report-grid">
+    <aside class="toc">
+      <ul>
+        {% for b in blocks %}
+        <li>
+          <a href="#{{ b.slug }}">
+            <span class="marker {% if b.worst == 'critical' %}crit{% elif b.worst == 'warning' or b.worst == 'info' %}warn{% else %}ok{% endif %}"></span>
+            {{ b.title }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </aside>
+
+    <div class="report-body">
+      {% for b in blocks %}
+      <section id="{{ b.slug }}">
+        <h3 class="block-title">{{ b.title }}</h3>
+
+        {% for f in b.problems %}
+          {{ finding_card(f, scan, rec_open=(f.id in open_rec_ids or not f.recommendation), locked_total=locked_count) }}
+        {% endfor %}
+
+        {% if b.oks %}
+        <details class="ok-group">
+          <summary>{{ b.oks|length }} проверок пройдено</summary>
+          {% for f in b.oks %}
+            {{ finding_card(f, scan) }}
+          {% endfor %}
+        </details>
         {% endif %}
-      </div>
+      </section>
       {% endfor %}
-    {% endif %}
-  {% endfor %}
+    </div>
+  </div>
 {% endif %}
 {% endblock %}

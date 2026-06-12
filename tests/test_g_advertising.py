@@ -17,26 +17,39 @@ def _snap(text: str = "", links: list[tuple[str, str]] | None = None,
 
 # === G1 superlatives ===
 
+# Сетевой запрос к РСЯ — признак, что сайт размещает рекламу (38-ФЗ применим)
+_ADS_NETWORK = ["https://an.yandex.ru/banner.js"]
+
+
 def test_g1_no_superlatives_ok():
     [f] = SuperlativesCheck().run(_snap(text="Обычный текст без превосходных степеней"))
     assert f.severity == Severity.OK
 
 
-def test_g1_finds_samyj_and_warns():
+def test_g1_superlatives_without_ad_signs_info_only():
+    # Информационный сайт без рекламы: превосходная степень — не нарушение, INFO
     [f] = SuperlativesCheck().run(_snap(text="Наш сервис — самый удобный на рынке"))
+    assert f.severity == Severity.INFO
+    assert "не применяются" in f.evidence
+
+
+def test_g1_finds_samyj_and_warns():
+    [f] = SuperlativesCheck().run(_snap(
+        text="Наш сервис — самый удобный на рынке", network=_ADS_NETWORK))
     assert f.severity == Severity.WARNING
     assert "сам" in f.evidence.lower()
 
 
 def test_g1_disclaimer_downgrades_to_info():
     [f] = SuperlativesCheck().run(_snap(
-        text="Лучший банк страны по данным исследования НАФИ 2024"
+        text="Лучший банк страны по данным исследования НАФИ 2024",
+        network=_ADS_NETWORK,
     ))
     assert f.severity == Severity.INFO
 
 
 def test_g1_no1_pattern_caught():
-    [f] = SuperlativesCheck().run(_snap(text="Мы № 1 в России!"))
+    [f] = SuperlativesCheck().run(_snap(text="Мы № 1 в России!", network=_ADS_NETWORK))
     assert f.severity == Severity.WARNING
 
 
@@ -88,8 +101,17 @@ def test_g3_erid_extraction_from_url():
     assert _erid_from_url("https://x.ru/") is None
 
 
-def test_g3_no_ads_no_erid_no_finding():
-    assert OrdMarkingCheck().run(_snap(text="нет рекламы")) == []
+def test_g3_no_ads_no_erid_ok_not_applicable():
+    [f] = OrdMarkingCheck().run(_snap(text="нет рекламы"))
+    assert f.severity == Severity.OK
+    assert "не применяются" in f.evidence
+
+
+def test_g3_advertiser_pixel_only_ok():
+    # VK Pixel — продвижение самого сайта, обязанности маркировки нет
+    [f] = OrdMarkingCheck().run(_snap(network=["https://vk.com/rtrg?p=123"]))
+    assert f.severity == Severity.OK
+    assert "пиксели" in f.evidence.lower()
 
 
 def test_g3_erid_found_info():

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if ok %}Оплата прошла{% else %}Оплата не завершена{% endif %} · LawCheck{% endblock %}
+
+{% block content %}
+<div class="pay-card">
+  {% if ok %}
+    <h1>✅ Оплата прошла</h1>
+    <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен.
+      Мы активируем тариф и напишем вам в течение рабочего дня.</p>
+    <p class="pay-note">Чек придёт на почту, указанную при оплате. Вопросы —
+      на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
+    <a href="/" class="btn-pay">На главную</a>
+  {% else %}
+    <h1>Оплата не завершена</h1>
+    <p>{% if order %}Заказ <span class="mono">{{ order.id[:8] }}</span> пока не оплачен.
+      Если вы уже заплатили — обновите страницу через минуту или напишите нам.{% else %}
+      Не нашли такой заказ. Попробуйте ещё раз с страницы тарифов.{% endif %}</p>
+    <div class="pay-row">
+      <a href="/pricing" class="btn-pay">Попробовать снова</a>
+      <a href="mailto:{{ operator.email }}" class="pay-back">Написать в поддержку</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

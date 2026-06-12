@@ -17,6 +17,7 @@ class TrackerHit:
     sets_pd_identifiers: bool
     cross_border_risk: str  # low | medium | high | "" (для RU)
     matched_urls: list[str]   # уникальные примеры сработавших URL
+    serves_creatives: bool = False  # ads-сеть отдаёт креативы на сайт (не пиксель рекламодателя)
 
 
 def _request_keys(snapshot: SiteSnapshot) -> list[tuple[str, str]]:
@@ -56,6 +57,7 @@ def match_trackers(snapshot: SiteSnapshot) -> list[TrackerHit]:
             sets_pd_identifiers=bool(tracker.get("sets_pd_identifiers")),
             cross_border_risk=tracker.get("cross_border_risk", "") or "",
             matched_urls=matched,
+            serves_creatives=bool(tracker.get("serves_creatives")),
         )
     return list(hits.values())
 

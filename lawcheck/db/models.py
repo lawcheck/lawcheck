@@ -43,3 +43,33 @@ class Finding(Base):
     recommendation: Mapped[str] = mapped_column(Text, default="")
 
     scan: Mapped["Scan"] = relationship(back_populates="findings")
+
+
+class Lead(Base):
+    """Email, оставленный на странице отчёта («прислать отчёт + следить за сайтом»).
+    Рассылка пока ручная — это точка захвата контакта."""
+    __tablename__ = "leads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scan_id: Mapped[str] = mapped_column(String(32), index=True)
+    url: Mapped[str] = mapped_column(String(2048), default="")
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class Order(Base):
+    """Заказ платного тарифа. Создаётся при клике «Оплатить», оплачивается
+    через интернет-эквайринг Точки (платёжная ссылка); статус обновляет
+    вебхук + контрольный запрос к API банка."""
+    __tablename__ = "orders"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    plan: Mapped[str] = mapped_column(String(16))  # pro | business
+    amount: Mapped[int] = mapped_column(Integer)   # в рублях
+    email: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(16), default="created", index=True)
+    # created | pending (ссылка выдана) | paid | failed
+    operation_id: Mapped[str] = mapped_column(String(64), default="", index=True)
+    payment_link: Mapped[str] = mapped_column(String(2048), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

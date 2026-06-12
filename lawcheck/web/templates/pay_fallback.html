@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Оплата · LawCheck{% endblock %}
+
+{% block content %}
+<div class="pay-card">
+  <h1>Оплата тарифа {{ plan|capitalize }} — {{ amount }} ₽/мес</h1>
+  <p>Приём платежей на сайте подключается. Пока — напишите нам, пришлём счёт
+    или ссылку на оплату в ответ:</p>
+  <a class="btn-pay" href="mailto:{{ operator.email }}?subject=LawCheck {{ plan|capitalize }} — заявка на оплату&body=Здравствуйте! Хочу подключить тариф {{ plan|capitalize }}. Мой сайт: ">
+    Написать на {{ operator.email }}
+  </a>
+  <p class="pay-note">Обычно отвечаем в течение рабочего дня. Юридические услуги
+    оказывает {{ operator.short_name }} (ИНН {{ operator.inn }}).</p>
+  <a href="/pricing" class="pay-back">← к тарифам</a>
+</div>
+{% endblock %}

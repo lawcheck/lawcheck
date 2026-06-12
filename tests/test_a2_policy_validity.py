@@ -27,7 +27,7 @@ def test_warning_when_crawler_did_not_visit_policy():
     snap = SiteSnapshot(start_url="https://example.com/", pages=[_home()])
     [f] = PolicyValidityCheck().run(snap)
     assert f.severity == Severity.WARNING
-    assert "не успел" in f.evidence
+    assert "Не удалось загрузить документ Политики" in f.evidence
 
 
 def test_critical_on_404():

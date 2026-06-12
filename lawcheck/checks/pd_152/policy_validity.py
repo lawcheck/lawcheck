@@ -30,11 +30,11 @@ class PolicyValidityCheck(Check):
         if page is None:
             return [Finding(
                 check_id=self.id, severity=Severity.WARNING, title=self.title,
-                evidence=f"Краулер не успел загрузить страницу Политики ({policy_url}) "
-                         f"в пределах max_pages={len(snapshot.pages)}.",
+                evidence=f"Не удалось загрузить документ Политики ({policy_url}) — "
+                         f"он не попал в число проверенных страниц.",
                 location=policy_url, law_reference=LAW_REF,
-                recommendation="Увеличьте лимит страниц для проверки или убедитесь, что Политика "
-                               "доступна по прямой ссылке.",
+                recommendation="Убедитесь, что Политика открывается по прямой ссылке "
+                               "и не закрыта авторизацией.",
             )]
 
         if page.error or page.status == 0:
