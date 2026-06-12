@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from lawcheck.api.routes.scan import _run_scan
+from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.reporting import fines
@@ -42,6 +43,7 @@ OPERATOR = {
     "policy_date": "10 июня 2026 г.",
 }
 templates.env.globals["operator"] = OPERATOR
+templates.env.globals["metrika_id"] = settings.metrika_id
 
 
 # === Главная: форма + список последних сканов ===
@@ -122,6 +124,107 @@ async def pay_success(request: Request, order: str = ""):
 async def pay_fail(request: Request, order: str = ""):
     o = await asyncio.to_thread(repo.get_order, order) if order else None
     return templates.TemplateResponse(request, "pay_result.html", {"ok": False, "order": o})
+
+
+# === Личный кабинет заказа (активация Pro после оплаты) ===
+
+def _scan_diff(prev, last) -> dict:
+    """Что изменилось между двумя сканами одного сайта.
+
+    Ключ находки — (check_id, location): новые проблемы, исправленные, без изменений.
+    """
+    def problems(scan):
+        return {(f.check_id, f.location): f for f in scan.findings if f.severity != "ok"}
+    p_prev, p_last = problems(prev), problems(last)
+    new = [p_last[k] for k in p_last.keys() - p_prev.keys()]
+    fixed = [p_prev[k] for k in p_prev.keys() - p_last.keys()]
+    order = {"critical": 0, "warning": 1, "info": 2}
+    new.sort(key=lambda f: (order.get(f.severity, 9), f.check_id))
+    fixed.sort(key=lambda f: (order.get(f.severity, 9), f.check_id))
+    return {"new": new, "fixed": fixed, "same": len(p_last.keys() & p_prev.keys()),
+            "prev": prev, "last": last}
+
+
+@router.get("/account/{order_id}", response_class=HTMLResponse)
+async def account(request: Request, order_id: str, attached: int = 0):
+    order = await asyncio.to_thread(repo.get_order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="order not found")
+    scans, diff = [], None
+    if order.monitored_url:
+        scans = await asyncio.to_thread(repo.list_done_scans_for_url, order.monitored_url, 5)
+        if len(scans) >= 2:
+            diff = _scan_diff(scans[1], scans[0])
+    return templates.TemplateResponse(request, "account.html", {
+        "order": order, "scans": scans, "diff": diff, "attached": bool(attached),
+    })
+
+
+@router.post("/account/{order_id}/monitor", response_class=HTMLResponse)
+async def account_monitor(request: Request, order_id: str, bg: BackgroundTasks,
+                          url: str = Form(...)):
+    order = await asyncio.to_thread(repo.get_order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="order not found")
+    if order.status != "paid":
+        raise HTTPException(status_code=403, detail="order not paid")
+    url = url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    await asyncio.to_thread(repo.set_monitored_url, order_id, url)
+    # Первый скан мониторинга — сразу, чтобы кабинет не был пустым.
+    if await asyncio.to_thread(repo.latest_scan_for_url, url) is None:
+        scan_id = uuid.uuid4().hex
+        await asyncio.to_thread(repo.create_scan, scan_id, url, 25)
+        queue = get_queue()
+        if queue is not None:
+            queue.enqueue("lawcheck.workers.scan_worker.run_scan",
+                          scan_id, url, 25, job_timeout=600)
+        else:
+            bg.add_task(_run_scan, scan_id, url, 25)
+    return RedirectResponse(url=f"/account/{order_id}?attached=1", status_code=303)
+
+
+@router.get("/account/{order_id}/templates", response_class=HTMLResponse)
+async def account_templates(request: Request, order_id: str):
+    order = await asyncio.to_thread(repo.get_order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="order not found")
+    if order.status != "paid":
+        # Шаблоны — платный контент.
+        return RedirectResponse(url=f"/account/{order_id}", status_code=303)
+    return templates.TemplateResponse(request, "pro_templates.html", {"order": order})
+
+
+@router.post("/internal/monitoring/run")
+async def monitoring_run(request: Request, bg: BackgroundTasks):
+    """Еженедельный мониторинг: вызывается cron'ом с X-Internal-Key.
+
+    Для каждого оплаченного заказа с подключённым сайтом запускает новый скан,
+    если последнему больше 6 дней.
+    """
+    if not settings.internal_key or request.headers.get("X-Internal-Key") != settings.internal_key:
+        raise HTTPException(status_code=403, detail="forbidden")
+    from datetime import datetime, timedelta, timezone
+    started = []
+    orders = await asyncio.to_thread(repo.list_monitored_orders)
+    for order in orders:
+        last = await asyncio.to_thread(repo.latest_scan_for_url, order.monitored_url)
+        if last is not None:
+            age = datetime.now(timezone.utc) - last.created_at
+            if age < timedelta(days=6) or last.status in ("pending", "running"):
+                continue
+        scan_id = uuid.uuid4().hex
+        await asyncio.to_thread(repo.create_scan, scan_id, order.monitored_url, 25)
+        queue = get_queue()
+        if queue is not None:
+            queue.enqueue("lawcheck.workers.scan_worker.run_scan",
+                          scan_id, order.monitored_url, 25, job_timeout=600)
+        else:
+            bg.add_task(_run_scan, scan_id, order.monitored_url, 25)
+        started.append({"order": order.id[:8], "url": order.monitored_url, "scan": scan_id})
+        log.info("monitoring: запущен скан %s для %s", scan_id[:8], order.monitored_url)
+    return {"monitored": len(orders), "started": started}
 
 
 @router.post("/webhooks/tochka")

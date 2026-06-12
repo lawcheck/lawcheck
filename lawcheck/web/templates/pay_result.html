@@ -5,11 +5,12 @@
 <div class="pay-card">
   {% if ok %}
     <h1>✅ Оплата прошла</h1>
-    <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен.
-      Мы активируем тариф и напишем вам в течение рабочего дня.</p>
-    <p class="pay-note">Чек придёт на почту, указанную при оплате. Вопросы —
-      на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
-    <a href="/" class="btn-pay">На главную</a>
+    <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен —
+      тариф активирован.</p>
+    <a href="/account/{{ order.id }}" class="btn-pay">Открыть кабинет заказа</a>
+    <p class="pay-note"><strong>Сохраните ссылку на кабинет</strong> — это ваш доступ
+      к мониторингу, diff-отчётам и шаблонам. Чек придёт на почту, указанную при
+      оплате. Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
   {% else %}
     <h1>Оплата не завершена</h1>
     <p>{% if order %}Заказ <span class="mono">{{ order.id[:8] }}</span> пока не оплачен.

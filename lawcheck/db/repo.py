@@ -111,3 +111,41 @@ def create_lead(scan_id: str, url: str, email: str) -> None:
         ).scalar_one_or_none()
         if not exists:
             sess.add(Lead(scan_id=scan_id, url=url, email=email))
+
+
+def set_monitored_url(order_id: str, url: str) -> None:
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order:
+            order.monitored_url = url
+
+
+def list_monitored_orders() -> list[Order]:
+    """Оплаченные заказы с подключённым мониторингом."""
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Order).where(Order.status == "paid", Order.monitored_url != "")
+        ).scalars().all()
+        return list(rows)
+
+
+def list_done_scans_for_url(url: str, limit: int = 5) -> list[Scan]:
+    """Завершённые сканы конкретного сайта, новые первыми (для diff и истории)."""
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Scan)
+            .options(selectinload(Scan.findings))
+            .where(Scan.url == url, Scan.status == "done")
+            .order_by(Scan.created_at.desc())
+            .limit(limit)
+        ).scalars().all()
+        return list(rows)
+
+
+def latest_scan_for_url(url: str) -> Scan | None:
+    """Последний скан сайта в любом статусе (для троттлинга мониторинга)."""
+    with session_scope() as sess:
+        return sess.execute(
+            select(Scan).where(Scan.url == url)
+            .order_by(Scan.created_at.desc()).limit(1)
+        ).scalar_one_or_none()

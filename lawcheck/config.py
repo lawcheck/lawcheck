@@ -27,5 +27,14 @@ class Settings(BaseSettings):
     tochka_base_url: str = "https://enter.tochka.com/uapi"
     site_base_url: str = "https://lawchek.ru"
 
+    # Номер счётчика Яндекс.Метрики. Пусто — счётчик и cookie-баннер не выводятся.
+    # Скрипт Метрики загружается только после клика «Принять» в cookie-баннере,
+    # чтобы сайт проходил собственную проверку D2 (согласие до загрузки трекеров).
+    metrika_id: str = ""
+
+    # Ключ внутренних эндпойнтов (еженедельный мониторинг по cron).
+    # Пусто = эндпойнт выключен.
+    internal_key: str = ""
+
 
 settings = Settings()
