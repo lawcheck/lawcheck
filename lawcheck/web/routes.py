@@ -15,6 +15,7 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.reporting import fines
+from lawcheck.web import ownership
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -145,24 +146,43 @@ def _scan_diff(prev, last) -> dict:
             "prev": prev, "last": last}
 
 
+def _start_scan(bg: BackgroundTasks, url: str, max_pages: int = 25) -> str:
+    """Ставит скан в очередь (RQ) либо в BackgroundTasks (dev). Возвращает scan_id."""
+    scan_id = uuid.uuid4().hex
+    repo.create_scan(scan_id, url, max_pages)
+    queue = get_queue()
+    if queue is not None:
+        queue.enqueue("lawcheck.workers.scan_worker.run_scan",
+                      scan_id, url, max_pages, job_timeout=600)
+    else:
+        bg.add_task(_run_scan, scan_id, url, max_pages)
+    return scan_id
+
+
 @router.get("/account/{order_id}", response_class=HTMLResponse)
-async def account(request: Request, order_id: str, attached: int = 0):
+async def account(request: Request, order_id: str, attached: int = 0,
+                  verified: int = 0, vfail: int = 0):
     order = await asyncio.to_thread(repo.get_order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="order not found")
     scans, diff = [], None
-    if order.monitored_url:
+    if order.monitored_url and order.verified_at:
         scans = await asyncio.to_thread(repo.list_done_scans_for_url, order.monitored_url, 5)
         if len(scans) >= 2:
             diff = _scan_diff(scans[1], scans[0])
+    token = order.verify_token
+    if order.status == "paid" and order.monitored_url and not order.verified_at and not token:
+        token = await asyncio.to_thread(repo.ensure_verify_token, order_id, ownership.new_token())
     return templates.TemplateResponse(request, "account.html", {
-        "order": order, "scans": scans, "diff": diff, "attached": bool(attached),
+        "order": order, "scans": scans, "diff": diff,
+        "attached": bool(attached), "verified": bool(verified), "vfail": bool(vfail),
+        "verify_token": token,
+        "monitored_domain": ownership.registered_domain(order.monitored_url) if order.monitored_url else "",
     })
 
 
 @router.post("/account/{order_id}/monitor", response_class=HTMLResponse)
-async def account_monitor(request: Request, order_id: str, bg: BackgroundTasks,
-                          url: str = Form(...)):
+async def account_monitor(request: Request, order_id: str, url: str = Form(...)):
     order = await asyncio.to_thread(repo.get_order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="order not found")
@@ -172,17 +192,31 @@ async def account_monitor(request: Request, order_id: str, bg: BackgroundTasks,
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     await asyncio.to_thread(repo.set_monitored_url, order_id, url)
-    # Первый скан мониторинга — сразу, чтобы кабинет не был пустым.
-    if await asyncio.to_thread(repo.latest_scan_for_url, url) is None:
-        scan_id = uuid.uuid4().hex
-        await asyncio.to_thread(repo.create_scan, scan_id, url, 25)
-        queue = get_queue()
-        if queue is not None:
-            queue.enqueue("lawcheck.workers.scan_worker.run_scan",
-                          scan_id, url, 25, job_timeout=600)
-        else:
-            bg.add_task(_run_scan, scan_id, url, 25)
+    # Смена сайта сбрасывает подтверждение и выдаёт новый токен — мониторинг
+    # не должен достаться вместе со старым подтверждением другому домену.
+    await asyncio.to_thread(repo.reset_verification, order_id)
+    await asyncio.to_thread(repo.ensure_verify_token, order_id, ownership.new_token())
     return RedirectResponse(url=f"/account/{order_id}?attached=1", status_code=303)
+
+
+@router.post("/account/{order_id}/verify", response_class=HTMLResponse)
+async def account_verify(request: Request, order_id: str, bg: BackgroundTasks):
+    order = await asyncio.to_thread(repo.get_order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="order not found")
+    if order.status != "paid" or not order.monitored_url or not order.verify_token:
+        raise HTTPException(status_code=403, detail="nothing to verify")
+    method = await asyncio.to_thread(
+        ownership.check_ownership, order.monitored_url, order.verify_token)
+    if not method:
+        return RedirectResponse(url=f"/account/{order_id}?vfail=1", status_code=303)
+    await asyncio.to_thread(repo.mark_verified, order_id)
+    log.info("ownership: заказ %s подтвердил %s через %s",
+             order_id[:8], order.monitored_url, method)
+    # Подтверждено — запускаем первый скан мониторинга, если истории ещё нет.
+    if await asyncio.to_thread(repo.latest_scan_for_url, order.monitored_url) is None:
+        await asyncio.to_thread(_start_scan, bg, order.monitored_url)
+    return RedirectResponse(url=f"/account/{order_id}?verified=1", status_code=303)
 
 
 @router.get("/account/{order_id}/templates", response_class=HTMLResponse)

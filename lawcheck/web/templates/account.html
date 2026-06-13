@@ -27,14 +27,26 @@
 <div class="card">
   <h2 style="font-size: 18px; margin: 0 0 10px;">Еженедельный мониторинг</h2>
   {% if attached %}
-  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Сайт подключён — первая проверка уже запущена.</div>
+  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Сайт сохранён. Остался шаг — подтвердите владение ниже.</div>
   {% endif %}
-  {% if order.monitored_url %}
-    <p>Под наблюдением: <strong class="mono">{{ order.monitored_url }}</strong>.
-      Проверяем раз в неделю; изменения видны ниже.</p>
+  {% if verified %}
+  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Владение подтверждено. Первая проверка запущена, дальше — раз в неделю.</div>
+  {% endif %}
+  {% if vfail %}
+  <div class="status-banner error" style="margin: 0 0 14px;">Подтверждение не найдено. Проверьте, что TXT-запись или meta-тег добавлены, и попробуйте ещё раз (DNS может обновляться до часа).</div>
+  {% endif %}
+
+  {% if order.monitored_url and order.verified_at %}
+    <p>Под наблюдением: <strong class="mono">{{ order.monitored_url }}</strong>
+      <span class="pill ok">подтверждён</span>. Проверяем раз в неделю; изменения — ниже.</p>
+  {% elif order.monitored_url %}
+    <p>Сайт <strong class="mono">{{ order.monitored_url }}</strong> ждёт подтверждения владения.
+      Еженедельные проверки начнутся после подтверждения.</p>
   {% else %}
-    <p>Укажите сайт — будем проверять его каждую неделю и фиксировать изменения.</p>
+    <p>Укажите сайт — после подтверждения владения будем проверять его каждую неделю
+      и фиксировать изменения.</p>
   {% endif %}
+
   <form class="monitor-form" action="/account/{{ order.id }}/monitor" method="post">
     <div class="url-field" style="max-width: 420px;">
       <span class="scheme">https://</span>
@@ -44,6 +56,24 @@
     </div>
     <button type="submit">{{ 'Сменить сайт' if order.monitored_url else 'Подключить' }}</button>
   </form>
+
+  {% if order.monitored_url and not order.verified_at and verify_token %}
+  <div class="verify-box">
+    <h3>Подтвердите владение сайтом {{ monitored_domain }}</h3>
+    <p>Любым из способов — затем нажмите «Проверить»:</p>
+    <div class="verify-way">
+      <strong>Способ 1 — DNS TXT-запись</strong> (для домена <span class="mono">{{ monitored_domain }}</span>):
+      <pre class="verify-code">lawcheck-verify={{ verify_token }}</pre>
+    </div>
+    <div class="verify-way">
+      <strong>Способ 2 — meta-тег</strong> в <code>&lt;head&gt;</code> главной страницы:
+      <pre class="verify-code">&lt;meta name="lawcheck-verify" content="{{ verify_token }}"&gt;</pre>
+    </div>
+    <form action="/account/{{ order.id }}/verify" method="post" style="margin-top: 10px;">
+      <button type="submit" class="btn-pay">Проверить подтверждение</button>
+    </form>
+  </div>
+  {% endif %}
 
   {% if diff %}
   <div class="diff-wrap">

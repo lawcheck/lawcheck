@@ -121,10 +121,15 @@ def set_monitored_url(order_id: str, url: str) -> None:
 
 
 def list_monitored_orders() -> list[Order]:
-    """Оплаченные заказы с подключённым мониторингом."""
+    """Оплаченные заказы с подключённым И подтверждённым сайтом — еженедельно
+    сканируем только сайты, владение которыми подтверждено."""
     with session_scope() as sess:
         rows = sess.execute(
-            select(Order).where(Order.status == "paid", Order.monitored_url != "")
+            select(Order).where(
+                Order.status == "paid",
+                Order.monitored_url != "",
+                Order.verified_at.is_not(None),
+            )
         ).scalars().all()
         return list(rows)
 
@@ -149,3 +154,29 @@ def latest_scan_for_url(url: str) -> Scan | None:
             select(Scan).where(Scan.url == url)
             .order_by(Scan.created_at.desc()).limit(1)
         ).scalar_one_or_none()
+
+
+def ensure_verify_token(order_id: str, token: str) -> str:
+    """Возвращает токен верификации заказа, генерируя при первом обращении."""
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order is None:
+            return ""
+        if not order.verify_token:
+            order.verify_token = token
+        return order.verify_token
+
+
+def mark_verified(order_id: str) -> None:
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order and order.verified_at is None:
+            order.verified_at = utcnow()
+
+
+def reset_verification(order_id: str) -> None:
+    """Сбрасывается при смене наблюдаемого сайта."""
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order:
+            order.verified_at = None

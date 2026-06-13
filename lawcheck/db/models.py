@@ -73,5 +73,8 @@ class Order(Base):
     payment_link: Mapped[str] = mapped_column(String(2048), default="")
     # Сайт, подключённый к еженедельному мониторингу (Pro). Пусто = не подключён.
     monitored_url: Mapped[str] = mapped_column(String(2048), default="")
+    # Верификация владения: токен для TXT-записи/meta-тега и момент подтверждения.
+    verify_token: Mapped[str] = mapped_column(String(64), default="")
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
