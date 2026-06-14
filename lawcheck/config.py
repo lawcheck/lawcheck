@@ -36,5 +36,9 @@ class Settings(BaseSettings):
     # Пусто = эндпойнт выключен.
     internal_key: str = ""
 
+    # Telegram-уведомления владельцу (оплаты, лиды). Оба пусты = выключено.
+    telegram_bot_token: str = ""
+    telegram_owner_chat_id: str = ""
+
 
 settings = Settings()

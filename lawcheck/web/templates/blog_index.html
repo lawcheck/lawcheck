@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Блог о 152-ФЗ и защите персональных данных · LawCheck{% endblock %}
+{% block meta_description %}Статьи о законе о персональных данных: штрафы 152-ФЗ, политика конфиденциальности, уведомление в Роскомнадзор, согласия на сайте. Простым языком для бизнеса.{% endblock %}
+{% block nav_blog %}active{% endblock %}
+
+{% block content %}
+<div class="blog-head">
+  <h1>Блог о 152-ФЗ</h1>
+  <p>Закон о персональных данных простым языком: штрафы, политика, уведомление в РКН, согласия на сайте.</p>
+</div>
+
+<div class="article-list">
+  {% for a in articles %}
+  <a class="article-card" href="/blog/{{ a.slug }}">
+    {% if a.date and a.date.year > 1 %}<div class="a-date">{{ a.date.strftime('%d.%m.%Y') }}</div>{% endif %}
+    <div class="a-title">{{ a.title }}</div>
+    {% if a.description %}<p class="a-desc">{{ a.description }}</p>{% endif %}
+  </a>
+  {% else %}
+  <p>Статьи скоро появятся.</p>
+  {% endfor %}
+</div>
+{% endblock %}

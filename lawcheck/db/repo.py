@@ -82,12 +82,16 @@ def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> No
             order.status = "pending"
 
 
-def mark_order_paid(order_id: str) -> None:
+def mark_order_paid(order_id: str) -> bool:
+    """Помечает заказ оплаченным. Возвращает True, если это был переход
+    «не оплачен → оплачен» (для разовых уведомлений)."""
     with session_scope() as sess:
         order = sess.get(Order, order_id)
         if order and order.status != "paid":
             order.status = "paid"
             order.paid_at = utcnow()
+            return True
+    return False
 
 
 def get_order(order_id: str) -> Order | None:
@@ -104,13 +108,16 @@ def get_order_by_operation(operation_id: str) -> Order | None:
 
 # === Лиды (email со страницы отчёта) ===
 
-def create_lead(scan_id: str, url: str, email: str) -> None:
+def create_lead(scan_id: str, url: str, email: str) -> bool:
+    """Сохраняет лид (dedupe по scan+email). True, если это новая запись."""
     with session_scope() as sess:
         exists = sess.execute(
             select(Lead).where(Lead.scan_id == scan_id, Lead.email == email)
         ).scalar_one_or_none()
         if not exists:
             sess.add(Lead(scan_id=scan_id, url=url, email=email))
+            return True
+    return False
 
 
 def set_monitored_url(order_id: str, url: str) -> None:

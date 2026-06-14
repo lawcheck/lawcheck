@@ -19,57 +19,8 @@
     </div>
   </div>
 
-  <div class="form-card">
-    <h3>Запустить проверку</h3>
-    <form action="/scan" method="post" id="scan-form" novalidate>
-      <div class="url-field">
-        <span class="scheme">https://</span>
-        <input type="text" name="url" id="scan-url" placeholder="mystore.ru" autofocus
-               aria-label="Адрес сайта для проверки" autocomplete="off"
-               autocapitalize="off" spellcheck="false">
-      </div>
-      <div class="field-error" id="scan-error" role="alert" hidden></div>
-      <button type="submit" id="scan-submit">Проверить за 60 секунд</button>
-    </form>
-    <div class="note">Не храним содержимое страниц после генерации отчёта.</div>
-    <script>
-      (function () {
-        var form = document.getElementById('scan-form');
-        var input = document.getElementById('scan-url');
-        var error = document.getElementById('scan-error');
-        var btn = document.getElementById('scan-submit');
-        function showError(msg) {
-          error.textContent = msg;
-          error.hidden = false;
-          input.setAttribute('aria-invalid', 'true');
-          input.focus();
-        }
-        function clearError() {
-          error.hidden = true;
-          input.removeAttribute('aria-invalid');
-        }
-        input.addEventListener('input', clearError);
-        form.addEventListener('submit', function (e) {
-          var raw = input.value.trim().replace(/^https?:\/\//i, '');
-          if (!raw) {
-            e.preventDefault();
-            showError('Введите адрес сайта.');
-            return;
-          }
-          if (!/^[^\s.]+(\.[^\s.]+)+/.test(raw)) {
-            e.preventDefault();
-            showError('Похоже на неполный адрес — нужен домен вида mystore.ru.');
-            return;
-          }
-          input.value = raw;
-          btn.disabled = true;
-          btn.classList.add('loading');
-          btn.textContent = 'Проверяем…';
-          lcGoal('scan_submit');
-        });
-      })();
-    </script>
-  </div>
+  {% set scan_autofocus = true %}
+  {% include "_scan_form.html" %}
 </section>
 
 <div class="mini-cards">

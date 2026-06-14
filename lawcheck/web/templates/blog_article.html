@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }} · LawCheck{% endblock %}
+{% block meta_description %}{{ article.description }}{% endblock %}
+{% block nav_blog %}active{% endblock %}
+
+{% block content %}
+<article class="policy">
+  <h1>{{ article.title }}</h1>
+  {% if article.date and article.date.year > 1 %}
+  <p class="article-meta">{{ article.date.strftime('%d.%m.%Y') }}</p>
+  {% endif %}
+
+  {{ article.html|safe }}
+
+  <div class="cta-inline">
+    <div class="ci-text">Узнайте, какие из этих нарушений есть на вашем сайте</div>
+    <a href="/">Проверить за 60 секунд</a>
+  </div>
+
+  <p style="margin-top:24px"><a href="/blog">← Все статьи</a></p>
+</article>
+{% endblock %}

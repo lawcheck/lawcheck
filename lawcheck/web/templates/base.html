@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/favicon.svg">
   <title>{% block title %}LawCheck{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Автоматическая проверка сайта на нарушения 152-ФЗ и смежных законов: политика конфиденциальности, согласия у форм, cookie, реклама. Конкретные цитаты со страниц и оценка риска штрафа.{% endblock %}">
   <!-- Шрифты самохостятся: без запросов к Google → нет передачи IP за рубеж -->
   <link href="/static/fonts/fonts.css" rel="stylesheet">
   <style>
@@ -374,13 +375,34 @@
     .tpl-hint { font-size: 13px; color: var(--muted); }
     .tpl-footer { margin-top: 20px; color: var(--ink-soft); }
 
-    /* --- Страница Политики обработки ПДн --- */
+    /* --- Страница Политики обработки ПДн + проза статей --- */
     .policy { max-width: 760px; margin: 0 auto; }
     .policy h1 { font-size: 28px; margin: 8px 0 4px; }
     .policy .policy-meta { font-family: var(--mono); font-size: 13px; color: var(--faint); margin: 0 0 24px; }
     .policy h2 { font-size: 18px; margin: 28px 0 8px; }
+    .policy h3 { font-size: 16px; margin: 20px 0 6px; }
     .policy p, .policy li { font-size: 15px; line-height: 1.65; color: var(--ink-soft); }
     .policy ul { padding-left: 22px; margin: 8px 0; }
+    .policy a { color: var(--brand); }
+    .policy strong { color: var(--ink); }
+
+    /* --- Блог: список статей --- */
+    .blog-head { max-width: 760px; margin: 0 auto 28px; }
+    .blog-head h1 { font-size: 30px; letter-spacing: -0.02em; margin: 8px 0 6px; }
+    .blog-head p { color: var(--ink-soft); margin: 0; }
+    .article-list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .article-card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; text-decoration: none; transition: border-color .15s; }
+    .article-card:hover { border-color: var(--brand); }
+    .article-card .a-date { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+    .article-card .a-title { font-size: 18px; font-weight: 600; color: var(--ink); margin: 6px 0 6px; }
+    .article-card .a-desc { font-size: 14px; color: var(--muted); margin: 0; }
+
+    /* --- Блог: страница статьи --- */
+    .article-meta { font-family: var(--mono); font-size: 13px; color: var(--faint); margin: 0 0 24px; }
+    .cta-inline { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 32px 0 8px; padding: 20px 22px; background: var(--ink); color: #fff; border-radius: 14px; }
+    .cta-inline .ci-text { font-size: 15px; font-weight: 600; min-width: 0; }
+    .cta-inline a { flex-shrink: 0; background: var(--brand); color: #fff; padding: 11px 20px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .cta-inline a:hover { background: var(--brand-hover); }
   </style>
   {% if metrika_id %}
   <script>
@@ -448,6 +470,7 @@
       <div class="links" id="navlinks">
         <a href="/" class="{% block nav_home %}{% endblock %}">Главная</a>
         <a href="/pricing" class="{% block nav_pricing %}{% endblock %}">Тарифы</a>
+        <a href="/blog" class="{% block nav_blog %}{% endblock %}">Блог</a>
       </div>
       <div class="spacer"></div>
       <button class="nav-toggle" aria-label="Меню" aria-expanded="false"
@@ -465,6 +488,7 @@
           <h4>Продукт</h4>
           <a href="/">Проверить сайт</a>
           <a href="/pricing">Тарифы</a>
+          <a href="/blog">Блог</a>
         </div>
         <div class="col">
           <h4>Законы</h4>
