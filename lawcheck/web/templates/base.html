@@ -470,7 +470,7 @@
       <div class="links" id="navlinks">
         <a href="/" class="{% block nav_home %}{% endblock %}">Главная</a>
         <a href="/pricing" class="{% block nav_pricing %}{% endblock %}">Тарифы</a>
-        <a href="/blog" class="{% block nav_blog %}{% endblock %}">Блог</a>
+        {% if seo_enabled %}<a href="/blog" class="{% block nav_blog %}{% endblock %}">Блог</a>{% endif %}
       </div>
       <div class="spacer"></div>
       <button class="nav-toggle" aria-label="Меню" aria-expanded="false"
@@ -488,7 +488,7 @@
           <h4>Продукт</h4>
           <a href="/">Проверить сайт</a>
           <a href="/pricing">Тарифы</a>
-          <a href="/blog">Блог</a>
+          {% if seo_enabled %}<a href="/blog">Блог</a>{% endif %}
         </div>
         <div class="col">
           <h4>Законы</h4>

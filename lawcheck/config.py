@@ -40,5 +40,9 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_owner_chat_id: str = ""
 
+    # Публиковать SEO-раздел (блог, нишевые лендинги). Пока контент сырой — False:
+    # роуты /blog и /proverka/* отдают 404, ссылки в навигации скрыты.
+    seo_enabled: bool = False
+
 
 settings = Settings()

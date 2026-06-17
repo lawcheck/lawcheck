@@ -48,11 +48,13 @@ templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
 
 # Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
-# и подключаются как под-роутеры.
+# и подключаются как под-роутеры — только когда SEO-контент готов к публикации.
 blog.templates = templates
 landings.templates = templates
-router.include_router(blog.router)
-router.include_router(landings.router)
+templates.env.globals["seo_enabled"] = settings.seo_enabled
+if settings.seo_enabled:
+    router.include_router(blog.router)
+    router.include_router(landings.router)
 
 
 # === Главная: форма + список последних сканов ===
@@ -99,9 +101,11 @@ async def robots() -> str:
 @router.get("/sitemap.xml")
 async def sitemap() -> Response:
     base = settings.site_base_url.rstrip("/")
-    urls = ["/", "/pricing", "/blog", "/privacy", "/oferta"]
-    urls += [f"/blog/{a.slug}" for a in blog.list_articles()]
-    urls += [f"/proverka/{niche}" for niche in landings.LANDINGS]
+    urls = ["/", "/pricing", "/privacy", "/oferta"]
+    if settings.seo_enabled:
+        urls += ["/blog"]
+        urls += [f"/blog/{a.slug}" for a in blog.list_articles()]
+        urls += [f"/proverka/{niche}" for niche in landings.LANDINGS]
     items = "".join(f"<url><loc>{base}{u}</loc></url>" for u in urls)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{items}</urlset>'
     return Response(content=xml, media_type="application/xml")
