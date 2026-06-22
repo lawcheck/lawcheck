@@ -296,6 +296,13 @@ async def monitoring_run(request: Request, bg: BackgroundTasks):
     return {"monitored": len(orders), "started": started}
 
 
+@router.get("/webhooks/tochka")
+async def tochka_webhook_probe():
+    """Точка при регистрации вебхука проверяет доступность URL (в т.ч. GET) —
+    отвечаем 200, иначе «Failed to test webhook url accessibility»."""
+    return {"ok": True}
+
+
 @router.post("/webhooks/tochka")
 async def tochka_webhook(request: Request, bg: BackgroundTasks):
     """Вебхук acquiringInternetPayment. Тело — JWT; используем его только как
