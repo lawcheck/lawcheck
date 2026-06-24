@@ -7,15 +7,16 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from lawcheck.api.routes.scan import _run_scan
 from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.payments import tochka
+from lawcheck.notify import telegram
 from lawcheck.reporting import fines
-from lawcheck.web import ownership
+from lawcheck.web import blog, landings, ownership
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -45,6 +46,15 @@ OPERATOR = {
 }
 templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
+
+# Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
+# и подключаются как под-роутеры — только когда SEO-контент готов к публикации.
+blog.templates = templates
+landings.templates = templates
+templates.env.globals["seo_enabled"] = settings.seo_enabled
+if settings.seo_enabled:
+    router.include_router(blog.router)
+    router.include_router(landings.router)
 
 
 # === Главная: форма + список последних сканов ===
@@ -80,19 +90,43 @@ async def oferta(request: Request):
     return templates.TemplateResponse(request, "oferta.html", {})
 
 
+# === SEO: sitemap.xml + robots.txt ===
+
+@router.get("/robots.txt", response_class=PlainTextResponse)
+async def robots() -> str:
+    base = settings.site_base_url.rstrip("/")
+    return f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n"
+
+
+@router.get("/sitemap.xml")
+async def sitemap() -> Response:
+    base = settings.site_base_url.rstrip("/")
+    urls = ["/", "/pricing", "/privacy", "/oferta"]
+    if settings.seo_enabled:
+        urls += ["/blog"]
+        urls += [f"/blog/{a.slug}" for a in blog.list_articles()]
+        urls += [f"/proverka/{niche}" for niche in landings.LANDINGS]
+    items = "".join(f"<url><loc>{base}{u}</loc></url>" for u in urls)
+    xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{items}</urlset>'
+    return Response(content=xml, media_type="application/xml")
+
+
 # === Оплата: Pro через эквайринг Точки ===
 
 _PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
 
 
 @router.post("/buy/{plan}", response_class=HTMLResponse)
-async def buy(request: Request, plan: str):
+async def buy(request: Request, plan: str, bg: BackgroundTasks):
     if plan not in _PLANS:
         raise HTTPException(status_code=404, detail="unknown plan")
     purpose, amount = _PLANS[plan]
 
     if not tochka.is_configured():
         # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
+        bg.add_task(telegram.notify_owner,
+                    f"🔔 Клик «Оплатить {plan.capitalize()}» ({amount} ₽). "
+                    f"Касса в fallback — возможно, придёт заявка на {OPERATOR['email']}.")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
     order_id = uuid.uuid4().hex
@@ -110,14 +144,15 @@ async def buy(request: Request, plan: str):
 
 
 @router.get("/pay/success", response_class=HTMLResponse)
-async def pay_success(request: Request, order: str = ""):
+async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
     paid = False
     o = await asyncio.to_thread(repo.get_order, order) if order else None
     if o and o.operation_id:
         # Не верим redirect'у: подтверждаем оплату запросом к API банка.
         paid = await asyncio.to_thread(tochka.is_paid, o.operation_id)
-        if paid:
-            await asyncio.to_thread(repo.mark_order_paid, order)
+        if paid and await asyncio.to_thread(repo.mark_order_paid, order):
+            bg.add_task(telegram.notify_owner,
+                        f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.")
     return templates.TemplateResponse(request, "pay_result.html", {"ok": paid, "order": o})
 
 
@@ -261,8 +296,15 @@ async def monitoring_run(request: Request, bg: BackgroundTasks):
     return {"monitored": len(orders), "started": started}
 
 
+@router.get("/webhooks/tochka")
+async def tochka_webhook_probe():
+    """Точка при регистрации вебхука проверяет доступность URL (в т.ч. GET) —
+    отвечаем 200, иначе «Failed to test webhook url accessibility»."""
+    return {"ok": True}
+
+
 @router.post("/webhooks/tochka")
-async def tochka_webhook(request: Request):
+async def tochka_webhook(request: Request, bg: BackgroundTasks):
     """Вебхук acquiringInternetPayment. Тело — JWT; используем его только как
     триггер: вытаскиваем operationId без проверки подписи и перепроверяем
     статус авторизованным запросом к API банка."""
@@ -279,8 +321,11 @@ async def tochka_webhook(request: Request):
     if operation_id:
         order = await asyncio.to_thread(repo.get_order_by_operation, operation_id)
         if order and await asyncio.to_thread(tochka.is_paid, operation_id):
-            await asyncio.to_thread(repo.mark_order_paid, order.id)
-            log.info("заказ %s оплачен (операция %s)", order.id, operation_id)
+            if await asyncio.to_thread(repo.mark_order_paid, order.id):
+                bg.add_task(telegram.notify_owner,
+                            f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
+                            f"{order.plan.capitalize()} {order.amount} ₽.")
+                log.info("заказ %s оплачен (операция %s)", order.id, operation_id)
     return {"ok": True}
 
 
@@ -385,12 +430,16 @@ async def report(request: Request, scan_id: str, sub: int = 0):
 
 
 @router.post("/report/{scan_id}/subscribe", response_class=HTMLResponse)
-async def report_subscribe(request: Request, scan_id: str, email: str = Form(...)):
+async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
+                           email: str = Form(...)):
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
     if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
     email = email.strip().lower()
     if "@" in email and "." in email.split("@")[-1]:
-        await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email)
-        log.info("lead: %s (скан %s, %s)", email, scan_id[:8], scan.url)
+        if await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email):
+            log.info("lead: %s (скан %s, %s)", email, scan_id[:8], scan.url)
+            bg.add_task(telegram.notify_owner,
+                        f"📩 Новый лид: <b>{email}</b>\nсайт: {scan.url}\n"
+                        f"отчёт: {settings.site_base_url}/report/{scan_id}")
     return RedirectResponse(url=f"/report/{scan_id}?sub=1", status_code=303)

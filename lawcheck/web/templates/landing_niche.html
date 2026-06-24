@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ L.meta_title }}{% endblock %}
+{% block meta_description %}{{ L.meta_description }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="badge-pill"><span class="dot"></span>30 проверок · 6 законов</span>
+    <h1>{{ L.h1 }}</h1>
+    <p class="sub">{{ L.lead }}</p>
+    <div class="trust">
+      <span>без регистрации</span>
+      <span>отчёт публичный по ссылке</span>
+      <span>не храним содержимое страниц</span>
+    </div>
+  </div>
+
+  {% include "_scan_form.html" %}
+</section>
+
+<section class="section">
+  <div class="kicker">в чём специфика</div>
+  <p class="lead" style="max-width:760px">{{ L.intro }}</p>
+</section>
+
+<section class="section">
+  <div class="kicker">что проверяем</div>
+  <h2>На что смотрим именно у вас</h2>
+  <ul class="checklist">
+    {% for p in L.points %}
+    <li>
+      <span class="num">{{ loop.index }}</span>
+      <div>
+        <div class="ct">{{ p.title }}</div>
+        <div class="cd">{{ p.text }}</div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="section">
+  <div class="kicker">цена вопроса</div>
+  <h2>Сколько стоят нарушения</h2>
+  <p class="lead">Ориентировочные диапазоны штрафов для юрлиц по КоАП РФ. Не точный расчёт — оценка порядка риска.</p>
+  <div class="fine-cards">
+    {% for f in L.fines %}
+    <div class="fine-card">
+      <div class="amount">{{ f.amount }}</div>
+      <div class="reason">{{ f.reason }}</div>
+      <div class="src">{{ f.law }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="footer-cta">
+  <h2>Проверьте свой сайт за 60 секунд</h2>
+  <p>Без регистрации. Конкретные нарушения с цитатами со страниц и оценкой риска штрафа.</p>
+  <div class="row">
+    <a href="/" class="btn-dark">Проверить сайт</a>
+    <a href="/pricing" class="btn-ghost">Тарифы</a>
+  </div>
+</section>
+{% endblock %}
