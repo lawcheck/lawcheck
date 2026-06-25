@@ -57,6 +57,18 @@ class Lead(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
+class Inquiry(Base):
+    """Вопрос из чат-виджета на сайте: сообщение + контакт для ответа.
+    Сохраняется в БД и мгновенно уходит алертом владельцу в Telegram."""
+    __tablename__ = "inquiries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    message: Mapped[str] = mapped_column(Text)
+    contact: Mapped[str] = mapped_column(String(255), default="")
+    page: Mapped[str] = mapped_column(String(2048), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
 class Order(Base):
     """Заказ платного тарифа. Создаётся при клике «Оплатить», оплачивается
     через интернет-эквайринг Точки (платёжная ссылка); статус обновляет

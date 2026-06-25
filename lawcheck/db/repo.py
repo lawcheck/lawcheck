@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import Finding, Lead, Order, Scan, utcnow
+from lawcheck.db.models import Finding, Inquiry, Lead, Order, Scan, utcnow
 from lawcheck.db.session import session_scope
 
 
@@ -187,3 +187,12 @@ def reset_verification(order_id: str) -> None:
         order = sess.get(Order, order_id)
         if order:
             order.verified_at = None
+
+
+def create_inquiry(message: str, contact: str, page: str) -> int:
+    """Сохраняет вопрос из чат-виджета. Возвращает id записи."""
+    with session_scope() as sess:
+        inq = Inquiry(message=message[:4000], contact=contact[:255], page=page[:2048])
+        sess.add(inq)
+        sess.flush()
+        return inq.id

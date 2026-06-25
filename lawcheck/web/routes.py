@@ -85,6 +85,28 @@ async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+@router.post("/inquiry")
+async def inquiry(request: Request, bg: BackgroundTasks,
+                  message: str = Form(...), contact: str = Form(""),
+                  page: str = Form(""), website: str = Form("")):
+    """Вопрос из чат-виджета. Сохраняем + мгновенный алерт владельцу в Telegram."""
+    if website:  # honeypot: бот заполнил скрытое поле — тихо игнорируем
+        return {"ok": True}
+    message = message.strip()
+    contact = contact.strip()
+    if len(message) < 2:
+        raise HTTPException(status_code=422, detail="empty message")
+    inq_id = await asyncio.to_thread(repo.create_inquiry, message, contact, page)
+    log.info("inquiry #%s: %.60s | контакт: %s", inq_id, message, contact or "—")
+    bg.add_task(
+        telegram.notify_owner,
+        f"💬 Вопрос с сайта #{inq_id}\n{message[:1500]}\n\n"
+        f"Контакт: <b>{contact or 'не оставлен'}</b>"
+        + (f"\nСтраница: {page}" if page else ""),
+    )
+    return {"ok": True}
+
+
 @router.get("/oferta", response_class=HTMLResponse)
 async def oferta(request: Request):
     return templates.TemplateResponse(request, "oferta.html", {})
