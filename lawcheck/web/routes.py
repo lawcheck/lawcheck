@@ -112,6 +112,16 @@ async def oferta(request: Request):
     return templates.TemplateResponse(request, "oferta.html", {})
 
 
+@router.get("/inbox", response_class=HTMLResponse)
+async def inbox(request: Request):
+    """Входящие: вопросы чат-виджета + email-лиды. Защита — basic_auth на Caddy."""
+    inquiries = await asyncio.to_thread(repo.list_inquiries, 200)
+    leads = await asyncio.to_thread(repo.list_leads, 200)
+    return templates.TemplateResponse(request, "inbox.html", {
+        "inquiries": inquiries, "leads": leads,
+    })
+
+
 # === SEO: sitemap.xml + robots.txt ===
 
 @router.get("/robots.txt", response_class=PlainTextResponse)

@@ -7,6 +7,7 @@
   <link rel="apple-touch-icon" href="/static/favicon.svg">
   <title>{% block title %}LawCheck{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Автоматическая проверка сайта на нарушения 152-ФЗ и смежных законов: политика конфиденциальности, согласия у форм, cookie, реклама. Конкретные цитаты со страниц и оценка риска штрафа.{% endblock %}">
+  <meta name="yandex-verification" content="89b1f3af94c61af6" />
   <!-- Шрифты самохостятся: без запросов к Google → нет передачи IP за рубеж -->
   <link href="/static/fonts/fonts.css" rel="stylesheet">
   <style>
@@ -343,6 +344,15 @@
       padding: 14px 18px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
     /* display:flex выше перебивает [hidden]=display:none — возвращаем скрытие */
     .cookie-bar[hidden] { display: none; }
+
+    /* --- Входящие (admin /inbox) --- */
+    .inbox-list { display: flex; flex-direction: column; gap: 10px; }
+    .inbox-item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .inbox-meta { font-size: 12px; color: var(--faint); font-family: var(--mono); }
+    .inbox-page { color: var(--brand); }
+    .inbox-msg { font-size: 15px; color: var(--ink); margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
+    .inbox-contact { font-size: 13px; color: var(--ink-soft); }
+    .muted { color: var(--muted); }
 
     /* --- Чат-виджет лидов --- */
     #lc-chat-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 45;

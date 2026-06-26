@@ -196,3 +196,19 @@ def create_inquiry(message: str, contact: str, page: str) -> int:
         sess.add(inq)
         sess.flush()
         return inq.id
+
+
+def list_inquiries(limit: int = 100) -> list[Inquiry]:
+    """Вопросы из чат-виджета, новые первыми."""
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Inquiry).order_by(Inquiry.created_at.desc()).limit(limit)
+        ).scalars().all())
+
+
+def list_leads(limit: int = 100) -> list[Lead]:
+    """Email-лиды со страницы отчёта, новые первыми."""
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Lead).order_by(Lead.created_at.desc()).limit(limit)
+        ).scalars().all())
