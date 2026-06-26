@@ -273,6 +273,14 @@
     .upsell-cta { flex-shrink: 0; background: var(--brand); color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; }
     .upsell-cta:hover { background: var(--brand-hover); }
 
+    /* Премиум-CTA «Разбор с юристом» — при высоком риске, заметнее обычного апселла */
+    .consult { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 14px; padding: 18px 20px; background: var(--crit-soft); border: 1px solid #f3c9c4; border-radius: 12px; }
+    .consult-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .consult-text strong { font-size: 16px; color: var(--crit); }
+    .consult-text span { font-size: 13px; color: var(--ink-soft); }
+    .consult-cta { flex-shrink: 0; background: var(--crit); color: #fff; border: 0; cursor: pointer; padding: 12px 20px; border-radius: 9px; font-weight: 600; font-size: 14px; }
+    .consult-cta:hover { background: #b42318; }
+
     .subscribe-box { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 14px; padding: 14px 18px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
     .subscribe-box.done { border-style: solid; color: var(--ok); font-size: 14px; }
     .subscribe-box .sub-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
