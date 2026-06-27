@@ -185,7 +185,11 @@ async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
         if paid and await asyncio.to_thread(repo.mark_order_paid, order):
             bg.add_task(telegram.notify_owner,
                         f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.")
-    return templates.TemplateResponse(request, "pay_result.html", {"ok": paid, "order": o})
+    tg_deeplink = ""
+    if o and settings.telegram_bot_username:
+        tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={o.id}"
+    return templates.TemplateResponse(request, "pay_result.html",
+                                      {"ok": paid, "order": o, "tg_deeplink": tg_deeplink})
 
 
 @router.get("/pay/fail", response_class=HTMLResponse)
@@ -359,15 +363,18 @@ async def telegram_webhook(request: Request):
     order_id = parts[1].strip() if len(parts) > 1 else ""
     if order_id:
         order = await asyncio.to_thread(repo.set_client_chat_id, order_id, chat_id)
-        if order and order.monitored_url:
-            await asyncio.to_thread(
-                telegram.send_message, chat_id,
-                f"✅ Подключено. Буду присылать сюда изменения по сайту "
-                f"<b>{order.monitored_url}</b> после еженедельных проверок.")
+        if order:
+            lines = [f"✅ Доступ к заказу <b>{order.id[:8]}</b> сохранён.",
+                     f"Личный кабинет: {settings.site_base_url}/account/{order.id}",
+                     "(сохраните это сообщение — здесь ваша постоянная ссылка)"]
+            if order.monitored_url:
+                lines.append(f"\nБуду присылать сюда изменения по сайту "
+                             f"<b>{order.monitored_url}</b> после еженедельных проверок.")
+            await asyncio.to_thread(telegram.send_message, chat_id, "\n".join(lines))
         else:
             await asyncio.to_thread(
                 telegram.send_message, chat_id,
-                "Не нашёл заказ. Откройте ссылку «Подключить Telegram» из кабинета ещё раз.")
+                "Не нашёл заказ. Откройте ссылку из кабинета ещё раз.")
     else:
         await asyncio.to_thread(
             telegram.send_message, chat_id,
