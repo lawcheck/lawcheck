@@ -19,15 +19,16 @@ def is_configured() -> bool:
     return bool(settings.telegram_bot_token and settings.telegram_owner_chat_id)
 
 
-def notify_owner(text: str) -> None:
-    """Отправить владельцу сообщение (HTML-разметка)."""
-    if not is_configured():
-        return
+def send_message(chat_id: str, text: str) -> bool:
+    """Отправить сообщение в произвольный чат (HTML). Best-effort: ошибки не
+    пробрасываем. True — если ушло (для разовых проверок)."""
+    if not settings.telegram_bot_token or not chat_id:
+        return False
     try:
         r = httpx.post(
             _API.format(token=settings.telegram_bot_token, method="sendMessage"),
             json={
-                "chat_id": settings.telegram_owner_chat_id,
+                "chat_id": chat_id,
                 "text": text,
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True,
@@ -35,5 +36,14 @@ def notify_owner(text: str) -> None:
             timeout=8,
         )
         r.raise_for_status()
+        return True
     except Exception as e:
-        log.warning("telegram: уведомление не отправлено: %s", e)
+        log.warning("telegram: сообщение в %s не отправлено: %s", chat_id, e)
+        return False
+
+
+def notify_owner(text: str) -> None:
+    """Отправить владельцу сообщение (HTML-разметка)."""
+    if not settings.telegram_owner_chat_id:
+        return
+    send_message(settings.telegram_owner_chat_id, text)

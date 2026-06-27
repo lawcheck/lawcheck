@@ -106,6 +106,19 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  {% if tg_deeplink %}
+  <div class="tg-connect">
+    {% if order.client_chat_id %}
+      <span class="pill ok">Telegram подключён</span>
+      <span class="muted">изменения приходят в ваш чат после каждой проверки</span>
+    {% else %}
+      <strong>Получать изменения в Telegram</strong>
+      <span class="muted">— бот пришлёт, что появилось или исправилось на сайте</span>
+      <a class="btn-tg" href="{{ tg_deeplink }}" target="_blank" rel="noopener">Подключить Telegram</a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <div class="card">

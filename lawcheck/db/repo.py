@@ -212,3 +212,26 @@ def list_leads(limit: int = 100) -> list[Lead]:
         return list(sess.execute(
             select(Lead).order_by(Lead.created_at.desc()).limit(limit)
         ).scalars().all())
+
+
+def set_client_chat_id(order_id: str, chat_id: str) -> Order | None:
+    """Привязывает Telegram-чат клиента к заказу (deep-link бота)."""
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order:
+            order.client_chat_id = chat_id
+        return order
+
+
+def clients_subscribed_to_url(url: str) -> list[tuple[str, str]]:
+    """(order_id, client_chat_id) для подтверждённых заказов, мониторящих url
+    и подключивших Telegram. Для рассылки diff после скана."""
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Order).where(
+                Order.monitored_url == url,
+                Order.verified_at.is_not(None),
+                Order.client_chat_id != "",
+            )
+        ).scalars().all()
+        return [(o.id, o.client_chat_id) for o in rows]

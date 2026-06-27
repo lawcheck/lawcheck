@@ -88,5 +88,7 @@ class Order(Base):
     # Верификация владения: токен для TXT-записи/meta-тега и момент подтверждения.
     verify_token: Mapped[str] = mapped_column(String(64), default="")
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Telegram-чат клиента для diff-уведомлений мониторинга (через deep-link бота).
+    client_chat_id: Mapped[str] = mapped_column(String(32), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

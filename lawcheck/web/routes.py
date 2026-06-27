@@ -240,11 +240,15 @@ async def account(request: Request, order_id: str, attached: int = 0,
     token = order.verify_token
     if order.status == "paid" and order.monitored_url and not order.verified_at and not token:
         token = await asyncio.to_thread(repo.ensure_verify_token, order_id, ownership.new_token())
+    tg_deeplink = ""
+    if settings.telegram_bot_username and order.monitored_url and order.verified_at:
+        tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={order.id}"
     return templates.TemplateResponse(request, "account.html", {
         "order": order, "scans": scans, "diff": diff,
         "attached": bool(attached), "verified": bool(verified), "vfail": bool(vfail),
         "verify_token": token,
         "monitored_domain": ownership.registered_domain(order.monitored_url) if order.monitored_url else "",
+        "tg_deeplink": tg_deeplink,
     })
 
 
@@ -332,6 +336,42 @@ async def monitoring_run(request: Request, bg: BackgroundTasks):
 async def tochka_webhook_probe():
     """Точка при регистрации вебхука проверяет доступность URL (в т.ч. GET) —
     отвечаем 200, иначе «Failed to test webhook url accessibility»."""
+    return {"ok": True}
+
+
+@router.post("/webhooks/telegram")
+async def telegram_webhook(request: Request):
+    """Апдейты бота. Нужны только для deep-link подключения мониторинга:
+    клиент жмёт Start по ссылке t.me/bot?start=<order_id> → привязываем его чат."""
+    if (settings.telegram_webhook_secret
+            and request.headers.get("X-Telegram-Bot-Api-Secret-Token") != settings.telegram_webhook_secret):
+        raise HTTPException(status_code=403, detail="bad secret")
+    try:
+        upd = await request.json()
+    except Exception:
+        return {"ok": True}
+    msg = upd.get("message") or {}
+    text = (msg.get("text") or "").strip()
+    chat_id = str((msg.get("chat") or {}).get("id") or "")
+    if not chat_id or not text.startswith("/start"):
+        return {"ok": True}
+    parts = text.split(maxsplit=1)
+    order_id = parts[1].strip() if len(parts) > 1 else ""
+    if order_id:
+        order = await asyncio.to_thread(repo.set_client_chat_id, order_id, chat_id)
+        if order and order.monitored_url:
+            await asyncio.to_thread(
+                telegram.send_message, chat_id,
+                f"✅ Подключено. Буду присылать сюда изменения по сайту "
+                f"<b>{order.monitored_url}</b> после еженедельных проверок.")
+        else:
+            await asyncio.to_thread(
+                telegram.send_message, chat_id,
+                "Не нашёл заказ. Откройте ссылку «Подключить Telegram» из кабинета ещё раз.")
+    else:
+        await asyncio.to_thread(
+            telegram.send_message, chat_id,
+            "Это бот уведомлений LawCheck. Подключите его кнопкой в кабинете заказа.")
     return {"ok": True}
 
 
