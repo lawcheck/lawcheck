@@ -46,6 +46,7 @@ OPERATOR = {
 }
 templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
+templates.env.globals["site_base_url"] = settings.site_base_url.rstrip("/")
 
 # Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
 # и подключаются как под-роутеры — только когда SEO-контент готов к публикации.
@@ -133,12 +134,20 @@ async def robots() -> str:
 @router.get("/sitemap.xml")
 async def sitemap() -> Response:
     base = settings.site_base_url.rstrip("/")
-    urls = ["/", "/pricing", "/privacy", "/oferta"]
+    # (path, lastmod|None)
+    entries: list[tuple[str, str | None]] = [
+        ("/", None), ("/pricing", None), ("/privacy", None), ("/oferta", None),
+    ]
     if settings.seo_enabled:
-        urls += ["/blog"]
-        urls += [f"/blog/{a.slug}" for a in blog.list_articles()]
-        urls += [f"/proverka/{niche}" for niche in landings.LANDINGS]
-    items = "".join(f"<url><loc>{base}{u}</loc></url>" for u in urls)
+        entries.append(("/blog", None))
+        for a in blog.list_articles():
+            lastmod = a.date.isoformat() if a.date and a.date.year > 1 else None
+            entries.append((f"/blog/{a.slug}", lastmod))
+        entries += [(f"/proverka/{niche}", None) for niche in landings.LANDINGS]
+    items = "".join(
+        f"<url><loc>{base}{path}</loc>" + (f"<lastmod>{lm}</lastmod>" if lm else "") + "</url>"
+        for path, lm in entries
+    )
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{items}</urlset>'
     return Response(content=xml, media_type="application/xml")
 

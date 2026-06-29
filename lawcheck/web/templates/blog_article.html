@@ -1,7 +1,22 @@
 {% extends "base.html" %}
 {% block title %}{{ article.title }} · LawCheck{% endblock %}
 {% block meta_description %}{{ article.description }}{% endblock %}
+{% block og_type %}article{% endblock %}
 {% block nav_blog %}active{% endblock %}
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": {{ article.title|tojson }},
+  "description": {{ article.description|tojson }},
+  {% if article.date and article.date.year > 1 %}"datePublished": "{{ article.date.isoformat() }}",{% endif %}
+  "author": {"@type": "Person", "name": {{ operator.name|tojson }}},
+  "publisher": {"@type": "Organization", "name": "LawCheck"},
+  "mainEntityOfPage": "{{ site_base_url }}/blog/{{ article.slug }}"
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <article class="policy">
