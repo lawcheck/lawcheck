@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Входящие · LawCheck{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1 style="font-size: 22px; margin: 0 0 4px;">Входящие</h1>
+  <div class="stamp">вопросы из чат-виджета и email-лиды · только для владельца</div>
+</div>
+
+<div class="section" style="margin-top: 16px;">
+  <h2 style="font-size: 20px;">💬 Вопросы ({{ inquiries|length }})</h2>
+  {% if inquiries %}
+  <div class="inbox-list">
+    {% for q in inquiries %}
+    <div class="inbox-item">
+      <div class="inbox-meta">
+        <span class="mono">#{{ q.id }}</span> · {{ q.created_at.strftime('%d.%m.%Y %H:%M') }}
+        {% if q.page %} · <span class="inbox-page">{{ q.page }}</span>{% endif %}
+      </div>
+      <div class="inbox-msg">{{ q.message }}</div>
+      <div class="inbox-contact">
+        контакт: {% if q.contact %}<strong>{{ q.contact }}</strong>{% else %}<span class="muted">не оставлен</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="muted">Пока нет вопросов.</p>{% endif %}
+</div>
+
+<div class="section">
+  <h2 style="font-size: 20px;">📩 Email-лиды ({{ leads|length }})</h2>
+  {% if leads %}
+  <div class="card" style="padding: 0;">
+    <table class="cmp" style="margin: 0;">
+      <thead><tr><th>Дата</th><th>Email</th><th>Сайт (скан)</th></tr></thead>
+      <tbody>
+        {% for l in leads %}
+        <tr>
+          <td>{{ l.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+          <td><strong>{{ l.email }}</strong></td>
+          <td>{% if l.url %}<a href="/report/{{ l.scan_id }}">{{ l.url }}</a>{% else %}<span class="mono">{{ l.scan_id[:8] }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="muted">Пока нет лидов.</p>{% endif %}
+</div>
+{% endblock %}

@@ -46,6 +46,7 @@ OPERATOR = {
 }
 templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
+templates.env.globals["site_base_url"] = settings.site_base_url.rstrip("/")
 
 # Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
 # и подключаются как под-роутеры — только когда SEO-контент готов к публикации.
@@ -85,9 +86,41 @@ async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+@router.post("/inquiry")
+async def inquiry(request: Request, bg: BackgroundTasks,
+                  message: str = Form(...), contact: str = Form(""),
+                  page: str = Form(""), website: str = Form("")):
+    """Вопрос из чат-виджета. Сохраняем + мгновенный алерт владельцу в Telegram."""
+    if website:  # honeypot: бот заполнил скрытое поле — тихо игнорируем
+        return {"ok": True}
+    message = message.strip()
+    contact = contact.strip()
+    if len(message) < 2:
+        raise HTTPException(status_code=422, detail="empty message")
+    inq_id = await asyncio.to_thread(repo.create_inquiry, message, contact, page)
+    log.info("inquiry #%s: %.60s | контакт: %s", inq_id, message, contact or "—")
+    bg.add_task(
+        telegram.notify_owner,
+        f"💬 Вопрос с сайта #{inq_id}\n{message[:1500]}\n\n"
+        f"Контакт: <b>{contact or 'не оставлен'}</b>"
+        + (f"\nСтраница: {page}" if page else ""),
+    )
+    return {"ok": True}
+
+
 @router.get("/oferta", response_class=HTMLResponse)
 async def oferta(request: Request):
     return templates.TemplateResponse(request, "oferta.html", {})
+
+
+@router.get("/inbox", response_class=HTMLResponse)
+async def inbox(request: Request):
+    """Входящие: вопросы чат-виджета + email-лиды. Защита — basic_auth на Caddy."""
+    inquiries = await asyncio.to_thread(repo.list_inquiries, 200)
+    leads = await asyncio.to_thread(repo.list_leads, 200)
+    return templates.TemplateResponse(request, "inbox.html", {
+        "inquiries": inquiries, "leads": leads,
+    })
 
 
 # === SEO: sitemap.xml + robots.txt ===
@@ -101,12 +134,20 @@ async def robots() -> str:
 @router.get("/sitemap.xml")
 async def sitemap() -> Response:
     base = settings.site_base_url.rstrip("/")
-    urls = ["/", "/pricing", "/privacy", "/oferta"]
+    # (path, lastmod|None)
+    entries: list[tuple[str, str | None]] = [
+        ("/", None), ("/pricing", None), ("/privacy", None), ("/oferta", None),
+    ]
     if settings.seo_enabled:
-        urls += ["/blog"]
-        urls += [f"/blog/{a.slug}" for a in blog.list_articles()]
-        urls += [f"/proverka/{niche}" for niche in landings.LANDINGS]
-    items = "".join(f"<url><loc>{base}{u}</loc></url>" for u in urls)
+        entries.append(("/blog", None))
+        for a in blog.list_articles():
+            lastmod = a.date.isoformat() if a.date and a.date.year > 1 else None
+            entries.append((f"/blog/{a.slug}", lastmod))
+        entries += [(f"/proverka/{niche}", None) for niche in landings.LANDINGS]
+    items = "".join(
+        f"<url><loc>{base}{path}</loc>" + (f"<lastmod>{lm}</lastmod>" if lm else "") + "</url>"
+        for path, lm in entries
+    )
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{items}</urlset>'
     return Response(content=xml, media_type="application/xml")
 
@@ -153,7 +194,11 @@ async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
         if paid and await asyncio.to_thread(repo.mark_order_paid, order):
             bg.add_task(telegram.notify_owner,
                         f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.")
-    return templates.TemplateResponse(request, "pay_result.html", {"ok": paid, "order": o})
+    tg_deeplink = ""
+    if o and settings.telegram_bot_username:
+        tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={o.id}"
+    return templates.TemplateResponse(request, "pay_result.html",
+                                      {"ok": paid, "order": o, "tg_deeplink": tg_deeplink})
 
 
 @router.get("/pay/fail", response_class=HTMLResponse)
@@ -208,11 +253,15 @@ async def account(request: Request, order_id: str, attached: int = 0,
     token = order.verify_token
     if order.status == "paid" and order.monitored_url and not order.verified_at and not token:
         token = await asyncio.to_thread(repo.ensure_verify_token, order_id, ownership.new_token())
+    tg_deeplink = ""
+    if settings.telegram_bot_username and order.monitored_url and order.verified_at:
+        tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={order.id}"
     return templates.TemplateResponse(request, "account.html", {
         "order": order, "scans": scans, "diff": diff,
         "attached": bool(attached), "verified": bool(verified), "vfail": bool(vfail),
         "verify_token": token,
         "monitored_domain": ownership.registered_domain(order.monitored_url) if order.monitored_url else "",
+        "tg_deeplink": tg_deeplink,
     })
 
 
@@ -300,6 +349,45 @@ async def monitoring_run(request: Request, bg: BackgroundTasks):
 async def tochka_webhook_probe():
     """Точка при регистрации вебхука проверяет доступность URL (в т.ч. GET) —
     отвечаем 200, иначе «Failed to test webhook url accessibility»."""
+    return {"ok": True}
+
+
+@router.post("/webhooks/telegram")
+async def telegram_webhook(request: Request):
+    """Апдейты бота. Нужны только для deep-link подключения мониторинга:
+    клиент жмёт Start по ссылке t.me/bot?start=<order_id> → привязываем его чат."""
+    if (settings.telegram_webhook_secret
+            and request.headers.get("X-Telegram-Bot-Api-Secret-Token") != settings.telegram_webhook_secret):
+        raise HTTPException(status_code=403, detail="bad secret")
+    try:
+        upd = await request.json()
+    except Exception:
+        return {"ok": True}
+    msg = upd.get("message") or {}
+    text = (msg.get("text") or "").strip()
+    chat_id = str((msg.get("chat") or {}).get("id") or "")
+    if not chat_id or not text.startswith("/start"):
+        return {"ok": True}
+    parts = text.split(maxsplit=1)
+    order_id = parts[1].strip() if len(parts) > 1 else ""
+    if order_id:
+        order = await asyncio.to_thread(repo.set_client_chat_id, order_id, chat_id)
+        if order:
+            lines = [f"✅ Доступ к заказу <b>{order.id[:8]}</b> сохранён.",
+                     f"Личный кабинет: {settings.site_base_url}/account/{order.id}",
+                     "(сохраните это сообщение — здесь ваша постоянная ссылка)"]
+            if order.monitored_url:
+                lines.append(f"\nБуду присылать сюда изменения по сайту "
+                             f"<b>{order.monitored_url}</b> после еженедельных проверок.")
+            await asyncio.to_thread(telegram.send_message, chat_id, "\n".join(lines))
+        else:
+            await asyncio.to_thread(
+                telegram.send_message, chat_id,
+                "Не нашёл заказ. Откройте ссылку из кабинета ещё раз.")
+    else:
+        await asyncio.to_thread(
+            telegram.send_message, chat_id,
+            "Это бот уведомлений LawCheck. Подключите его кнопкой в кабинете заказа.")
     return {"ok": True}
 
 

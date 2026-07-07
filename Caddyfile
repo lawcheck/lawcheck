@@ -22,6 +22,14 @@ lawchek.ru {
 		file_server
 	}
 
+	# Входящие (заявки + лиды) — тот же basic auth (логин maxim), но рендерит API.
+	handle /inbox* {
+		basic_auth {
+			maxim $2a$14$O0CaflJ9VbOnzyrqTifz6.W1e1r6bCQ9YYJE.CXVHfUaNrqzeN6uW
+		}
+		reverse_proxy api:8000
+	}
+
 	handle {
 		reverse_proxy api:8000
 	}

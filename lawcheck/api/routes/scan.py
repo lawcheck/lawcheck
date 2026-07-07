@@ -45,6 +45,8 @@ async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
             for check in CHECKS:
                 all_findings.extend(check.run(snapshot))
             repo.mark_done(scan_id, pages_crawled=len(snapshot.pages), findings=all_findings)
+            from lawcheck.notify.monitoring import notify_monitoring
+            notify_monitoring(url)
 
         await asyncio.to_thread(_run_all_checks_and_save)
     except Exception as e:

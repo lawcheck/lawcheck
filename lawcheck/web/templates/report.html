@@ -67,6 +67,27 @@
   </div>
   {% endif %}
 
+  {% if risk and risk.max >= 1000000 %}
+  <div class="consult">
+    <div class="consult-text">
+      <strong>Риск до {{ risk.max|money }} ₽ — стоит разобрать с юристом</strong>
+      <span>Персональный разбор отчёта: что закрывать в первую очередь, какие документы
+        подготовить, как снять риск. Готовит юрист-партнёр — 4 900 ₽.</span>
+    </div>
+    <button type="button" class="consult-cta" onclick="lcConsult()">Заказать разбор</button>
+  </div>
+  <script>
+    function lcConsult() {
+      var t = document.getElementById('lc-chat-toggle');
+      var p = document.getElementById('lc-chat-panel');
+      if (p && p.hidden && t) t.click();
+      var m = document.getElementById('lc-chat-msg');
+      if (m) { m.value = 'Хочу заказать персональный разбор отчёта с юристом (4 900 ₽). Сайт: ' + {{ scan.url|tojson }}; m.focus(); }
+      if (window.lcGoal) lcGoal('consult_click');
+    }
+  </script>
+  {% endif %}
+
   {% if counts.critical or counts.warning %}
   <div class="upsell">
     <div class="upsell-text">

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Telegram-уведомления владельцу (оплаты, лиды). Оба пусты = выключено.
     telegram_bot_token: str = ""
     telegram_owner_chat_id: str = ""
+    # Для клиентского мониторинга: username бота (deep-link ?start=) и секрет
+    # вебхука (проверяем заголовок X-Telegram-Bot-Api-Secret-Token).
+    telegram_bot_username: str = "LawCheckMonitor_bot"
+    telegram_webhook_secret: str = ""
 
     # Публиковать SEO-раздел (блог, нишевые лендинги). Пока контент сырой — False:
     # роуты /blog и /proverka/* отдают 404, ссылки в навигации скрыты.

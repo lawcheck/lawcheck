@@ -7,6 +7,16 @@
   <link rel="apple-touch-icon" href="/static/favicon.svg">
   <title>{% block title %}LawCheck{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Автоматическая проверка сайта на нарушения 152-ФЗ и смежных законов: политика конфиденциальности, согласия у форм, cookie, реклама. Конкретные цитаты со страниц и оценка риска штрафа.{% endblock %}">
+  <meta name="yandex-verification" content="89b1f3af94c61af6" />
+  {% set _canonical = site_base_url ~ request.url.path %}
+  <link rel="canonical" href="{{ _canonical }}">
+  <meta property="og:site_name" content="LawCheck">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{{ self.title() }}">
+  <meta property="og:description" content="{{ self.meta_description() }}">
+  <meta property="og:url" content="{{ _canonical }}">
+  <meta property="og:image" content="{{ site_base_url }}/static/lawyer-podolskiy.jpg">
+  <meta name="twitter:card" content="summary_large_image">
   <!-- Шрифты самохостятся: без запросов к Google → нет передачи IP за рубеж -->
   <link href="/static/fonts/fonts.css" rel="stylesheet">
   <style>
@@ -272,6 +282,14 @@
     .upsell-cta { flex-shrink: 0; background: var(--brand); color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; }
     .upsell-cta:hover { background: var(--brand-hover); }
 
+    /* Премиум-CTA «Разбор с юристом» — при высоком риске, заметнее обычного апселла */
+    .consult { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 14px; padding: 18px 20px; background: var(--crit-soft); border: 1px solid #f3c9c4; border-radius: 12px; }
+    .consult-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .consult-text strong { font-size: 16px; color: var(--crit); }
+    .consult-text span { font-size: 13px; color: var(--ink-soft); }
+    .consult-cta { flex-shrink: 0; background: var(--crit); color: #fff; border: 0; cursor: pointer; padding: 12px 20px; border-radius: 9px; font-weight: 600; font-size: 14px; }
+    .consult-cta:hover { background: #b42318; }
+
     .subscribe-box { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 14px; padding: 14px 18px; background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; }
     .subscribe-box.done { border-style: solid; color: var(--ok); font-size: 14px; }
     .subscribe-box .sub-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -343,6 +361,53 @@
       padding: 14px 18px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
     /* display:flex выше перебивает [hidden]=display:none — возвращаем скрытие */
     .cookie-bar[hidden] { display: none; }
+
+    /* --- Входящие (admin /inbox) --- */
+    .inbox-list { display: flex; flex-direction: column; gap: 10px; }
+    .inbox-item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .inbox-meta { font-size: 12px; color: var(--faint); font-family: var(--mono); }
+    .inbox-page { color: var(--brand); }
+    .inbox-msg { font-size: 15px; color: var(--ink); margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
+    .inbox-contact { font-size: 13px; color: var(--ink-soft); }
+    .muted { color: var(--muted); }
+    .tg-connect { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding: 12px 14px; background: var(--info-soft); border: 1px solid #cfe0fb; border-radius: 10px; font-size: 14px; }
+    .tg-connect strong { font-size: 14px; }
+    .btn-tg { margin-left: auto; background: #229ed9; color: #fff; padding: 9px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; display: inline-block; }
+    .btn-tg:hover { background: #1c8dc2; }
+    .pay-save { margin: 16px 0; padding: 14px; background: var(--info-soft); border: 1px solid #cfe0fb; border-radius: 10px; }
+    .pay-save .btn-tg { margin: 6px 0; }
+    .pay-save p { margin: 4px 0; font-size: 14px; }
+
+    /* --- Чат-виджет лидов --- */
+    #lc-chat-toggle { position: fixed; right: 18px; bottom: 18px; z-index: 45;
+      display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer;
+      background: var(--brand); color: #fff; font-size: 14px; font-weight: 600;
+      padding: 12px 18px; border-radius: 999px; box-shadow: 0 6px 20px rgba(29,78,216,.35); }
+    #lc-chat-toggle:hover { background: var(--brand-hover); }
+    #lc-chat-toggle .lc-chat-ic { font-size: 18px; line-height: 1; }
+    @media (max-width: 480px) { #lc-chat-toggle .lc-chat-cap { display: none; }
+      #lc-chat-toggle { padding: 14px; } }
+    #lc-chat-panel { position: fixed; right: 18px; bottom: 74px; z-index: 46;
+      width: 340px; max-width: calc(100vw - 36px); background: var(--surface);
+      border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,.18); }
+    #lc-chat-panel[hidden] { display: none; }
+    .lc-chat-head { display: flex; align-items: center; justify-content: space-between;
+      background: var(--ink); color: #fff; padding: 12px 16px; font-size: 15px; }
+    .lc-chat-head button { background: none; border: 0; color: #c9c9d1; font-size: 16px; cursor: pointer; }
+    .lc-chat-body { padding: 14px 16px; }
+    .lc-chat-hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+    #lc-chat-form textarea, #lc-chat-form input[type=text] { width: 100%; box-sizing: border-box;
+      border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; font-size: 14px;
+      font-family: inherit; margin-bottom: 8px; resize: vertical; }
+    #lc-chat-form textarea:focus, #lc-chat-form input[type=text]:focus {
+      outline: 2px solid var(--brand); outline-offset: 1px; }
+    #lc-chat-send { width: 100%; background: var(--brand); color: #fff; border: 0;
+      border-radius: 9px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    #lc-chat-send:hover { background: var(--brand-hover); }
+    #lc-chat-send:disabled { opacity: .7; cursor: progress; }
+    .lc-chat-status { color: var(--crit); font-size: 13px; margin-top: 8px; }
+    .lc-chat-done { font-size: 14px; color: var(--ok); padding: 6px 0; }
     .cookie-bar .cookie-text { flex: 1 1 320px; min-width: 0; font-size: 13px; color: var(--ink-soft); }
     .cookie-bar .cookie-text a { color: var(--brand); }
     .cookie-bar .cookie-actions { display: flex; gap: 8px; }
@@ -528,5 +593,74 @@
     </div>
   </div>
   {% endif %}
+
+  <!-- Чат-виджет для входящих вопросов → Telegram владельцу (свой код, без трекеров) -->
+  <div id="lc-chat">
+    <button type="button" id="lc-chat-toggle" aria-label="Задать вопрос юристу">
+      <span class="lc-chat-ic">💬</span><span class="lc-chat-cap">Юрист на связи</span>
+    </button>
+    <div id="lc-chat-panel" hidden role="dialog" aria-label="Вопрос юристу">
+      <div class="lc-chat-head">
+        <strong>Вопрос юристу</strong>
+        <button type="button" id="lc-chat-close" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="lc-chat-body">
+        <p class="lc-chat-hint">Опишите вопрос по проверке сайта или ПДн — ответим в течение рабочего дня.</p>
+        <form id="lc-chat-form">
+          <textarea name="message" id="lc-chat-msg" rows="3" required
+                    placeholder="Ваш вопрос…" aria-label="Сообщение"></textarea>
+          <input type="text" name="contact" id="lc-chat-contact"
+                 placeholder="Telegram / email / телефон для ответа" aria-label="Контакт">
+          <input type="text" name="website" id="lc-chat-hp" tabindex="-1" autocomplete="off"
+                 style="position:absolute;left:-9999px" aria-hidden="true">
+          <button type="submit" id="lc-chat-send">Отправить</button>
+          <div class="lc-chat-status" id="lc-chat-status" hidden></div>
+        </form>
+        <div class="lc-chat-done" id="lc-chat-done" hidden>
+          ✅ Спасибо! Ответим в течение рабочего дня.
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var toggle = document.getElementById("lc-chat-toggle");
+      var panel = document.getElementById("lc-chat-panel");
+      var closeB = document.getElementById("lc-chat-close");
+      var form = document.getElementById("lc-chat-form");
+      var sendB = document.getElementById("lc-chat-send");
+      var status = document.getElementById("lc-chat-status");
+      var done = document.getElementById("lc-chat-done");
+      if (!toggle || !panel) return;
+
+      function open() { panel.hidden = false; toggle.setAttribute("aria-expanded", "true");
+        var m = document.getElementById("lc-chat-msg"); if (m) m.focus(); }
+      function close() { panel.hidden = true; toggle.setAttribute("aria-expanded", "false"); }
+      toggle.addEventListener("click", function () { panel.hidden ? open() : close(); });
+      closeB.addEventListener("click", close);
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        status.hidden = true;
+        var msg = (document.getElementById("lc-chat-msg").value || "").trim();
+        if (msg.length < 2) { status.textContent = "Напишите вопрос."; status.hidden = false; return; }
+        sendB.disabled = true; sendB.textContent = "Отправляем…";
+        var body = new FormData(form);
+        body.set("page", location.pathname);
+        fetch("/inquiry", { method: "POST", body: body })
+          .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function () {
+            form.hidden = true; done.hidden = false;
+            if (window.lcGoal) lcGoal("inquiry_sent");
+            setTimeout(close, 4000);
+          })
+          .catch(function () {
+            status.textContent = "Не отправилось. Напишите на {{ operator.email }}.";
+            status.hidden = false;
+            sendB.disabled = false; sendB.textContent = "Отправить";
+          });
+      });
+    })();
+  </script>
 </body>
 </html>

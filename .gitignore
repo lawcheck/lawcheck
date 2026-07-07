@@ -46,3 +46,6 @@ snapshots/
 
 # Local Claude Code tooling (preview config, local permissions)
 .claude/
+
+# Handoff-файлы (могут содержать секреты) — не коммитить
+handoff/

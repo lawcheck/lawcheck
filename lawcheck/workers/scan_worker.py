@@ -13,6 +13,11 @@ import logging
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
 from lawcheck.db import repo
+from lawcheck.net import force_ipv4
+from lawcheck.notify.monitoring import notify_monitoring
+
+# Контейнер IPv4-only — нужно и воркеру (рассылка клиентских diff в Telegram).
+force_ipv4()
 
 log = logging.getLogger(__name__)
 
@@ -38,3 +43,5 @@ async def _crawl_and_check(scan_id: str, url: str, max_pages: int | None) -> Non
     for check in CHECKS:
         all_findings.extend(check.run(snapshot))
     repo.mark_done(scan_id, pages_crawled=len(snapshot.pages), findings=all_findings)
+    # Если сайт под клиентским мониторингом — разослать diff в Telegram.
+    notify_monitoring(url)

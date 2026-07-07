@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import Finding, Lead, Order, Scan, utcnow
+from lawcheck.db.models import Finding, Inquiry, Lead, Order, Scan, utcnow
 from lawcheck.db.session import session_scope
 
 
@@ -187,3 +187,51 @@ def reset_verification(order_id: str) -> None:
         order = sess.get(Order, order_id)
         if order:
             order.verified_at = None
+
+
+def create_inquiry(message: str, contact: str, page: str) -> int:
+    """Сохраняет вопрос из чат-виджета. Возвращает id записи."""
+    with session_scope() as sess:
+        inq = Inquiry(message=message[:4000], contact=contact[:255], page=page[:2048])
+        sess.add(inq)
+        sess.flush()
+        return inq.id
+
+
+def list_inquiries(limit: int = 100) -> list[Inquiry]:
+    """Вопросы из чат-виджета, новые первыми."""
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Inquiry).order_by(Inquiry.created_at.desc()).limit(limit)
+        ).scalars().all())
+
+
+def list_leads(limit: int = 100) -> list[Lead]:
+    """Email-лиды со страницы отчёта, новые первыми."""
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Lead).order_by(Lead.created_at.desc()).limit(limit)
+        ).scalars().all())
+
+
+def set_client_chat_id(order_id: str, chat_id: str) -> Order | None:
+    """Привязывает Telegram-чат клиента к заказу (deep-link бота)."""
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order:
+            order.client_chat_id = chat_id
+        return order
+
+
+def clients_subscribed_to_url(url: str) -> list[tuple[str, str]]:
+    """(order_id, client_chat_id) для подтверждённых заказов, мониторящих url
+    и подключивших Telegram. Для рассылки diff после скана."""
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Order).where(
+                Order.monitored_url == url,
+                Order.verified_at.is_not(None),
+                Order.client_chat_id != "",
+            )
+        ).scalars().all()
+        return [(o.id, o.client_chat_id) for o in rows]

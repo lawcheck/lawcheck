@@ -8,6 +8,13 @@
     <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен —
       тариф активирован.</p>
     <a href="/account/{{ order.id }}" class="btn-pay">Открыть кабинет заказа</a>
+    {% if tg_deeplink %}
+    <div class="pay-save">
+      <p><strong>Чтобы не потерять доступ</strong> — сохраните ссылку на кабинет в Telegram:</p>
+      <a href="{{ tg_deeplink }}" class="btn-tg" target="_blank" rel="noopener">Сохранить доступ в Telegram</a>
+      <p class="pay-note">Бот пришлёт вашу постоянную ссылку на кабинет в личный чат.</p>
+    </div>
+    {% endif %}
     <p class="pay-note"><strong>Сохраните ссылку на кабинет</strong> — это ваш доступ
       к мониторингу, diff-отчётам и шаблонам. Чек придёт на почту, указанную при
       оплате. Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
