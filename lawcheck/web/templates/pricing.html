@@ -39,7 +39,10 @@
       <li>поддержка в Telegram</li>
     </ul>
     <form class="buy-form" action="/buy/pro" method="post" data-goal="pay_click">
+      <input type="email" name="email" required autocomplete="email"
+             placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
       <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽</button>
+      <div class="buy-email-note">На этот email восстановим доступ к кабинету, если потеряете ссылку.</div>
     </form>
     <div class="offer-note">Оплачивая, вы принимаете <a href="/oferta">условия оферты</a></div>
   </div>
