@@ -42,9 +42,8 @@
       <input type="email" name="email" required autocomplete="email"
              placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
       <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽</button>
-      <div class="buy-email-note">На этот email восстановим доступ к кабинету, если потеряете ссылку.</div>
+      <div class="buy-email-note">На этот email — доступ к кабинету и чек · Оплачивая, принимаете <a href="/oferta">оферту</a></div>
     </form>
-    <div class="offer-note">Оплачивая, вы принимаете <a href="/oferta">условия оферты</a></div>
   </div>
 
   <div class="plan">
@@ -64,6 +63,7 @@
 </section>
 
 <section class="section">
+  <div class="kicker numbered">сравнение возможностей</div>
   <h2>Сравнение тарифов</h2>
   <div class="cmp-wrap">
     <table class="cmp">
@@ -87,11 +87,13 @@
 </section>
 
 <section class="section">
+  <div class="kicker numbered">кто за этим стоит</div>
   <h2>Кто готовит PDF-заключение</h2>
   {% include "_expert.html" %}
 </section>
 
 <section class="section faq">
+  <div class="kicker numbered">вопросы и ответы</div>
   <h2>Частые вопросы</h2>
   <details>
     <summary>Это юридическая консультация?</summary>
