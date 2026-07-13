@@ -47,12 +47,13 @@
 
   {% if not is_active and scan.status == 'done' %}
   <script>lcGoal('report_view');</script>
+  {% set zone = 'ok' if compliance >= 70 else ('warn' if compliance >= 40 else 'crit') %}
   <div class="progress-wrap">
     <div class="progress-label">
       <span>Соответствие требованиям</span>
-      <span><strong>{{ compliance }}%</strong></span>
+      <span class="pct {{ zone }}">{{ compliance }}%</span>
     </div>
-    <div class="progress-bar"><div class="fill" style="width: {{ compliance }}%"></div></div>
+    <div class="progress-bar"><div class="fill {{ zone }}" style="width: {{ compliance }}%"></div></div>
   </div>
   {% if risk %}
   <div class="risk-banner">

@@ -158,20 +158,26 @@ _PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
 
 
 @router.post("/buy/{plan}", response_class=HTMLResponse)
-async def buy(request: Request, plan: str, bg: BackgroundTasks):
+async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = Form(...)):
     if plan not in _PLANS:
         raise HTTPException(status_code=404, detail="unknown plan")
     purpose, amount = _PLANS[plan]
 
+    # Email — единственная связь с покупателем: без него оплаченный заказ
+    # анонимен, а клиент, потерявший ссылку на кабинет, теряет доступ.
+    email = email.strip().lower()
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=422, detail="invalid email")
+
     if not tochka.is_configured():
         # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
         bg.add_task(telegram.notify_owner,
-                    f"🔔 Клик «Оплатить {plan.capitalize()}» ({amount} ₽). "
+                    f"🔔 Клик «Оплатить {plan.capitalize()}» ({amount} ₽) от <b>{email}</b>. "
                     f"Касса в fallback — возможно, придёт заявка на {OPERATOR['email']}.")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
     order_id = uuid.uuid4().hex
-    await asyncio.to_thread(repo.create_order, order_id, plan, amount)
+    await asyncio.to_thread(repo.create_order, order_id, plan, amount, email)
     try:
         link = await asyncio.to_thread(
             tochka.create_payment,
@@ -193,7 +199,8 @@ async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
         paid = await asyncio.to_thread(tochka.is_paid, o.operation_id)
         if paid and await asyncio.to_thread(repo.mark_order_paid, order):
             bg.add_task(telegram.notify_owner,
-                        f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.")
+                        f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.\n"
+                        f"Покупатель: <b>{o.email or 'email не указан'}</b>")
     tg_deeplink = ""
     if o and settings.telegram_bot_username:
         tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={o.id}"
@@ -412,7 +419,8 @@ async def tochka_webhook(request: Request, bg: BackgroundTasks):
             if await asyncio.to_thread(repo.mark_order_paid, order.id):
                 bg.add_task(telegram.notify_owner,
                             f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
-                            f"{order.plan.capitalize()} {order.amount} ₽.")
+                            f"{order.plan.capitalize()} {order.amount} ₽.\n"
+                            f"Покупатель: <b>{order.email or 'email не указан'}</b>")
                 log.info("заказ %s оплачен (операция %s)", order.id, operation_id)
     return {"ok": True}
 

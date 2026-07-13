@@ -30,7 +30,7 @@
 </div>
 
 <section class="section">
-  <div class="kicker">01 · цена вопроса</div>
+  <div class="kicker numbered">цена вопроса</div>
   <h2>Сколько стоят нарушения</h2>
   <p class="lead">Ориентировочные диапазоны штрафов для юрлиц по КоАП РФ. Не точный расчёт — оценка порядка риска, который находит проверка.</p>
   <div class="fine-cards">
@@ -54,14 +54,14 @@
 </section>
 
 <section class="section">
-  <div class="kicker">02 · что попадает в отчёт</div>
-  <h2>Не «соответствует / нет», а конкретика по каждой находке</h2>
+  <div class="kicker numbered">что попадает в отчёт</div>
+  <h2>Каждая находка — с доказательством и рецептом</h2>
   <p class="lead">По каждому нарушению — где нашли, цитата со страницы, какая норма нарушена и готовый текст для исправления.</p>
   <div class="what-grid">
     <ul class="checklist">
       <li><span class="num">1</span><div><div class="ct">URL и цитата</div><div class="cd">точная страница и фрагмент, который вызвал срабатывание</div></div></li>
       <li><span class="num">2</span><div><div class="ct">Норма закона</div><div class="cd">статья и пункт + внутренний код правила</div></div></li>
-      <li><span class="num">3</span><div><div class="ct">Severity</div><div class="cd">критично / предупреждение / информация</div></div></li>
+      <li><span class="num">3</span><div><div class="ct">Степень риска</div><div class="cd">критично / предупреждение / информация</div></div></li>
       <li><span class="num">4</span><div><div class="ct">Шаблон замены</div><div class="cd">готовый текст, который можно вставить на сайт</div></div></li>
       <li><span class="num">5</span><div><div class="ct">Оценка штрафа</div><div class="cd">ориентировочный диапазон по статье КоАП</div></div></li>
     </ul>
@@ -81,7 +81,7 @@
 </section>
 
 <section class="section">
-  <div class="kicker">03 · чем мы отличаемся</div>
+  <div class="kicker numbered">чем мы отличаемся</div>
   <h2>Проверить сайт может любой сервис. Следить за ним — только мы</h2>
   <p class="lead">Бесплатные чекеры покажут проблемы один раз и попрощаются. LawCheck отдаёт полный отчёт с цитатами бесплатно, а на Pro — следит за сайтом каждую неделю и подключает живого юриста.</p>
   <div class="cmp-wrap">
@@ -109,7 +109,7 @@
 
 {% if recent %}
 <section class="section">
-  <div class="kicker">04 · соцдоказательство</div>
+  <div class="kicker numbered">соцдоказательство</div>
   <h2>Последние публичные проверки</h2>
   <div class="card recent" style="margin-top: 12px;">
     {% for s in recent %}
@@ -128,7 +128,7 @@
 {% endif %}
 
 <section class="section">
-  <div class="kicker">05 · кто за этим стоит</div>
+  <div class="kicker numbered">кто за этим стоит</div>
   <h2>Заключения готовит практикующий юрист</h2>
   <p class="lead">Движок находит нарушения автоматически, а PDF-заключение на платном тарифе проверяет и подписывает юрист-партнёр.</p>
   {% include "_expert.html" %}
