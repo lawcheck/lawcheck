@@ -35,6 +35,9 @@
       --warn: #dc6803;   --warn-soft: #fffaeb;
       --info: #1570ef;   --info-soft: #eff6ff;
       --ok:   #027a48;   --ok-soft:   #ecfdf3;
+      /* деньги/штрафы в маркетинге: чернильно-кирпичный вместо алертного алого —
+         серьёзность без «пожарной сигнализации»; --crit остаётся severity-цветом отчёта */
+      --risk: #8f1d18;
       /* алиасы для совместимости со старыми шаблонами */
       --bg: var(--page);
       --card: var(--surface);
@@ -49,9 +52,10 @@
       --r-s: 6px; --r-m: 10px; --r-l: 14px; --r-full: 999px;
     }
     * { box-sizing: border-box; }
+    ::selection { background: rgba(29, 78, 216, .16); }
     body {
       margin: 0; padding: 0;
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-family: "Golos Text", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       background: var(--page); color: var(--ink);
       line-height: 1.5;
     }
@@ -139,14 +143,15 @@
     @media (max-width: 640px) { .numbers { grid-template-columns: minmax(0, 1fr); } }
     .numbers .n { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: 22px; }
     .numbers .n .big { font-family: var(--mono); font-size: var(--t-h2); font-weight: 600; letter-spacing: -0.03em; white-space: nowrap; }
-    .numbers .n .big.crit { color: var(--crit); }
+    .numbers .n .big.crit { color: var(--risk); }
     .numbers .n .cap { color: var(--muted); font-size: var(--t-m); margin-top: 4px; }
     .numbers .n .src { color: var(--faint); font-size: var(--t-xs); margin-top: 6px; }
 
     .fine-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
     @media (max-width: 640px) { .fine-cards { grid-template-columns: minmax(0, 1fr); } }
-    .fine-card { background: var(--crit-soft); border: 1px solid #f3c9c4; border-radius: var(--r-l); padding: 20px 22px; }
-    .fine-card .amount { font-family: var(--mono); font-size: var(--t-h2); font-weight: 600; letter-spacing: -0.03em; color: var(--crit); white-space: nowrap; }
+    /* карточка штрафа говорит языком находки из отчёта (левое ребро), а не алертной плашки */
+    .fine-card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--risk); border-radius: var(--r-l); padding: 20px 22px; }
+    .fine-card .amount { font-family: var(--mono); font-size: var(--t-h2); font-weight: 600; letter-spacing: -0.03em; color: var(--risk); white-space: nowrap; }
     .fine-card .reason { font-size: var(--t-m); color: var(--ink); margin-top: 8px; }
     .fine-card .src { font-family: var(--mono); font-size: var(--t-xs); color: var(--faint); margin-top: 6px; }
     .fine-disclaimer { font-size: var(--t-xs); color: var(--faint); margin-top: 14px; max-width: 720px; }
@@ -176,7 +181,7 @@
     @media (max-width: 820px) { .price-hero h1 { font-size: var(--t-h2); } }
     .price-hero p { color: var(--ink-soft); margin: 0; }
     .price-hero .price-math { margin-top: 10px; font-size: var(--t-m); color: var(--muted); }
-    .price-hero .price-math strong { color: var(--crit); }
+    .price-hero .price-math strong { color: var(--risk); }
     .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
     @media (max-width: 880px) { .plans { grid-template-columns: minmax(0, 1fr); } }
     .plan { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: 24px; }
@@ -184,7 +189,7 @@
     .plan .rec-badge { position: absolute; top: -11px; left: 24px; background: var(--brand); color: #fff; font-size: var(--t-xs); font-weight: 600; border-radius: var(--r-full); padding: 3px 12px; }
     .plan .name { font-weight: 600; font-size: var(--t-xl); }
     .plan .price { font-family: var(--mono); font-size: var(--t-h2); font-weight: 600; margin: 10px 0 2px; }
-    .plan .price small { font-family: "Inter", sans-serif; font-size: var(--t-m); font-weight: 400; color: var(--muted); }
+    .plan .price small { font-family: "Golos Text", "Inter", sans-serif; font-size: var(--t-m); font-weight: 400; color: var(--muted); }
     .plan .price-note { font-size: var(--t-s); color: var(--faint); min-height: 18px; }
     .plan ul { list-style: none; margin: 16px 0; padding: 0; }
     .plan ul li { font-size: var(--t-m); color: var(--ink-soft); padding: 6px 0 6px 22px; position: relative; }
@@ -268,6 +273,7 @@
     /* --- Отчёт: хедер скана --- */
     .scan-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
     .scan-head .url { font-family: var(--mono); font-size: var(--t-h3); font-weight: 500; margin: 0 0 6px; word-break: break-all; }
+    @media (max-width: 640px) { .scan-head .url { font-size: var(--t-xl); } }
     .scan-head .stamp { color: var(--faint); font-size: var(--t-s); font-family: var(--mono); }
     .badge { display: inline-block; font-size: var(--t-xs); font-weight: 600; border-radius: var(--r-s); padding: 2px 8px; vertical-align: 2px; margin-left: 8px; }
     .badge.https { background: var(--ok-soft); color: var(--ok); }
