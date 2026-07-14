@@ -25,7 +25,7 @@
     {% else %}
       <div class="rec locked">
         <strong>🔒 Как исправить</strong> — готовый текст в Pro.
-        <a href="/pricing">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
+        <a href="/pricing?scan={{ scan.id }}">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
       </div>
     {% endif %}
   {% endif %}
@@ -89,13 +89,18 @@
   </script>
   {% endif %}
 
-  {% if counts.critical or counts.warning %}
+  {% if unlocked %}
+  <div class="subscribe-box done">
+    ✅ Доступ Pro активен — все рекомендации «Как исправить» открыты ниже.
+    Шаблоны документов и PDF-заключение — в <a href="/account/{{ paid_order_id }}">вашем кабинете заказа</a>.
+  </div>
+  {% elif counts.critical or counts.warning %}
   <div class="upsell">
     <div class="upsell-text">
       <strong>PDF-заключение с подписью юриста — 990 ₽</strong>
       <span>Готовый документ с шаблонами исправлений. Первые 7 дней бесплатно.</span>
     </div>
-    <a href="/pricing" class="upsell-cta" data-goal="pay_click">Получить PDF</a>
+    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pay_click">Получить PDF</a>
   </div>
   {% endif %}
 

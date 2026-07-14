@@ -68,9 +68,25 @@ def list_recent_scans(limit: int = 50) -> list[Scan]:
 
 # === Заказы (оплата тарифов) ===
 
-def create_order(order_id: str, plan: str, amount: int, email: str = "") -> None:
+def create_order(order_id: str, plan: str, amount: int, email: str = "",
+                 scan_id: str = "") -> None:
     with session_scope() as sess:
-        sess.add(Order(id=order_id, plan=plan, amount=amount, email=email))
+        sess.add(Order(id=order_id, plan=plan, amount=amount, email=email,
+                       scan_id=scan_id))
+
+
+def paid_order_id_for_scan(scan_id: str) -> str | None:
+    """id оплаченного заказа, оформленного с отчёта этого скана, или None.
+    По нему на странице отчёта открываются рецепты «Как исправить»,
+    а плашка ведёт в кабинет заказа за шаблонами и PDF."""
+    if not scan_id:
+        return None
+    with session_scope() as sess:
+        return sess.execute(
+            select(Order.id)
+            .where(Order.scan_id == scan_id, Order.status == "paid")
+            .order_by(Order.paid_at.desc())
+        ).scalars().first()
 
 
 def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> None:

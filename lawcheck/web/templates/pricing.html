@@ -39,6 +39,7 @@
       <li>поддержка в Telegram</li>
     </ul>
     <form class="buy-form" action="/buy/pro" method="post" data-goal="pay_click">
+      {% if scan_id %}<input type="hidden" name="scan_id" value="{{ scan_id }}">{% endif %}
       <input type="email" name="email" required autocomplete="email"
              placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
       <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽</button>
