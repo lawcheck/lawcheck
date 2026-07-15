@@ -81,6 +81,9 @@ class Order(Base):
     email: Mapped[str] = mapped_column(String(255), default="")
     status: Mapped[str] = mapped_column(String(16), default="created", index=True)
     # created | pending (ссылка выдана) | paid | failed
+    # Скан, с отчёта которого оформлена покупка. Пусто = куплено не из отчёта.
+    # По нему на /report/{scan_id} открываются рецепты «Как исправить» после оплаты.
+    scan_id: Mapped[str] = mapped_column(String(32), default="", index=True)
     operation_id: Mapped[str] = mapped_column(String(64), default="", index=True)
     payment_link: Mapped[str] = mapped_column(String(2048), default="")
     # Сайт, подключённый к еженедельному мониторингу (Pro). Пусто = не подключён.

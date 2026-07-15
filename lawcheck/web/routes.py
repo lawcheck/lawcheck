@@ -158,7 +158,8 @@ _PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
 
 
 @router.post("/buy/{plan}", response_class=HTMLResponse)
-async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = Form(...)):
+async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = Form(...),
+              scan_id: str = Form("")):
     if plan not in _PLANS:
         raise HTTPException(status_code=404, detail="unknown plan")
     purpose, amount = _PLANS[plan]
@@ -177,7 +178,7 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
     order_id = uuid.uuid4().hex
-    await asyncio.to_thread(repo.create_order, order_id, plan, amount, email)
+    await asyncio.to_thread(repo.create_order, order_id, plan, amount, email, scan_id.strip())
     try:
         link = await asyncio.to_thread(
             tochka.create_payment,
@@ -426,10 +427,13 @@ async def tochka_webhook(request: Request, bg: BackgroundTasks):
 
 
 @router.get("/pricing", response_class=HTMLResponse)
-async def pricing(request: Request):
+async def pricing(request: Request, scan: str = ""):
     recent = await asyncio.to_thread(repo.list_recent_scans, 10)
     example = next((s for s in recent if s.status == "done"), None)
-    return templates.TemplateResponse(request, "pricing.html", {"example": example})
+    # scan прилетает с CTA отчёта («Открыть исправления») — привяжем к нему покупку,
+    # чтобы после оплаты открыть рецепты именно на этом отчёте.
+    return templates.TemplateResponse(request, "pricing.html",
+                                      {"example": example, "scan_id": scan.strip()})
 
 
 # === POST формы — создаёт скан, редиректит на /report/{id} ===
@@ -504,12 +508,18 @@ async def report(request: Request, scan_id: str, sub: int = 0):
     compliance = round(counts["ok"] / total * 100) if total else 0
 
     # Gate рецептов: открываем «Как исправить» у первых N самых тяжёлых находок.
+    # Оплаченный заказ с этим scan_id снимает замок со всех рецептов.
     all_problems = sorted(
         (f for f in scan.findings if f.severity != "ok" and f.recommendation),
         key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id),
     )
-    open_rec_ids = {f.id for f in all_problems[:_FREE_RECIPES]}
-    locked_count = max(0, len(all_problems) - _FREE_RECIPES)
+    paid_order_id = await asyncio.to_thread(repo.paid_order_id_for_scan, scan_id)
+    if paid_order_id:
+        open_rec_ids = {f.id for f in all_problems}
+        locked_count = 0
+    else:
+        open_rec_ids = {f.id for f in all_problems[:_FREE_RECIPES]}
+        locked_count = max(0, len(all_problems) - _FREE_RECIPES)
 
     return templates.TemplateResponse(request, "report.html", {
         "scan": scan,
@@ -521,6 +531,8 @@ async def report(request: Request, scan_id: str, sub: int = 0):
         "is_active": scan.status in ("pending", "running"),
         "open_rec_ids": open_rec_ids,
         "locked_count": locked_count,
+        "unlocked": bool(paid_order_id),
+        "paid_order_id": paid_order_id,
         "subscribed": bool(sub),
     })
 
