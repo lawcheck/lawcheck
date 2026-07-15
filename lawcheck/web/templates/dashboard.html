@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Мои отчёты · LawCheck{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="scan-head">
+    <div>
+      <h1 style="font-size: 22px; margin: 0 0 4px;">Мои отчёты</h1>
+      <div class="stamp">{{ user.email }}</div>
+    </div>
+    <a href="/" style="color: var(--brand); text-decoration: none; font-size: 14px;">+ новая проверка</a>
+  </div>
+
+  {% if not verified %}
+  <div class="status-banner error" style="margin-top: 12px;">
+    Подтвердите email — после этого сюда автоматически подтянутся прошлые проверки и заказы,
+    сделанные с этим адресом.
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size: 18px; margin: 0 0 10px;">Проверки</h2>
+  {% if scans %}
+  <div class="recent">
+    {% for s in scans %}
+    <div class="row">
+      <div><a href="/report/{{ s.id }}">{{ s.url }}</a></div>
+      <div class="stamp">{{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</div>
+      <div>
+        {% if s.status == 'done' %}<span class="pill ok">готов</span>
+        {% elif s.status == 'error' %}<span class="pill warning">ошибка</span>
+        {% else %}<span class="pill warning">{{ s.status }}</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="stamp">Пока нет проверок. <a href="/">Запустите первую</a> — она появится здесь.</p>
+  {% endif %}
+</div>
+
+{% if orders %}
+<div class="card">
+  <h2 style="font-size: 18px; margin: 0 0 10px;">Заказы</h2>
+  <div class="recent">
+    {% for o in orders %}
+    <div class="row">
+      <div><a href="/account/{{ o.id }}">{{ o.plan|capitalize }} · заказ {{ o.id[:8] }}</a></div>
+      <div class="stamp">{{ o.created_at.strftime('%d.%m.%Y') }} · {{ o.amount|money }} ₽</div>
+      <div>
+        {% if o.status == 'paid' %}<span class="pill ok">оплачен</span>
+        {% else %}<span class="pill warning">{{ o.status }}</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

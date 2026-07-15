@@ -16,7 +16,7 @@ from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
 from lawcheck.reporting import fines
-from lawcheck.web import blog, landings, ownership
+from lawcheck.web import auth, blog, deps, landings, ownership
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -56,6 +56,14 @@ templates.env.globals["seo_enabled"] = settings.seo_enabled
 if settings.seo_enabled:
     router.include_router(blog.router)
     router.include_router(landings.router)
+
+# Аккаунты (регистрация/вход/выход). Сессии всегда включены (SessionMiddleware
+# ставится в create_app с секретом из .env или эфемерным в dev).
+auth.templates = templates
+templates.env.globals["accounts_enabled"] = True
+templates.env.globals["session_email"] = deps.session_email  # для навигации в шаблонах
+templates.env.globals["session_unverified"] = deps.session_unverified  # баннер «подтвердите email»
+router.include_router(auth.router)
 
 
 # === Главная: форма + список последних сканов ===
@@ -445,6 +453,10 @@ async def create_scan_form(request: Request, bg: BackgroundTasks, url: str = For
         url = "https://" + url
     scan_id = uuid.uuid4().hex
     await asyncio.to_thread(repo.create_scan, scan_id, url, max_pages)
+    # Залогинен — привяжем скан к аккаунту, чтобы он попал в «Мои отчёты».
+    uid = deps.session_uid(request)
+    if uid:
+        await asyncio.to_thread(repo.set_scan_user, scan_id, uid)
 
     queue = get_queue()
     if queue is not None:

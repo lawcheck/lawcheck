@@ -48,5 +48,21 @@ class Settings(BaseSettings):
     # роуты /blog и /proverka/* отдают 404, ссылки в навигации скрыты.
     seo_enabled: bool = False
 
+    # Транзакционная почта (аккаунты: подтверждение email, сброс пароля).
+    # smtp_host пуст — письма не уходят по сети, а печатаются в лог
+    # (dev-режим console-бэкенд: ссылку с токеном видно в логах приложения).
+    # Порт 465 → SMTP_SSL; иначе SMTP + STARTTLS (если smtp_starttls=True).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "LawCheck <noreply@lawchek.ru>"
+    smtp_starttls: bool = True
+
+    # Секрет подписи cookie-сессий (Starlette SessionMiddleware). Пусто — вход
+    # в аккаунты выключен (сессии нечем подписать), сайт работает как раньше.
+    # В проде — длинная случайная строка в .env (напр. `openssl rand -hex 32`).
+    session_secret: str = ""
+
 
 settings = Settings()

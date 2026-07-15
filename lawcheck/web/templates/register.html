@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Регистрация · LawCheck{% endblock %}
+{% block nav_login %}active{% endblock %}
+{% block content %}
+<div class="card auth-card">
+  <h1>Регистрация</h1>
+  <p class="sub">Аккаунт, чтобы все ваши отчёты и заказы были в одном месте.</p>
+  {% if error %}<div class="auth-error">{{ error }}</div>{% endif %}
+  <form action="/register" method="post">
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" name="email" required autocomplete="email"
+             value="{{ email or '' }}" placeholder="you@company.ru">
+    </div>
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input id="password" type="password" name="password" required minlength="8"
+             autocomplete="new-password" placeholder="минимум 8 символов">
+    </div>
+    <button type="submit" class="submit">Создать аккаунт</button>
+  </form>
+  <p class="alt">Уже есть аккаунт? <a href="/login">Войти</a></p>
+</div>
+{% endblock %}

@@ -23,10 +23,39 @@ class Scan(Base):
     error: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Владелец скана, если запущен залогиненным пользователем. NULL = аноним.
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"),
+                                                nullable=True, index=True)
 
     findings: Mapped[list["Finding"]] = relationship(
         back_populates="scan", cascade="all, delete-orphan", order_by="Finding.id",
     )
+
+
+class User(Base):
+    """Зарегистрированный пользователь (email + пароль). Аккаунт — опция поверх
+    магик-ссылок: заказы/сканы привязываются к нему по подтверждённому email."""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AuthToken(Base):
+    """Одноразовый токен с TTL: подтверждение email и сброс пароля.
+    purpose = 'verify_email' | 'reset_password'."""
+    __tablename__ = "auth_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(32))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Finding(Base):
@@ -84,6 +113,10 @@ class Order(Base):
     # Скан, с отчёта которого оформлена покупка. Пусто = куплено не из отчёта.
     # По нему на /report/{scan_id} открываются рецепты «Как исправить» после оплаты.
     scan_id: Mapped[str] = mapped_column(String(32), default="", index=True)
+    # Владелец-аккаунт, если заказ привязан к пользователю (по подтверждённому
+    # email). NULL = доступ только по магик-ссылке /account/{order_id}.
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"),
+                                                nullable=True, index=True)
     operation_id: Mapped[str] = mapped_column(String(64), default="", index=True)
     payment_link: Mapped[str] = mapped_column(String(2048), default="")
     # Сайт, подключённый к еженедельному мониторингу (Pro). Пусто = не подключён.

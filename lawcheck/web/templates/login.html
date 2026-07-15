@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Вход · LawCheck{% endblock %}
+{% block nav_login %}active{% endblock %}
+{% block content %}
+<div class="card auth-card">
+  <h1>Вход</h1>
+  <p class="sub">Войдите, чтобы видеть все свои отчёты и заказы.</p>
+  {% if error %}<div class="auth-error">{{ error }}</div>{% endif %}
+  <form action="/login" method="post">
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" name="email" required autocomplete="email"
+             value="{{ email or '' }}" placeholder="you@company.ru">
+    </div>
+    <div class="field">
+      <label for="password">Пароль</label>
+      <input id="password" type="password" name="password" required
+             autocomplete="current-password" placeholder="ваш пароль">
+    </div>
+    <button type="submit" class="submit">Войти</button>
+  </form>
+  <p class="alt">Нет аккаунта? <a href="/register">Зарегистрироваться</a>
+     · <a href="/forgot-password">Забыли пароль?</a></p>
+</div>
+{% endblock %}

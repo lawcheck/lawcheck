@@ -75,6 +75,10 @@
     .topnav .links { display: flex; gap: 18px; margin-left: 12px; }
     .topnav .links a { color: var(--ink-soft); text-decoration: none; font-size: var(--t-m); }
     .topnav .links a:hover, .topnav .links a.active { color: var(--brand); }
+    .topnav .nav-user { color: var(--ink-soft); font-size: var(--t-m); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .topnav .nav-logout { display: inline; }
+    .topnav .nav-logout button { background: none; border: none; padding: 0; color: var(--ink-soft); font-size: var(--t-m); cursor: pointer; font: inherit; }
+    .topnav .nav-logout button:hover { color: var(--brand); }
     .topnav .spacer { flex: 1; }
     .topnav .cta { background: var(--ink); color: #fff; padding: 9px 16px; border-radius: var(--r-m); font-size: var(--t-m); font-weight: 600; text-decoration: none; white-space: nowrap; }
     .topnav .cta:hover { background: #000; }
@@ -111,6 +115,23 @@
     .form-card .url-field:focus-within { outline: 2px solid var(--brand); outline-offset: 1px; }
     .form-card button { width: 100%; margin-top: 12px; background: var(--brand); }
     .form-card button:hover { background: var(--brand-hover); }
+    /* --- Auth (register/login/reset) --- */
+    .auth-card { max-width: 400px; margin: 48px auto; }
+    .auth-card h1 { font-size: var(--t-xl); margin: 0 0 6px; }
+    .auth-card .sub { color: var(--ink-soft); font-size: var(--t-m); margin: 0 0 18px; }
+    .auth-card .field { margin-bottom: 14px; }
+    .auth-card label { display: block; font-size: var(--t-s); color: var(--ink-soft); margin-bottom: 4px; }
+    .auth-card input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--r-m); font-size: var(--t-m); }
+    .auth-card input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+    .auth-card button.submit { width: 100%; background: var(--brand); color: #fff; border: none; padding: 12px; border-radius: var(--r-m); font-size: var(--t-m); font-weight: 600; cursor: pointer; }
+    .auth-card button.submit:hover { background: var(--brand-hover); }
+    .auth-card .alt { margin-top: 14px; font-size: var(--t-m); color: var(--ink-soft); }
+    .auth-error { background: #fdecec; color: #a01313; border-radius: var(--r-m); padding: 10px 12px; font-size: var(--t-m); margin-bottom: 14px; }
+    /* --- Баннер «подтвердите email» --- */
+    .verify-bar { background: var(--info-soft); color: var(--ink); font-size: var(--t-m); padding: 9px 20px; display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+    .verify-bar form { display: inline; }
+    .verify-bar button { background: none; border: none; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .verify-bar .verify-sent { color: var(--brand); font-weight: 600; }
     .form-card button:disabled, .form-card button.loading { opacity: .7; cursor: progress; }
     .form-card .url-field:has(input[aria-invalid]) { border-color: var(--crit); }
     .form-card .field-error { color: var(--crit); font-size: var(--t-s); margin-top: 8px; }
@@ -567,6 +588,15 @@
         <a href="/" class="{% block nav_home %}{% endblock %}">Главная</a>
         <a href="/pricing" class="{% block nav_pricing %}{% endblock %}">Тарифы</a>
         {% if seo_enabled %}<a href="/blog" class="{% block nav_blog %}{% endblock %}">Блог</a>{% endif %}
+        {% if accounts_enabled %}{% set acc_email = session_email(request) %}
+          {% if acc_email %}
+            <a href="/dashboard" class="{% block nav_dashboard %}{% endblock %}">Мои отчёты</a>
+            <span class="nav-user" title="{{ acc_email }}">{{ acc_email }}</span>
+            <form action="/logout" method="post" class="nav-logout"><button type="submit">Выйти</button></form>
+          {% else %}
+            <a href="/login" class="{% block nav_login %}{% endblock %}">Войти</a>
+          {% endif %}
+        {% endif %}
       </div>
       <div class="spacer"></div>
       <button class="nav-toggle" aria-label="Меню" aria-expanded="false"
@@ -574,6 +604,16 @@
       <a href="/" class="cta">Проверить сайт</a>
     </div>
   </nav>
+  {% if accounts_enabled and session_unverified(request) %}
+  <div class="verify-bar">
+    <span>Подтвердите email — мы отправили ссылку на <b>{{ session_email(request) }}</b>.</span>
+    {% if request.query_params.get('vsent') %}
+      <span class="verify-sent">Письмо отправлено повторно ✓</span>
+    {% else %}
+      <form action="/resend-verification" method="post"><button type="submit">Отправить снова</button></form>
+    {% endif %}
+  </div>
+  {% endif %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>
