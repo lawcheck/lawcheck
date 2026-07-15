@@ -325,3 +325,54 @@ def consume_auth_token(token: str, purpose: str) -> int | None:
             return None
         row.used_at = utcnow()
         return row.user_id
+
+
+# === Привязка контента к аккаунту (дашборд) ===
+
+def set_scan_user(scan_id: str, user_id: int) -> None:
+    """Привязать скан к пользователю (когда залогиненный запускает проверку)."""
+    with session_scope() as sess:
+        scan = sess.get(Scan, scan_id)
+        if scan and scan.user_id is None:
+            scan.user_id = user_id
+
+
+def list_scans_for_user(user_id: int) -> list[Scan]:
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Scan).where(Scan.user_id == user_id).order_by(Scan.created_at.desc())
+        ).scalars())
+
+
+def list_orders_for_user(user_id: int) -> list[Order]:
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Order).where(Order.user_id == user_id).order_by(Order.created_at.desc())
+        ).scalars())
+
+
+def claim_for_user(user_id: int, email: str) -> int:
+    """Привязать к аккаунту прошлые заказы и сканы, связанные с этим email
+    (по заказам с этим email и по оставленным лидам). Вызывать ТОЛЬКО для
+    подтверждённого email. Идемпотентно. Возвращает число привязанных сканов."""
+    if not email:
+        return 0
+    with session_scope() as sess:
+        for order in sess.execute(
+            select(Order).where(Order.email == email, Order.user_id.is_(None))
+        ).scalars():
+            order.user_id = user_id
+        scan_ids: set[str] = set()
+        scan_ids.update(sess.execute(
+            select(Order.scan_id).where(Order.email == email, Order.scan_id != "")
+        ).scalars())
+        scan_ids.update(sess.execute(
+            select(Lead.scan_id).where(Lead.email == email)
+        ).scalars())
+        linked = 0
+        for sid in scan_ids:
+            scan = sess.get(Scan, sid)
+            if scan and scan.user_id is None:
+                scan.user_id = user_id
+                linked += 1
+        return linked

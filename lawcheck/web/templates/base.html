@@ -590,6 +590,7 @@
         {% if seo_enabled %}<a href="/blog" class="{% block nav_blog %}{% endblock %}">Блог</a>{% endif %}
         {% if accounts_enabled %}{% set acc_email = session_email(request) %}
           {% if acc_email %}
+            <a href="/dashboard" class="{% block nav_dashboard %}{% endblock %}">Мои отчёты</a>
             <span class="nav-user" title="{{ acc_email }}">{{ acc_email }}</span>
             <form action="/logout" method="post" class="nav-logout"><button type="submit">Выйти</button></form>
           {% else %}

@@ -453,6 +453,10 @@ async def create_scan_form(request: Request, bg: BackgroundTasks, url: str = For
         url = "https://" + url
     scan_id = uuid.uuid4().hex
     await asyncio.to_thread(repo.create_scan, scan_id, url, max_pages)
+    # Залогинен — привяжем скан к аккаунту, чтобы он попал в «Мои отчёты».
+    uid = deps.session_uid(request)
+    if uid:
+        await asyncio.to_thread(repo.set_scan_user, scan_id, uid)
 
     queue = get_queue()
     if queue is not None:

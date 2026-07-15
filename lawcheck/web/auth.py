@@ -109,7 +109,23 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
                                           {"error": "Неверный email или пароль.", "email": email},
                                           status_code=401)
     deps.login_user(request, user)
-    return RedirectResponse(url="/", status_code=303)
+    if user.email_verified_at is not None:
+        # Подтверждённый email — подцепим прошлые заказы/сканы к аккаунту.
+        await asyncio.to_thread(repo.claim_for_user, user.id, user.email)
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    user = await deps.current_user(request)
+    if user is None:
+        return RedirectResponse(url="/login", status_code=303)
+    scans = await asyncio.to_thread(repo.list_scans_for_user, user.id)
+    orders = await asyncio.to_thread(repo.list_orders_for_user, user.id)
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "user": user, "scans": scans, "orders": orders,
+        "verified": user.email_verified_at is not None,
+    })
 
 
 @router.post("/logout")
@@ -131,6 +147,10 @@ async def verify_email(request: Request, token: str = ""):
     await asyncio.to_thread(repo.set_email_verified, uid)
     if deps.session_uid(request) == uid:
         deps.mark_session_verified(request)
+    # Email подтверждён — безопасно подцепить прошлые заказы/сканы этого email.
+    user = await asyncio.to_thread(repo.get_user_by_id, uid)
+    if user:
+        await asyncio.to_thread(repo.claim_for_user, user.id, user.email)
     return _message(request, "Email подтверждён ✅",
                     "Спасибо! Ваш email подтверждён — аккаунт активен.",
                     cta_href="/", cta_label="На главную")
