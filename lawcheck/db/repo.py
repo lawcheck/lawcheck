@@ -376,3 +376,12 @@ def claim_for_user(user_id: int, email: str) -> int:
                 scan.user_id = user_id
                 linked += 1
         return linked
+
+
+def user_has_paid_order(user_id: int) -> bool:
+    """Есть ли у пользователя оплаченный заказ (активная Pro-подписка).
+    По ней его собственные отчёты открываются целиком."""
+    with session_scope() as sess:
+        return sess.execute(
+            select(Order.id).where(Order.user_id == user_id, Order.status == "paid")
+        ).first() is not None
