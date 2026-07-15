@@ -127,6 +127,11 @@
     .auth-card button.submit:hover { background: var(--brand-hover); }
     .auth-card .alt { margin-top: 14px; font-size: var(--t-m); color: var(--ink-soft); }
     .auth-error { background: #fdecec; color: #a01313; border-radius: var(--r-m); padding: 10px 12px; font-size: var(--t-m); margin-bottom: 14px; }
+    /* --- Баннер «подтвердите email» --- */
+    .verify-bar { background: var(--info-soft); color: var(--ink); font-size: var(--t-m); padding: 9px 20px; display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+    .verify-bar form { display: inline; }
+    .verify-bar button { background: none; border: none; padding: 0; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .verify-bar .verify-sent { color: var(--brand); font-weight: 600; }
     .form-card button:disabled, .form-card button.loading { opacity: .7; cursor: progress; }
     .form-card .url-field:has(input[aria-invalid]) { border-color: var(--crit); }
     .form-card .field-error { color: var(--crit); font-size: var(--t-s); margin-top: 8px; }
@@ -598,6 +603,16 @@
       <a href="/" class="cta">Проверить сайт</a>
     </div>
   </nav>
+  {% if accounts_enabled and session_unverified(request) %}
+  <div class="verify-bar">
+    <span>Подтвердите email — мы отправили ссылку на <b>{{ session_email(request) }}</b>.</span>
+    {% if request.query_params.get('vsent') %}
+      <span class="verify-sent">Письмо отправлено повторно ✓</span>
+    {% else %}
+      <form action="/resend-verification" method="post"><button type="submit">Отправить снова</button></form>
+    {% endif %}
+  </div>
+  {% endif %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>

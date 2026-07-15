@@ -27,11 +27,24 @@ def session_email(request: Request) -> str | None:
     return sess.get("email") if sess else None
 
 
+def session_unverified(request: Request) -> bool:
+    """Залогинен, но email ещё не подтверждён — для баннера в шаблонах."""
+    sess = _session(request)
+    return bool(sess and sess.get("uid") and not sess.get("verified"))
+
+
 def login_user(request: Request, user: User) -> None:
     sess = _session(request)
     if sess is not None:
         sess["uid"] = user.id
         sess["email"] = user.email
+        sess["verified"] = user.email_verified_at is not None
+
+
+def mark_session_verified(request: Request) -> None:
+    sess = _session(request)
+    if sess is not None:
+        sess["verified"] = True
 
 
 def logout_user(request: Request) -> None:

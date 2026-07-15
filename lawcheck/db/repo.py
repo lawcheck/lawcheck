@@ -1,4 +1,7 @@
 """Репозиторий — все DB-операции над Scan/Finding в одном месте."""
+import secrets
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -274,3 +277,51 @@ def create_user(email: str, password_hash: str) -> User | None:
         sess.add(user)
         sess.flush()  # присвоить user.id до выхода из сессии
         return user
+
+
+def set_email_verified(user_id: int) -> None:
+    with session_scope() as sess:
+        user = sess.get(User, user_id)
+        if user and user.email_verified_at is None:
+            user.email_verified_at = utcnow()
+
+
+def set_user_password(user_id: int, password_hash: str) -> None:
+    with session_scope() as sess:
+        user = sess.get(User, user_id)
+        if user:
+            user.password_hash = password_hash
+
+
+# === Одноразовые токены (подтверждение email, сброс пароля) ===
+
+def create_auth_token(user_id: int, purpose: str, ttl_hours: int) -> str:
+    """Создаёт одноразовый токен с TTL и возвращает его значение."""
+    token = secrets.token_urlsafe(32)
+    with session_scope() as sess:
+        sess.add(AuthToken(
+            token=token, user_id=user_id, purpose=purpose,
+            expires_at=utcnow() + timedelta(hours=ttl_hours),
+        ))
+    return token
+
+
+def consume_auth_token(token: str, purpose: str) -> int | None:
+    """Проверяет токен (нужное назначение, не использован, не истёк) и помечает
+    использованным. Возвращает user_id или None. Гонки закрыты uniq-токеном."""
+    if not token:
+        return None
+    with session_scope() as sess:
+        row = sess.execute(
+            select(AuthToken).where(AuthToken.token == token)
+        ).scalar_one_or_none()
+        if row is None or row.purpose != purpose or row.used_at is not None:
+            return None
+        # sqlite отдаёт naive datetime — нормализуем к UTC для сравнения.
+        exp = row.expires_at
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            return None
+        row.used_at = utcnow()
+        return row.user_id

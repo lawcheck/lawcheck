@@ -62,6 +62,7 @@ if settings.seo_enabled:
 auth.templates = templates
 templates.env.globals["accounts_enabled"] = True
 templates.env.globals["session_email"] = deps.session_email  # для навигации в шаблонах
+templates.env.globals["session_unverified"] = deps.session_unverified  # баннер «подтвердите email»
 router.include_router(auth.router)
 
 

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · LawCheck{% endblock %}
+{% block content %}
+<div class="card auth-card">
+  <h1>{{ title }}</h1>
+  <p class="sub">{{ message }}</p>
+  <a href="{{ cta_href }}" class="submit" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;">{{ cta_label }}</a>
+</div>
+{% endblock %}
