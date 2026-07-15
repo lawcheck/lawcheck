@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import Finding, Inquiry, Lead, Order, Scan, utcnow
+from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, Order, Scan, User, utcnow
 from lawcheck.db.session import session_scope
 
 
@@ -251,3 +251,26 @@ def clients_subscribed_to_url(url: str) -> list[tuple[str, str]]:
             )
         ).scalars().all()
         return [(o.id, o.client_chat_id) for o in rows]
+
+
+# === Пользователи (аккаунты) ===
+
+def get_user_by_email(email: str) -> User | None:
+    with session_scope() as sess:
+        return sess.execute(select(User).where(User.email == email)).scalar_one_or_none()
+
+
+def get_user_by_id(user_id: int) -> User | None:
+    with session_scope() as sess:
+        return sess.get(User, user_id)
+
+
+def create_user(email: str, password_hash: str) -> User | None:
+    """Создаёт пользователя. None — если email уже занят."""
+    with session_scope() as sess:
+        if sess.execute(select(User.id).where(User.email == email)).first():
+            return None
+        user = User(email=email, password_hash=password_hash)
+        sess.add(user)
+        sess.flush()  # присвоить user.id до выхода из сессии
+        return user

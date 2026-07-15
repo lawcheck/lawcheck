@@ -16,7 +16,7 @@ from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
 from lawcheck.reporting import fines
-from lawcheck.web import blog, landings, ownership
+from lawcheck.web import auth, blog, deps, landings, ownership
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -56,6 +56,13 @@ templates.env.globals["seo_enabled"] = settings.seo_enabled
 if settings.seo_enabled:
     router.include_router(blog.router)
     router.include_router(landings.router)
+
+# Аккаунты (регистрация/вход/выход). Сессии всегда включены (SessionMiddleware
+# ставится в create_app с секретом из .env или эфемерным в dev).
+auth.templates = templates
+templates.env.globals["accounts_enabled"] = True
+templates.env.globals["session_email"] = deps.session_email  # для навигации в шаблонах
+router.include_router(auth.router)
 
 
 # === Главная: форма + список последних сканов ===
