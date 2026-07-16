@@ -104,6 +104,25 @@ def render(scan) -> str:
 
     consent_fields = cats_ru or _BLANK.format("перечислите поля формы")
 
+    # --- cookie-политика: реально обнаруженные сервисы ---
+    all_trackers = facts["trackers_ru"] + facts["trackers_foreign"]
+    if all_trackers:
+        services = ", ".join(_esc(t) for t in all_trackers)
+        cookies_services = (f"На сайте обнаружены сервисы, использующие cookie и "
+                            f"аналогичные технологии: <strong>{services}</strong>.")
+    else:
+        cookies_services = _BLANK.format(
+            "перечислите используемые cookie и сторонние сервисы — сверьтесь с "
+            "отчётом, блок «Cookies и трекеры»")
+    if facts["trackers_foreign"]:
+        foreign = ", ".join(_esc(t) for t in facts["trackers_foreign"])
+        cookies_cross = (f"Часть сервисов — иностранные (<strong>{foreign}</strong>): "
+                         "установка их cookie влечёт трансграничную передачу данных "
+                         "(см. раздел Политики о трансграничной передаче).")
+    else:
+        cookies_cross = ("Иностранные сервисы cookie не обнаружены; трансграничная "
+                         "передача через cookie не осуществляется.")
+
     return _PAGE.format(
         domain=domain, url=_esc(facts["url"]), op=op,
         cats_line=cats_line, cross=cross, consent_fields=consent_fields,
@@ -112,6 +131,7 @@ def render(scan) -> str:
         terms=_BLANK.format("срок хранения: до достижения целей / N лет / до отзыва согласия"),
         contacts=_BLANK.format("email и почтовый адрес оператора для обращений субъектов"),
         resp=_BLANK.format("ФИО ответственного за организацию обработки ПДн"),
+        cookies_services=cookies_services, cookies_cross=cookies_cross,
     )
 
 
@@ -174,6 +194,23 @@ _PAGE = """<!doctype html>
     Если планируете рассылки — добавьте <b>отдельный</b> второй чекбокс на согласие
     получать рекламно-информационные сообщения (нельзя объединять с первым).</p>
 </div>
+
+<h2>Политика в отношении файлов cookie</h2>
+<ol>
+  <li><strong>Общие положения.</strong> Сайт {url} использует файлы cookie и аналогичные
+    технологии для обеспечения работы сайта, аналитики и (при наличии) рекламы.</li>
+  <li><strong>Используемые cookie и сервисы.</strong> {cookies_services} Файлы cookie
+    делятся на строго необходимые (для работы сайта), аналитические (статистика посещений)
+    и рекламные.</li>
+  <li><strong>Правовое основание и согласие.</strong> Cookie, кроме строго необходимых,
+    устанавливаются после получения согласия пользователя через баннер cookie. Идентификаторы
+    cookie относятся к персональным данным (ст. 3 152-ФЗ).</li>
+  <li><strong>Трансграничная передача.</strong> {cookies_cross}</li>
+  <li><strong>Управление cookie.</strong> Пользователь может отключить cookie в настройках
+    браузера или отклонить необязательные в баннере. Часть функций сайта при этом может быть
+    недоступна.</li>
+  <li><strong>Срок хранения и контакты.</strong> {terms}. Вопросы — {contacts}.</li>
+</ol>
 
 <footer>Черновик подготовлен автоматически сервисом LawCheck по данным проверки сайта и не
 является юридической консультацией. Перед публикацией проверьте с юристом.</footer>

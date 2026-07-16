@@ -46,6 +46,9 @@ def test_render_fills_detected_facts():
     assert "Google Analytics 4" in html and "трансгранич" in html.lower()
     # текст согласия под поля сайта
     assert "☐ Я даю согласие" in html
+    # cookie-политика с реально обнаруженными сервисами
+    assert "Политика в отношении файлов cookie" in html
+    assert "Яндекс.Метрика" in html
     # владельческие поля помечены к заполнению
     assert "[ЗАПОЛНИТЕ" in html
 
