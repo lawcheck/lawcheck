@@ -64,3 +64,18 @@ class SiteSnapshot:
 
     def all_forms(self) -> list[Form]:
         return [f for p in self.pages for f in p.forms]
+
+    def unique_forms(self) -> list[Form]:
+        """Формы, дедуплицированные по структуре (метод + action + сигнатура
+        полей). Одна и та же форма (напр. в футере) на N страницах считается
+        один раз — иначе проверки B1/B2 плодят дубли по числу страниц."""
+        seen: set = set()
+        out: list[Form] = []
+        for f in self.all_forms():
+            sig = (f.method.lower(), f.action,
+                   tuple(sorted((fld.name, fld.type) for fld in f.fields)))
+            if sig in seen:
+                continue
+            seen.add(sig)
+            out.append(f)
+        return out

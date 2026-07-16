@@ -72,6 +72,9 @@ def test_pro_owner_sees_own_report_unlocked(client):
     html = client.get(f"/report/{sid}").text
     assert _locks(html) == 0
     assert "Доступ Pro активен" in html
+    # связка «находка → готовый текст»: у A1/B2 есть ссылка на раздел шаблонов
+    assert "Готовый текст" in html
+    assert "/templates#tpl-" in html
 
 
 def test_logged_in_without_paid_order_stays_locked(client):

@@ -22,7 +22,7 @@ class FormConsentCheck(Check):
     title = TITLE
 
     def run(self, snapshot: SiteSnapshot) -> list[Finding]:
-        pd_forms = [f for f in snapshot.all_forms() if is_pd_form(f)]
+        pd_forms = [f for f in snapshot.unique_forms() if is_pd_form(f)]
         if not pd_forms:
             return []
 
