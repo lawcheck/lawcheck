@@ -8,7 +8,11 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
-    "playwright>=1.48",
+    # ВАЖНО: версия должна совпадать с тегом базового образа в Dockerfile
+    # (mcr.microsoft.com/playwright/python:vX.Y.Z-noble). Без пина pip тянет
+    # свежий playwright, а браузеры в образе остаются старыми → chromium.launch
+    # падает «Executable doesn't exist». Обновлять пару образ+пин синхронно.
+    "playwright==1.60.0",
     "beautifulsoup4>=4.12",
     "lxml>=5.3",
     "httpx>=0.27",
