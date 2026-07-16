@@ -3,7 +3,7 @@
 
 {% block head_extra %}{% endblock %}
 
-{% macro finding_card(f, scan, rec_open=true, locked_total=0) %}
+{% macro finding_card(f, scan, rec_open=true, locked_total=0, templates_href="") %}
 <div class="finding {{ f.severity }}">
   <div class="head">
     <span class="pill {{ f.severity }}">{{ f.severity }}</span>
@@ -21,7 +21,11 @@
   {% if f.evidence %}<div class="quote">{{ f.evidence }}</div>{% endif %}
   {% if f.recommendation %}
     {% if rec_open %}
-      <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}</div>
+      <div class="rec"><strong>Как исправить:</strong> {{ f.recommendation }}
+        {% if templates_href %}{% set tpl = fix_template(f.check_id) %}{% if tpl %}
+          <div class="rec-tpl">📄 Готовый текст: <a href="{{ templates_href }}#{{ tpl[0] }}">раздел «{{ tpl[1] }}» в шаблонах</a></div>
+        {% endif %}{% endif %}
+      </div>
     {% else %}
       <div class="rec locked">
         <strong>🔒 Как исправить</strong> — готовый текст в Pro.
@@ -182,7 +186,7 @@
         <h3 class="block-title">{{ b.title }}</h3>
 
         {% for f in b.problems %}
-          {{ finding_card(f, scan, rec_open=(f.id in open_rec_ids or not f.recommendation), locked_total=locked_count) }}
+          {{ finding_card(f, scan, rec_open=(f.id in open_rec_ids or not f.recommendation), locked_total=locked_count, templates_href=templates_href) }}
         {% endfor %}
 
         {% if b.oks %}

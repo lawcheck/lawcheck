@@ -129,3 +129,36 @@ def test_b2_finds_consent_checkbox_by_marker():
 
 def test_b2_no_findings_when_no_pd_forms():
     assert FormConsentCheck().run(_snap([])) == []
+
+
+# === Дедуп одинаковых форм на разных страницах (footer-форма и т.п.) ===
+
+def test_same_form_across_pages_counted_once():
+    """Структурно одинаковая форма на 3 страницах = одна находка B1/B2, не три."""
+    def page(url):
+        return PageSnapshot(url=url, status=200, forms=[
+            _form([_field(type="email", name="email"), _field(type="text", name="phone")],
+                  page_url=url)  # без чекбокса согласия → CRITICAL
+        ])
+    snap = SiteSnapshot(start_url="https://example.com/", pages=[
+        page("https://example.com/"),
+        page("https://example.com/about"),
+        page("https://example.com/contact"),
+    ])
+    assert len(snap.unique_forms()) == 1
+    b2_crit = [f for f in FormConsentCheck().run(snap) if f.severity == Severity.CRITICAL]
+    assert len(b2_crit) == 1
+    b1_info = [f for f in FormsInventoryCheck().run(snap) if f.severity == Severity.INFO]
+    assert len(b1_info) == 1
+
+
+def test_distinct_forms_not_merged():
+    """Разные по структуре формы (contact vs newsletter) остаются раздельными."""
+    snap = SiteSnapshot(start_url="https://example.com/", pages=[
+        PageSnapshot(url="https://example.com/", status=200, forms=[
+            _form([_field(type="email", name="email"), _field(type="text", name="phone")],
+                  action="/contact"),
+            _form([_field(type="email", name="subscriber")], action="/newsletter"),
+        ]),
+    ])
+    assert len(snap.unique_forms()) == 2

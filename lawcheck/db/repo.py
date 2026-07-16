@@ -385,3 +385,13 @@ def user_has_paid_order(user_id: int) -> bool:
         return sess.execute(
             select(Order.id).where(Order.user_id == user_id, Order.status == "paid")
         ).first() is not None
+
+
+def latest_paid_order_id_for_user(user_id: int) -> str | None:
+    """id последнего оплаченного заказа пользователя (для ссылок в кабинет и
+    шаблоны при подписочной разблокировке отчёта). None — если оплат нет."""
+    with session_scope() as sess:
+        return sess.execute(
+            select(Order.id).where(Order.user_id == user_id, Order.status == "paid")
+            .order_by(Order.paid_at.desc())
+        ).scalars().first()
