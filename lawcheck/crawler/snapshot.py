@@ -66,14 +66,20 @@ class SiteSnapshot:
         return [f for p in self.pages for f in p.forms]
 
     def unique_forms(self) -> list[Form]:
-        """Формы, дедуплицированные по структуре (метод + action + сигнатура
-        полей). Одна и та же форма (напр. в футере) на N страницах считается
-        один раз — иначе проверки B1/B2 плодят дубли по числу страниц."""
+        """Формы, дедуплицированные по структуре. Одна и та же форма (напр. в
+        футере) на N страницах считается один раз — иначе проверки B1/B2 плодят
+        дубли по числу страниц.
+
+        Сигнатура — метод + видимые поля (name+type). action НЕ учитываем: у
+        форм с пустым action он резолвится в URL текущей страницы и «скачет»
+        (форма футера получает разный action на каждой странице). hidden-поля
+        тоже исключаем — там бывают per-page CSRF-токены со случайными именами."""
         seen: set = set()
         out: list[Form] = []
         for f in self.all_forms():
-            sig = (f.method.lower(), f.action,
-                   tuple(sorted((fld.name, fld.type) for fld in f.fields)))
+            sig = (f.method.lower(),
+                   tuple(sorted((fld.name, fld.type)
+                                for fld in f.fields if fld.type != "hidden")))
             if sig in seen:
                 continue
             seen.add(sig)
