@@ -15,7 +15,7 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
-from lawcheck.reporting import fines
+from lawcheck.reporting import fines, policy_draft
 from lawcheck.web import auth, blog, deps, landings, ownership
 from lawcheck.workers.queue import get_queue
 
@@ -510,6 +510,29 @@ _BLOCK_DEFS = [
 _FREE_RECIPES = 2
 
 
+async def _unlock_order_id(request: Request, scan) -> str | None:
+    """id оплаченного заказа, дающего полный доступ к отчёту этого скана:
+    разовая покупка с него ИЛИ Pro-подписка залогиненного владельца скана."""
+    oid = await asyncio.to_thread(repo.paid_order_id_for_scan, scan.id)
+    if not oid:
+        user = await deps.current_user(request)
+        if user is not None and scan.user_id == user.id:
+            oid = await asyncio.to_thread(repo.latest_paid_order_id_for_user, user.id)
+    return oid
+
+
+@router.get("/report/{scan_id}/documents", response_class=HTMLResponse)
+async def report_documents(request: Request, scan_id: str):
+    """Авто-черновик Политики ПДн + текста согласия под конкретный сайт (Pro)."""
+    scan = await asyncio.to_thread(repo.get_scan, scan_id)
+    if scan is None or scan.status != "done":
+        raise HTTPException(status_code=404, detail="scan not found")
+    if not await _unlock_order_id(request, scan):
+        return RedirectResponse(url=f"/pricing?scan={scan_id}", status_code=303)
+    html = await asyncio.to_thread(policy_draft.render, scan)
+    return HTMLResponse(content=html)
+
+
 @router.get("/report/{scan_id}", response_class=HTMLResponse)
 async def report(request: Request, scan_id: str, sub: int = 0):
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
@@ -548,12 +571,7 @@ async def report(request: Request, scan_id: str, sub: int = 0):
     # Разблокировка «Как исправить»: (1) разовая покупка с этого отчёта, либо
     # (2) Pro-подписка — залогиненный ВЛАДЕЛЕЦ скана с оплаченным заказом видит
     # свои отчёты открытыми целиком (чужие сканы так не открываются).
-    unlock_order_id = await asyncio.to_thread(repo.paid_order_id_for_scan, scan_id)
-    if not unlock_order_id:
-        user = await deps.current_user(request)
-        if user is not None and scan.user_id == user.id:
-            unlock_order_id = await asyncio.to_thread(
-                repo.latest_paid_order_id_for_user, user.id)
+    unlock_order_id = await _unlock_order_id(request, scan)
     unlocked = bool(unlock_order_id)
     cabinet_href = f"/account/{unlock_order_id}" if unlock_order_id else "/dashboard"
     # База для ссылок на готовый текст в шаблонах (доступна при оплаченном заказе).

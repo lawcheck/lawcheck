@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -70,6 +70,9 @@ class Finding(Base):
     location: Mapped[str] = mapped_column(String(2048), default="")
     law_reference: Mapped[str] = mapped_column(String(255), default="")
     recommendation: Mapped[str] = mapped_column(Text, default="")
+    # Структурные факты проверки (ИНН, категории ПДн, трекеры…) — для авто-сборки
+    # черновиков документов под сайт. NULL для старых сканов.
+    extra: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     scan: Mapped["Scan"] = relationship(back_populates="findings")
 
