@@ -525,8 +525,19 @@ async def report(request: Request, scan_id: str, sub: int = 0):
         (f for f in scan.findings if f.severity != "ok" and f.recommendation),
         key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id),
     )
+    # Разблокировка «Как исправить»: (1) разовая покупка с этого отчёта, либо
+    # (2) Pro-подписка — залогиненный ВЛАДЕЛЕЦ скана с оплаченным заказом видит
+    # свои отчёты открытыми целиком (чужие сканы так не открываются).
     paid_order_id = await asyncio.to_thread(repo.paid_order_id_for_scan, scan_id)
-    if paid_order_id:
+    unlocked = bool(paid_order_id)
+    cabinet_href = f"/account/{paid_order_id}" if paid_order_id else "/dashboard"
+    if not unlocked:
+        user = await deps.current_user(request)
+        if (user is not None and scan.user_id == user.id
+                and await asyncio.to_thread(repo.user_has_paid_order, user.id)):
+            unlocked = True
+            cabinet_href = "/dashboard"
+    if unlocked:
         open_rec_ids = {f.id for f in all_problems}
         locked_count = 0
     else:
@@ -543,8 +554,8 @@ async def report(request: Request, scan_id: str, sub: int = 0):
         "is_active": scan.status in ("pending", "running"),
         "open_rec_ids": open_rec_ids,
         "locked_count": locked_count,
-        "unlocked": bool(paid_order_id),
-        "paid_order_id": paid_order_id,
+        "unlocked": unlocked,
+        "cabinet_href": cabinet_href,
         "subscribed": bool(sub),
     })
 

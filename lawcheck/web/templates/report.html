@@ -92,7 +92,7 @@
   {% if unlocked %}
   <div class="subscribe-box done">
     ✅ Доступ Pro активен — все рекомендации «Как исправить» открыты ниже.
-    Шаблоны документов и PDF-заключение — в <a href="/account/{{ paid_order_id }}">вашем кабинете заказа</a>.
+    Шаблоны документов и PDF-заключение — в <a href="{{ cabinet_href }}">вашем кабинете</a>.
   </div>
   {% elif counts.critical or counts.warning %}
   <div class="upsell">
