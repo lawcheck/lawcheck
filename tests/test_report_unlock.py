@@ -95,6 +95,22 @@ def test_pro_user_does_not_unlock_foreign_scan(client):
     assert _locks(html) >= 1                    # Pro не открывает чужое
 
 
+def test_documents_route_gated_by_payment(client):
+    # оплаченный владелец → черновик отдаётся (200, содержит Политику)
+    user = _register(client, "docs@x.ru")
+    _give_paid_order(user.id)
+    sid = "sdocsowner00000000000000000docs1"
+    _scan_with_problems(sid, user_id=user.id)
+    r = client.get(f"/report/{sid}/documents")
+    assert r.status_code == 200
+    assert "Политика обработки персональных данных" in r.text
+    assert "☐ Я даю согласие" in r.text
+    # аноним → редирект на оплату
+    client.cookies.clear()
+    r2 = client.get(f"/report/{sid}/documents")
+    assert r2.status_code == 303 and "/pricing" in r2.headers["location"]
+
+
 def test_per_scan_purchase_still_unlocks_for_anyone(client):
     sid = "sperscan00000000000000000000buy1"
     _scan_with_problems(sid, user_id=None)

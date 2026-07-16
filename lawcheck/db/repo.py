@@ -35,6 +35,7 @@ def mark_done(scan_id: str, pages_crawled: int, findings: list[CheckFinding]) ->
                 check_id=f.check_id, severity=f.severity.value, title=f.title,
                 evidence=f.evidence, location=f.location,
                 law_reference=f.law_reference, recommendation=f.recommendation,
+                extra=f.extra or None,
             )
             for f in findings
         ]

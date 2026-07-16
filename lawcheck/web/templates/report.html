@@ -97,6 +97,10 @@
   <div class="subscribe-box done">
     ✅ Доступ Pro активен — все рекомендации «Как исправить» открыты ниже.
     Шаблоны документов и PDF-заключение — в <a href="{{ cabinet_href }}">вашем кабинете</a>.
+    <div style="margin-top: 8px;">
+      📄 <a href="/report/{{ scan.id }}/documents"><strong>Черновик Политики ПДн + текста согласия под ваш сайт</strong></a>
+      — факты вашего сайта уже подставлены.
+    </div>
   </div>
   {% elif counts.critical or counts.warning %}
   <div class="upsell">
