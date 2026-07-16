@@ -162,3 +162,31 @@ def test_distinct_forms_not_merged():
         ]),
     ])
     assert len(snap.unique_forms()) == 2
+
+
+def test_self_submitting_form_deduped_despite_varying_action():
+    """Форма с пустым action резолвится в URL страницы → action скачет.
+    Дедуп по видимым полям всё равно считает её один раз (регресс fistashki.org)."""
+    fields = [_field(type="text", name="name"), _field(type="text", name="phone")]
+    snap = SiteSnapshot(start_url="https://example.com/", pages=[
+        PageSnapshot(url="https://example.com/", status=200,
+                     forms=[_form(list(fields), action="https://example.com/")]),
+        PageSnapshot(url="https://example.com/blog", status=200,
+                     forms=[_form(list(fields), action="https://example.com/blog")]),
+        PageSnapshot(url="https://example.com/blog", status=200,
+                     forms=[_form(list(fields), action="https://example.com/blog#to_footer")]),
+    ])
+    assert len(snap.unique_forms()) == 1
+
+
+def test_hidden_csrf_field_ignored_in_dedup():
+    """Скрытое поле с per-page именем (CSRF) не должно ломать дедуп."""
+    def form_with_token(tok):
+        return _form([_field(type="text", name="phone"),
+                      _field(type="hidden", name="csrf_" + tok)],
+                     action="/")
+    snap = SiteSnapshot(start_url="https://example.com/", pages=[
+        PageSnapshot(url="https://example.com/a", status=200, forms=[form_with_token("a1")]),
+        PageSnapshot(url="https://example.com/b", status=200, forms=[form_with_token("b2")]),
+    ])
+    assert len(snap.unique_forms()) == 1
