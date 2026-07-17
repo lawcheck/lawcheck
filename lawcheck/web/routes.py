@@ -15,7 +15,7 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
-from lawcheck.reporting import fines, policy_draft
+from lawcheck.reporting import fines, followup, policy_draft
 from lawcheck.web import auth, blog, deps, landings, ownership
 from lawcheck.workers.queue import get_queue
 
@@ -381,6 +381,20 @@ async def monitoring_run(request: Request, bg: BackgroundTasks):
     return {"monitored": len(orders), "started": started}
 
 
+@router.post("/internal/followups/run")
+async def followups_run(request: Request, limit: int = 20, dry_run: bool = False):
+    """Письма-догонялки лидам: вызывается cron'ом раз в сутки с X-Internal-Key.
+
+    Отбор и текст — reporting/followup.py. `limit` бережёт репутацию домена:
+    лучше слать понемногу, чем залпом с молодого домена.
+    """
+    if not settings.internal_key or request.headers.get("X-Internal-Key") != settings.internal_key:
+        raise HTTPException(status_code=403, detail="forbidden")
+    summary = await asyncio.to_thread(followup.run, limit, 24, 14, dry_run)
+    log.info("followups: %s", summary)
+    return summary
+
+
 @router.get("/webhooks/tochka")
 async def tochka_webhook_probe():
     """Точка при регистрации вебхука проверяет доступность URL (в т.ч. GET) —
@@ -614,3 +628,20 @@ async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
                         f"📩 Новый лид: <b>{email}</b>\nсайт: {scan.url}\n"
                         f"отчёт: {settings.site_base_url}/report/{scan_id}")
     return RedirectResponse(url=f"/report/{scan_id}?sub=1", status_code=303)
+
+
+@router.get("/unsubscribe/{token}", response_class=HTMLResponse)
+async def unsubscribe(request: Request, token: str):
+    """Отписка от писем-догонялок по токену из футера письма (ст. 18 ФЗ «О рекламе»)."""
+    email = await asyncio.to_thread(repo.unsubscribe_lead, token)
+    if email:
+        title = "Вы отписаны"
+        message = (f"Больше не будем писать на {email}. "
+                   "Если передумаете — просто запустите проверку сайта заново.")
+    else:
+        title = "Ссылка недействительна"
+        message = "Не нашли подписку по этой ссылке — возможно, вы уже отписались."
+    return templates.TemplateResponse(request, "message.html", {
+        "title": title, "message": message,
+        "cta_href": "/", "cta_label": "На главную",
+    })

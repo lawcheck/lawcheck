@@ -3,16 +3,20 @@
 Для MVP — синхронный SQLAlchemy. Все вызовы из async-эндпойнтов оборачиваем
 в asyncio.to_thread() (см. api/routes/scan.py).
 """
+import logging
+import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from lawcheck.config import settings
-from lawcheck.db.models import Base
+from lawcheck.db.models import Base, Lead
+
+log = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -30,6 +34,40 @@ def get_sessionmaker() -> sessionmaker[Session]:
 def init_db() -> None:
     """Создаёт таблицы, если их нет. Для MVP — вместо Alembic."""
     Base.metadata.create_all(bind=get_engine())
+    _migrate_leads_followup()
+
+
+def _migrate_leads_followup() -> None:
+    """Лёгкая миграция вместо Alembic: досоздаёт колонки follow-up в `leads`
+    и генерирует `unsub_token` для старых записей. Идемпотентна — `create_all`
+    не изменяет уже существующую таблицу, поэтому колонки добавляем вручную."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if "leads" not in insp.get_table_names():
+        return  # свежая БД — create_all уже создал колонки
+    cols = {c["name"] for c in insp.get_columns("leads")}
+    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
+    stmts = []
+    if "unsub_token" not in cols:
+        stmts.append("ALTER TABLE leads ADD COLUMN unsub_token VARCHAR(64) DEFAULT ''")
+    if "mailed_at" not in cols:
+        stmts.append(f"ALTER TABLE leads ADD COLUMN mailed_at {ts}")
+    if "unsubscribed_at" not in cols:
+        stmts.append(f"ALTER TABLE leads ADD COLUMN unsubscribed_at {ts}")
+    if stmts:
+        with engine.begin() as conn:
+            for stmt in stmts:
+                conn.execute(text(stmt))
+        log.info("migrate: leads follow-up columns added (%d)", len(stmts))
+    # Бэкфилл токенов отписки для строк без него (старые лиды + только что добавленная колонка).
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Lead).where((Lead.unsub_token == "") | (Lead.unsub_token.is_(None)))
+        ).scalars().all()
+        for lead in rows:
+            lead.unsub_token = secrets.token_urlsafe(24)
+        if rows:
+            log.info("migrate: backfilled unsub_token for %d leads", len(rows))
 
 
 @contextmanager
