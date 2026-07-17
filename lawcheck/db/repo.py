@@ -135,9 +135,84 @@ def create_lead(scan_id: str, url: str, email: str) -> bool:
             select(Lead).where(Lead.scan_id == scan_id, Lead.email == email)
         ).scalar_one_or_none()
         if not exists:
-            sess.add(Lead(scan_id=scan_id, url=url, email=email))
+            sess.add(Lead(scan_id=scan_id, url=url, email=email,
+                          unsub_token=secrets.token_urlsafe(24)))
             return True
     return False
+
+
+def leads_to_followup(delay_hours: int = 24, max_age_days: int = 14,
+                      limit: int = 50) -> list[Lead]:
+    """Лиды, которым пора отправить письмо-догонялку (scan_submit → оплата):
+    не писали (`mailed_at` пуст), не отписались, возраст в окне
+    [delay_hours; max_age_days], по их скану/email НЕТ оплаченного заказа,
+    а сам скан завершён и содержит нарушения. Возвращает detached-объекты
+    (безопасен доступ к скалярным полям после закрытия сессии)."""
+    now = utcnow()
+    lo = now - timedelta(days=max_age_days)
+    hi = now - timedelta(hours=delay_hours)
+    with session_scope() as sess:
+        paid_scans = set(sess.execute(
+            select(Order.scan_id).where(Order.status == "paid", Order.scan_id != "")
+        ).scalars())
+        paid_emails = set(sess.execute(
+            select(Order.email).where(Order.status == "paid", Order.email != "")
+        ).scalars())
+        done_scans = set(sess.execute(
+            select(Scan.id).where(Scan.status == "done")
+        ).scalars())
+        problem_scans = set(sess.execute(
+            select(Finding.scan_id).where(Finding.severity != "ok").distinct()
+        ).scalars())
+        candidates = sess.execute(
+            select(Lead).where(
+                Lead.mailed_at.is_(None),
+                Lead.unsubscribed_at.is_(None),
+                Lead.created_at >= lo,
+                Lead.created_at <= hi,
+            ).order_by(Lead.created_at.asc())
+        ).scalars().all()
+        out: list[Lead] = []
+        for lead in candidates:
+            if lead.email in paid_emails or lead.scan_id in paid_scans:
+                continue
+            if lead.scan_id not in done_scans or lead.scan_id not in problem_scans:
+                continue
+            sess.expunge(lead)
+            out.append(lead)
+            if len(out) >= limit:
+                break
+        return out
+
+
+def mark_lead_mailed(lead_id: int) -> None:
+    """Проставляет момент отправки письма-догонялки (защита от повторной отправки)."""
+    with session_scope() as sess:
+        lead = sess.get(Lead, lead_id)
+        if lead and lead.mailed_at is None:
+            lead.mailed_at = utcnow()
+
+
+def unsubscribe_lead(token: str) -> str | None:
+    """Отписка по токену из письма. Отписывает ВСЕ лиды с этим email (у человека
+    может быть несколько сканов). Возвращает email для страницы-подтверждения
+    или None, если токен неизвестен. Идемпотентна."""
+    if not token:
+        return None
+    with session_scope() as sess:
+        lead = sess.execute(
+            select(Lead).where(Lead.unsub_token == token)
+        ).scalars().first()
+        if lead is None:
+            return None
+        now = utcnow()
+        same_email = sess.execute(
+            select(Lead).where(Lead.email == lead.email,
+                               Lead.unsubscribed_at.is_(None))
+        ).scalars().all()
+        for row in same_email:
+            row.unsubscribed_at = now
+        return lead.email
 
 
 def set_monitored_url(order_id: str, url: str) -> None:

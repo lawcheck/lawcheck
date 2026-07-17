@@ -69,8 +69,8 @@ class CookieBannerCheck(Check):
         if banner is not None and banner.has_decline_option and has_pd:
             return [Finding(
                 check_id=self.id, severity=Severity.WARNING, title=self.title,
-                evidence=f"Cookie-баннер с возможностью отказа найден, но трекеры с идентификаторами "
-                         f"загружаются до взаимодействия пользователя с баннером.",
+                evidence="Cookie-баннер с возможностью отказа найден, но трекеры с идентификаторами "
+                         "загружаются до взаимодействия пользователя с баннером.",
                 location=banner_url, law_reference=LAW_REF,
                 recommendation="Откладывайте загрузку маркетинговых/аналитических скриптов до клика по «Принять».",
                 extra={"buttons": banner.buttons},
@@ -79,7 +79,7 @@ class CookieBannerCheck(Check):
         # banner есть, кнопка отказа есть, PD-трекеров нет
         return [Finding(
             check_id=self.id, severity=Severity.OK, title=self.title,
-            evidence=f"Cookie-баннер реализован корректно: есть выбор отказа, "
-                     f"трекеры до согласия не запускаются.",
+            evidence="Cookie-баннер реализован корректно: есть выбор отказа, "
+                     "трекеры до согласия не запускаются.",
             location=banner_url, law_reference=LAW_REF,
         )]

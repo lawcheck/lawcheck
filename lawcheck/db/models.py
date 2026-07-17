@@ -79,7 +79,7 @@ class Finding(Base):
 
 class Lead(Base):
     """Email, оставленный на странице отчёта («прислать отчёт + следить за сайтом»).
-    Рассылка пока ручная — это точка захвата контакта."""
+    Точка захвата контакта + база для письма-догонялки (scan_submit → оплата)."""
     __tablename__ = "leads"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -87,6 +87,13 @@ class Lead(Base):
     url: Mapped[str] = mapped_column(String(2048), default="")
     email: Mapped[str] = mapped_column(String(255), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    # Токен для ссылки отписки в письме (обязателен по ст. 18 ФЗ «О рекламе»).
+    # Генерируется миграцией/при создании; лежит в футере каждого письма.
+    unsub_token: Mapped[str] = mapped_column(String(64), default="")
+    # Момент отправки письма-догонялки (NULL = ещё не отправляли).
+    mailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Момент отписки от рассылки (NULL = подписан). Отписавшимся не пишем.
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Inquiry(Base):
