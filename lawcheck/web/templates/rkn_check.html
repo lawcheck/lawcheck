@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Проверить компанию в реестре операторов персональных данных РКН — по ИНН{% endblock %}
+{% block meta_description %}Бесплатная проверка по официальному реестру операторов персональных данных Роскомнадзора: введите ИНН и узнайте, подано ли уведомление об обработке ПДн.{% endblock %}
+
+{% block head_extra %}
+<style>
+  .rkn-result { max-width: 640px; margin: 18px 0 0; border-radius: var(--r-l, 12px);
+    padding: 18px 20px; border: 1px solid var(--line); font-size: var(--t-m); }
+  .rkn-result h3 { margin: 0 0 6px; font-size: var(--t-l); }
+  .rkn-result.ok { background: #f0f7f2; border-color: #cde5d4; }
+  .rkn-result.bad { background: #fdf1f0; border-color: #f2d4d0; }
+  .rkn-result.warn { background: #fef7ec; border-color: #f0e0c0; }
+  .rkn-result .cta-row { margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .rkn-result .btn-dark { background: var(--ink); color: #fff; padding: 10px 16px;
+    border-radius: var(--r-m); text-decoration: none; font-weight: 600; font-size: var(--t-m); }
+  .rkn-result .btn-ghost { border: 1px solid var(--line); color: var(--ink);
+    padding: 10px 16px; border-radius: var(--r-m); text-decoration: none; font-size: var(--t-m); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="badge-pill"><span class="dot"></span>официальный реестр РКН</span>
+    <h1>Проверка в реестре операторов персональных данных</h1>
+    <p class="sub">Если у вас есть сайт с формами, интернет-магазин или онлайн-запись —
+      вы обрабатываете персональные данные и обязаны быть в реестре операторов
+      Роскомнадзора. Проверьте себя по ИНН за 10 секунд.</p>
+    <div class="trust">
+      <span>бесплатно</span>
+      <span>без регистрации</span>
+      <span>данные — с pd.rkn.gov.ru</span>
+    </div>
+  </div>
+  {% include "_rkn_check_form.html" %}
+</section>
+
+{% if state == "invalid" %}
+<section class="section">
+  <div class="rkn-result warn">
+    <h3>Это не похоже на ИНН</h3>
+    <p>«{{ inn }}» не проходит проверку контрольной суммы. ИНН организации — 10 цифр,
+      ИП — 12 цифр. Проверьте и попробуйте ещё раз.</p>
+  </div>
+</section>
+{% elif state == "found" %}
+<section class="section">
+  <div class="rkn-result ok">
+    <h3>✅ Запись в реестре найдена</h3>
+    <p><strong>{{ op.name }}</strong> — регистрационный номер {{ op.registry_id }}
+      (<a href="{{ op.detail_url }}" rel="nofollow noopener" target="_blank">карточка в реестре РКН</a>).</p>
+    <p>Уведомление подано — базовое требование выполнено. Но при изменениях
+      (новые цели обработки, трансграничная передача, смена реквизитов) оператор обязан
+      подавать информационное письмо об изменениях — а сведения в реестре должны совпадать
+      с тем, что реально происходит на сайте. Это стоит проверить.</p>
+    <div class="cta-row">
+      <a class="btn-dark" href="/">Проверить сайт на 152-ФЗ бесплатно</a>
+      <a class="btn-ghost" href="/uvedomlenie-rkn">Что должно быть в уведомлении</a>
+    </div>
+  </div>
+</section>
+{% elif state == "not_found" %}
+<section class="section">
+  <div class="rkn-result bad">
+    <h3>⚠️ ИНН {{ inn }} в реестре операторов не найден</h3>
+    <p>Если вы обрабатываете персональные данные (формы на сайте, заказы, онлайн-запись,
+      база клиентов) — уведомление в Роскомнадзор обязательно <em>до начала</em> обработки
+      (ст. 22 152-ФЗ). С 30 мая 2025 года работа без уведомления — штраф
+      <strong>до 300 000 ₽</strong> для юрлиц (ч. 10 ст. 13.11 КоАП РФ).</p>
+    <p>Хорошая новость: подача бесплатна и делается онлайн. Мы поможем подготовить
+      уведомление по данным вашего сайта.</p>
+    <div class="cta-row">
+      <a class="btn-dark" href="/uvedomlenie-rkn">Подготовить уведомление</a>
+      <a class="btn-ghost" href="/">Проверить сайт на 152-ФЗ</a>
+    </div>
+  </div>
+</section>
+{% elif state == "error" %}
+<section class="section">
+  <div class="rkn-result warn">
+    <h3>Реестр РКН сейчас не отвечает</h3>
+    <p>Сервис pd.rkn.gov.ru временами недоступен. Попробуйте через пару минут или
+      проверьте вручную:
+      <a href="https://pd.rkn.gov.ru/operators-registry/operators-list/?act=search&inn={{ inn }}"
+         rel="nofollow noopener" target="_blank">поиск по ИНН {{ inn }} в реестре</a>.</p>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="kicker">почему это важно</div>
+  <h2>Реестр операторов — первое, что смотрит РКН</h2>
+  <ul class="checklist">
+    <li><span class="num">1</span><div>
+      <div class="ct">Уведомление обязательно почти для всех</div>
+      <div class="cd">С 1 сентября 2022 года прежние исключения почти не действуют: сайт с формой заявки, магазин, клиника, онлайн-школа — все обязаны уведомить РКН до начала обработки.</div>
+    </div></li>
+    <li><span class="num">2</span><div>
+      <div class="ct">Штраф до 300 000 ₽ за молчание</div>
+      <div class="cd">С 30 мая 2025 года непредставление уведомления — отдельный состав: до 300 тыс ₽ для юрлиц, до 50 тыс ₽ для должностных лиц и ИП (ч. 10 ст. 13.11 КоАП РФ).</div>
+    </div></li>
+    <li><span class="num">3</span><div>
+      <div class="ct">Отсутствие в реестре — маркер для проверки</div>
+      <div class="cd">Оператор, не выполнивший даже базовую обязанность, с высокой вероятностью нарушает и остальное — это простой способ для РКН выбирать, к кому присмотреться.</div>
+    </div></li>
+  </ul>
+</section>
+
+<section class="footer-cta">
+  <h2>Уведомление — только часть картины</h2>
+  <p>Проверьте сайт целиком: политика, согласия у форм, cookie, трансграничная передача — 30 проверок по 6 законам, бесплатно.</p>
+  <div class="row">
+    <a href="/" class="btn-dark">Проверить сайт за 60 секунд</a>
+    <a href="/uvedomlenie-rkn" class="btn-ghost">Как подать уведомление</a>
+  </div>
+</section>
+{% endblock %}

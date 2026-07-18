@@ -1,0 +1,16 @@
+{# Форма проверки ИНН по реестру операторов РКН.
+   Используется на /reestr-rkn и на посадочной /uvedomlenie-rkn.
+   POST ведёт на /reestr-rkn — результат показывается там же. #}
+<div class="form-card">
+  <h3>Есть ли вы в реестре операторов?</h3>
+  <form action="/reestr-rkn" method="post" data-goal="rkn_check_submit" novalidate>
+    <div class="url-field">
+      <input type="text" name="inn" placeholder="ИНН организации или ИП"
+             value="{{ inn or '' }}" inputmode="numeric" autocomplete="off"
+             aria-label="ИНН для проверки по реестру операторов РКН"
+             pattern="[0-9\s]*" maxlength="14">
+    </div>
+    <button type="submit">Проверить по реестру РКН</button>
+  </form>
+  <div class="note">Официальный реестр Роскомнадзора (pd.rkn.gov.ru). Бесплатно, без регистрации.</div>
+</div>
