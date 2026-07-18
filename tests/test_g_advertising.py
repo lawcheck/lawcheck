@@ -59,12 +59,24 @@ def test_g2_no_findings_when_no_categories_mentioned():
     assert CategoryDisclaimersCheck().run(_snap(text="Обычный сайт без специальных категорий")) == []
 
 
-def test_g2_bad_without_disclaimer_warns():
+def test_g2_bad_without_disclaimer_and_without_ad_signs_info_only():
+    # Сайт про собственную БАД без размещения рекламы: ст. 25 38-ФЗ
+    # к информации о своих товарах не применяется — INFO, не WARNING
     findings = CategoryDisclaimersCheck().run(_snap(
         text="Наша БАД для иммунитета — биологически активная добавка"
     ))
     by_id = {f.check_id: f for f in findings}
     assert "G2.bad" in by_id
+    assert by_id["G2.bad"].severity == Severity.INFO
+    assert "не применяются" in by_id["G2.bad"].evidence
+
+
+def test_g2_bad_without_disclaimer_with_ad_signs_warns():
+    findings = CategoryDisclaimersCheck().run(_snap(
+        text="Наша БАД для иммунитета — биологически активная добавка",
+        network=_ADS_NETWORK,
+    ))
+    by_id = {f.check_id: f for f in findings}
     assert by_id["G2.bad"].severity == Severity.WARNING
 
 
@@ -76,12 +88,21 @@ def test_g2_bad_with_disclaimer_ok():
     assert by_id["G2.bad"].severity == Severity.OK
 
 
-def test_g2_credit_without_psk_warns():
+def test_g2_credit_without_psk_warns_when_site_places_ads():
     findings = CategoryDisclaimersCheck().run(_snap(
-        text="Получить кредит онлайн за 5 минут"
+        text="Получить кредит онлайн за 5 минут", network=_ADS_NETWORK
     ))
     by_id = {f.check_id: f for f in findings}
     assert by_id["G2.finance"].severity == Severity.WARNING
+
+
+def test_g2_disclaimer_present_ok_regardless_of_ad_signs():
+    # Дисклеймер на месте — OK и без признаков рекламы
+    findings = CategoryDisclaimersCheck().run(_snap(
+        text="Наша БАД для сна. Не является лекарственным средством."
+    ))
+    by_id = {f.check_id: f for f in findings}
+    assert by_id["G2.bad"].severity == Severity.OK
 
 
 def test_g2_medical_with_disclaimer_ok():

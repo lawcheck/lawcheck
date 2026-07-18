@@ -13,9 +13,16 @@
 
 Проверяем: если категория упомянута и нет соответствующего дисклеймера —
 WARNING. Полноценная квалификация всё равно требует юриста.
+
+Гейт применимости: ст. 24, 25, 28 38-ФЗ применяются к РЕКЛАМЕ. Информация
+о собственных товарах/услугах на собственном сайте по практике ФАС,
+как правило, рекламой не является. Поэтому без признаков размещения
+рекламы (см. _ad_signs.py) отсутствие дисклеймера понижается до INFO
+с условной формулировкой, а не вменяется как нарушение.
 """
 from dataclasses import dataclass
 
+from lawcheck.checks.advertising._ad_signs import detect_ad_signs
 from lawcheck.checks.base import Check, Finding, Severity
 from lawcheck.crawler.snapshot import SiteSnapshot
 from lawcheck.utils.text import normalize_ru
@@ -106,6 +113,7 @@ class CategoryDisclaimersCheck(Check):
             return []
 
         findings: list[Finding] = []
+        site_places_ads: bool | None = None  # лениво: detect_ad_signs обходит все страницы
         for rule in RULES:
             trigger = _any_marker(all_text, rule.trigger_strong)
             if not trigger:
@@ -119,12 +127,27 @@ class CategoryDisclaimersCheck(Check):
                              f"соответствующий дисклеймер ('{disclaimer.strip()}').",
                     location=snapshot.start_url, law_reference=LAW_REF,
                 ))
-            else:
+                continue
+
+            if site_places_ads is None:
+                site_places_ads = detect_ad_signs(snapshot).site_places_ads
+            if site_places_ads:
                 findings.append(Finding(
                     check_id=f"{self.id}.{rule.sub_id}", severity=Severity.WARNING, title=f"{TITLE}: {rule.name}",
                     evidence=f"Категория '{rule.name}' упомянута ('{trigger.strip()}'), но ни один из "
                              f"требуемых дисклеймеров на сайте не найден.",
                     location=snapshot.start_url, law_reference=LAW_REF,
                     recommendation=rule.recommendation,
+                ))
+            else:
+                findings.append(Finding(
+                    check_id=f"{self.id}.{rule.sub_id}", severity=Severity.INFO, title=f"{TITLE}: {rule.name}",
+                    evidence=f"Категория '{rule.name}' упомянута ('{trigger.strip()}'), дисклеймер не найден, "
+                             f"но признаков размещения рекламы на сайте нет. Информация о собственных "
+                             f"товарах на собственном сайте, как правило, рекламой не является — "
+                             f"требования ст. 24, 25, 28 38-ФЗ к ней не применяются.",
+                    location=snapshot.start_url, law_reference=LAW_REF,
+                    recommendation=f"Если материалы этой категории используются в рекламе (баннеры, "
+                                   f"объявления, рассылки) — там дисклеймер обязателен. {rule.recommendation}",
                 ))
         return findings
