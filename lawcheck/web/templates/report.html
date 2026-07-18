@@ -6,7 +6,7 @@
 {% macro finding_card(f, scan, rec_open=true, locked_total=0, templates_href="") %}
 <div class="finding {{ f.severity }}">
   <div class="head">
-    <span class="pill {{ f.severity }}">{{ f.severity }}</span>
+    <span class="pill {{ f.severity }}">{{ {'critical': 'критично', 'warning': 'предупреждение', 'info': 'инфо', 'ok': 'ок'}.get(f.severity, f.severity) }}</span>
     <span class="title">{{ f.title }}</span>
   </div>
   {% if f.law_reference or f.check_id %}
