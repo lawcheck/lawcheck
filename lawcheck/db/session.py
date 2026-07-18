@@ -35,6 +35,7 @@ def init_db() -> None:
     """Создаёт таблицы, если их нет. Для MVP — вместо Alembic."""
     Base.metadata.create_all(bind=get_engine())
     _migrate_leads_followup()
+    _migrate_findings_extra()
 
 
 def _migrate_leads_followup() -> None:
@@ -68,6 +69,21 @@ def _migrate_leads_followup() -> None:
             lead.unsub_token = secrets.token_urlsafe(24)
         if rows:
             log.info("migrate: backfilled unsub_token for %d leads", len(rows))
+
+
+def _migrate_findings_extra() -> None:
+    """Досоздаёт `findings.extra` (структурные факты проверки) на БД,
+    созданных до появления колонки в модели. Идемпотентна."""
+    engine = get_engine()
+    insp = inspect(engine)
+    if "findings" not in insp.get_table_names():
+        return  # свежая БД — create_all уже создал колонку
+    cols = {c["name"] for c in insp.get_columns("findings")}
+    if "extra" in cols:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE findings ADD COLUMN extra JSON"))
+    log.info("migrate: findings.extra column added")
 
 
 @contextmanager
