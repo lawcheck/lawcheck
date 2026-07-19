@@ -479,9 +479,21 @@ async def pricing(request: Request, scan: str = ""):
     recent = await asyncio.to_thread(repo.list_recent_scans, 10)
     example = next((s for s in recent if s.status == "done"), None)
     # scan прилетает с CTA отчёта («Открыть исправления») — привяжем к нему покупку,
-    # чтобы после оплаты открыть рецепты именно на этом отчёте.
+    # чтобы после оплаты открыть рецепты именно на этом отчёте. Заодно покажем
+    # мост «для вашего отчёта: N исправлений готовы» вместо безликого hero.
+    scan_id = scan.strip()
+    scan_ctx = None
+    if scan_id:
+        s = await asyncio.to_thread(repo.get_scan, scan_id)
+        if s is not None and s.status == "done":
+            locked = sum(1 for f in s.findings
+                         if f.severity != "ok" and f.recommendation)
+            scan_ctx = {"url": s.url,
+                        "locked": max(0, locked - _FREE_RECIPES),
+                        "id": s.id}
     return templates.TemplateResponse(request, "pricing.html",
-                                      {"example": example, "scan_id": scan.strip()})
+                                      {"example": example, "scan_id": scan_id,
+                                       "scan_ctx": scan_ctx})
 
 
 # === POST формы — создаёт скан, редиректит на /report/{id} ===
