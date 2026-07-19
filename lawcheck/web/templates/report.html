@@ -29,7 +29,7 @@
     {% else %}
       <div class="rec locked">
         <strong>🔒 Как исправить</strong> — готовый текст в Pro.
-        <a href="/pricing?scan={{ scan.id }}">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
+        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
       </div>
     {% endif %}
   {% endif %}
@@ -72,27 +72,6 @@
   </div>
   {% endif %}
 
-  {% if risk and risk.max >= 1000000 %}
-  <div class="consult">
-    <div class="consult-text">
-      <strong>Риск до {{ risk.max|money }} ₽ — стоит разобрать с юристом</strong>
-      <span>Персональный разбор отчёта: что закрывать в первую очередь, какие документы
-        подготовить, как снять риск. Готовит юрист-партнёр — 4 900 ₽.</span>
-    </div>
-    <button type="button" class="consult-cta" onclick="lcConsult()">Заказать разбор</button>
-  </div>
-  <script>
-    function lcConsult() {
-      var t = document.getElementById('lc-chat-toggle');
-      var p = document.getElementById('lc-chat-panel');
-      if (p && p.hidden && t) t.click();
-      var m = document.getElementById('lc-chat-msg');
-      if (m) { m.value = 'Хочу заказать персональный разбор отчёта с юристом (4 900 ₽). Сайт: ' + {{ scan.url|tojson }}; m.focus(); }
-      if (window.lcGoal) lcGoal('consult_click');
-    }
-  </script>
-  {% endif %}
-
   {% if unlocked %}
   <div class="subscribe-box done">
     ✅ Доступ Pro активен — все рекомендации «Как исправить» открыты ниже.
@@ -109,11 +88,32 @@
   {% elif counts.critical or counts.warning %}
   <div class="upsell">
     <div class="upsell-text">
-      <strong>PDF-заключение с подписью юриста — 990 ₽</strong>
-      <span>Готовый документ с шаблонами исправлений. Первые 7 дней бесплатно.</span>
+      <strong>Pro — 990 ₽/мес: PDF-заключение с подписью юриста</strong>
+      <span>{% if locked_count %}Все {{ locked_count }} закрыт{{ 'ое' if locked_count == 1 else 'ых' }} исправлени{{ 'е' if locked_count == 1 else ('я' if locked_count in (2,3,4) else 'й') }}, {% endif %}готовые шаблоны документов и еженедельный мониторинг сайта. Без автопродления.</span>
     </div>
-    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pay_click">Получить PDF</a>
+    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Открыть Pro</a>
   </div>
+  {% endif %}
+
+  {% if risk and risk.max >= 1000000 %}
+  <div class="consult">
+    <div class="consult-text">
+      <strong>Нужен живой юрист?</strong>
+      <span>Персональный разбор отчёта: что закрывать в первую очередь, какие документы
+        подготовить, как снять риск. Готовит юрист-партнёр — 4 900 ₽.</span>
+    </div>
+    <button type="button" class="consult-cta" onclick="lcConsult()">Заказать разбор</button>
+  </div>
+  <script>
+    function lcConsult() {
+      var t = document.getElementById('lc-chat-toggle');
+      var p = document.getElementById('lc-chat-panel');
+      if (p && p.hidden && t) t.click();
+      var m = document.getElementById('lc-chat-msg');
+      if (m) { m.value = 'Хочу заказать персональный разбор отчёта с юристом (4 900 ₽). Сайт: ' + {{ scan.url|tojson }}; m.focus(); }
+      if (window.lcGoal) lcGoal('consult_click');
+    }
+  </script>
   {% endif %}
 
   {% if subscribed %}

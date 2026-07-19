@@ -11,6 +11,16 @@
   <p class="price-math">990 ₽/мес — это <strong>0,14%</strong> от одного штрафа до 700 000 ₽ по ст. 13.11 ч. 2 КоАП РФ.</p>
 </section>
 
+{% if scan_ctx %}
+<div class="upsell" style="margin-bottom: 20px;">
+  <div class="upsell-text">
+    <strong>Ваш отчёт по {{ scan_ctx.url }}</strong>
+    <span>{% if scan_ctx.locked %}{{ scan_ctx.locked }} исправлени{{ 'е' if scan_ctx.locked == 1 else ('я' if scan_ctx.locked in (2,3,4) else 'й' ) }} ждут открытия — {% endif %}Pro откроет все рекомендации «Как исправить», PDF-заключение и мониторинг именно для этого отчёта.</span>
+  </div>
+  <a href="/report/{{ scan_ctx.id }}" class="upsell-cta" style="background: transparent; border: 1px solid #ffffff55;">← к отчёту</a>
+</div>
+{% endif %}
+
 <section class="plans">
   <div class="plan">
     <div class="name">Free</div>
@@ -42,7 +52,7 @@
       {% if scan_id %}<input type="hidden" name="scan_id" value="{{ scan_id }}">{% endif %}
       <input type="email" name="email" required autocomplete="email"
              placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
-      <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽</button>
+      <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽/мес</button>
       <div class="buy-email-note">На этот email — доступ к кабинету и чек · Оплачивая, принимаете <a href="/oferta">оферту</a></div>
     </form>
   </div>
