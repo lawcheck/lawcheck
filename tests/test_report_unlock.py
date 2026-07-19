@@ -111,6 +111,22 @@ def test_documents_route_gated_by_payment(client):
     assert r2.status_code == 303 and "/pricing" in r2.headers["location"]
 
 
+def test_rkn_notification_route_gated_by_payment(client):
+    # оплаченный владелец → черновик уведомления отдаётся
+    user = _register(client, "rkn@x.ru")
+    _give_paid_order(user.id)
+    sid = "srknowner000000000000000000rkn1x"
+    _scan_with_problems(sid, user_id=user.id)
+    r = client.get(f"/report/{sid}/rkn-notification")
+    assert r.status_code == 200
+    assert "Уведомление в Роскомнадзор" in r.text
+    assert "pd.rkn.gov.ru" in r.text
+    # аноним → редирект на оплату
+    client.cookies.clear()
+    r2 = client.get(f"/report/{sid}/rkn-notification")
+    assert r2.status_code == 303 and "/pricing" in r2.headers["location"]
+
+
 def test_per_scan_purchase_still_unlocks_for_anyone(client):
     sid = "sperscan00000000000000000000buy1"
     _scan_with_problems(sid, user_id=None)

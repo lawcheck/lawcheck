@@ -15,8 +15,8 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
-from lawcheck.reporting import fines, followup, policy_draft
-from lawcheck.web import auth, blog, deps, landings, ownership
+from lawcheck.reporting import fines, followup, policy_draft, rkn_notification_draft
+from lawcheck.web import auth, blog, deps, landings, ownership, rkn
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -56,6 +56,11 @@ templates.env.globals["seo_enabled"] = settings.seo_enabled
 if settings.seo_enabled:
     router.include_router(blog.router)
     router.include_router(landings.router)
+
+# Посадочная «Уведомление в РКН» и проверка по реестру операторов — без гейта
+# SEO: это цель рекламной кампании, должна жить независимо от флага.
+rkn.templates = templates
+router.include_router(rkn.router)
 
 # Аккаунты (регистрация/вход/выход). Сессии всегда включены (SessionMiddleware
 # ставится в create_app с секретом из .env или эфемерным в dev).
@@ -165,6 +170,7 @@ async def sitemap() -> Response:
     # (path, lastmod|None)
     entries: list[tuple[str, str | None]] = [
         ("/", None), ("/pricing", None), ("/privacy", None), ("/oferta", None),
+        ("/uvedomlenie-rkn", None), ("/reestr-rkn", None),
     ]
     if settings.seo_enabled:
         entries.append(("/blog", None))
@@ -544,6 +550,18 @@ async def report_documents(request: Request, scan_id: str):
     if not await _unlock_order_id(request, scan):
         return RedirectResponse(url=f"/pricing?scan={scan_id}", status_code=303)
     html = await asyncio.to_thread(policy_draft.render, scan)
+    return HTMLResponse(content=html)
+
+
+@router.get("/report/{scan_id}/rkn-notification", response_class=HTMLResponse)
+async def report_rkn_notification(request: Request, scan_id: str):
+    """Черновик уведомления в РКН под конкретный сайт (Pro)."""
+    scan = await asyncio.to_thread(repo.get_scan, scan_id)
+    if scan is None or scan.status != "done":
+        raise HTTPException(status_code=404, detail="scan not found")
+    if not await _unlock_order_id(request, scan):
+        return RedirectResponse(url=f"/pricing?scan={scan_id}", status_code=303)
+    html = await asyncio.to_thread(rkn_notification_draft.render, scan)
     return HTMLResponse(content=html)
 
 

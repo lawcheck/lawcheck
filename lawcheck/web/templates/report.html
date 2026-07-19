@@ -101,6 +101,10 @@
       📄 <a href="/report/{{ scan.id }}/documents"><strong>Черновик Политики ПДн + текста согласия под ваш сайт</strong></a>
       — факты вашего сайта уже подставлены.
     </div>
+    <div style="margin-top: 6px;">
+      📨 <a href="/report/{{ scan.id }}/rkn-notification"><strong>Черновик уведомления в Роскомнадзор</strong></a>
+      — поля формы РКН с данными вашего сайта.
+    </div>
   </div>
   {% elif counts.critical or counts.warning %}
   <div class="upsell">
