@@ -29,7 +29,7 @@
     {% else %}
       <div class="rec locked">
         <strong>🔒 Как исправить</strong> — готовый текст в Pro.
-        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} — 990 ₽/мес</a>
+        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Снять риск — открыть {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} за 990 ₽</a>
       </div>
     {% endif %}
   {% endif %}
@@ -88,10 +88,10 @@
   {% elif counts.critical or counts.warning %}
   <div class="upsell">
     <div class="upsell-text">
-      <strong>{% if locked_count %}Откройте готовые тексты для {{ locked_count }} нарушени{{ 'я' if locked_count == 1 else 'й' }} — Pro 990 ₽/мес{% else %}Pro — 990 ₽/мес: готовые тексты исправлений{% endif %}</strong>
-      <span>Готовые формулировки «как исправить», шаблоны документов, PDF-заключение с подписью юриста и еженедельный мониторинг. Без автопродления.</span>
+      <strong>{% if risk and risk.max %}Закрыть риск на {{ risk.max|money }} ₽ — 990 ₽{% else %}Закрыть найденные нарушения — 990 ₽{% endif %}</strong>
+      <span>Готовые тексты исправлений под ваш сайт, шаблоны документов и PDF-заключение с подписью юриста{% if locked_count %}; откроются все {{ locked_count }} исправлени{{ 'е' if locked_count == 1 else ('я' if locked_count in (2,3,4) else 'й') }}{% endif %}. 990 ₽/мес, без автопродления.</span>
     </div>
-    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Открыть Pro</a>
+    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">{% if risk and risk.max %}Закрыть риск — 990 ₽{% else %}Открыть Pro — 990 ₽{% endif %}</a>
   </div>
   {% endif %}
 

@@ -624,7 +624,9 @@ async def report(request: Request, scan_id: str, sub: int = 0):
     total = sum(counts.values())
     compliance = round(counts["ok"] / total * 100) if total else 0
 
-    # Gate рецептов: открываем «Как исправить» у первых N самых тяжёлых находок.
+    # Gate рецептов: тизер открываем у НАИМЕНЕЕ тяжёлых находок, а фиксы за
+    # самый крупный риск держим под замком — иначе бесплатно раздаётся ровно
+    # то, за что платят (см. вики free-report-gating, замер воронки 2026-07-21).
     # Оплаченный заказ с этим scan_id снимает замок со всех рецептов.
     all_problems = sorted(
         (f for f in scan.findings if f.severity != "ok" and f.recommendation),
@@ -642,8 +644,11 @@ async def report(request: Request, scan_id: str, sub: int = 0):
         open_rec_ids = {f.id for f in all_problems}
         locked_count = 0
     else:
-        open_rec_ids = {f.id for f in all_problems[:_FREE_RECIPES]}
-        locked_count = max(0, len(all_problems) - _FREE_RECIPES)
+        # all_problems отсортированы critical→info, поэтому «хвост» — наименее
+        # тяжёлые находки: их рецепты и показываем как тизер качества.
+        free_sample = all_problems[-_FREE_RECIPES:] if _FREE_RECIPES else []
+        open_rec_ids = {f.id for f in free_sample}
+        locked_count = max(0, len(all_problems) - len(open_rec_ids))
 
     return templates.TemplateResponse(request, "report.html", {
         "scan": scan,
