@@ -88,8 +88,8 @@
   {% elif counts.critical or counts.warning %}
   <div class="upsell">
     <div class="upsell-text">
-      <strong>Pro — 990 ₽/мес: PDF-заключение с подписью юриста</strong>
-      <span>{% if locked_count %}Все {{ locked_count }} закрыт{{ 'ое' if locked_count == 1 else 'ых' }} исправлени{{ 'е' if locked_count == 1 else ('я' if locked_count in (2,3,4) else 'й') }}, {% endif %}готовые шаблоны документов и еженедельный мониторинг сайта. Без автопродления.</span>
+      <strong>{% if locked_count %}Откройте готовые тексты для {{ locked_count }} нарушени{{ 'я' if locked_count == 1 else 'й' }} — Pro 990 ₽/мес{% else %}Pro — 990 ₽/мес: готовые тексты исправлений{% endif %}</strong>
+      <span>Готовые формулировки «как исправить», шаблоны документов, PDF-заключение с подписью юриста и еженедельный мониторинг. Без автопродления.</span>
     </div>
     <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Открыть Pro</a>
   </div>
