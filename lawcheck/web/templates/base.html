@@ -71,7 +71,6 @@
     .topnav { border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; z-index: 20; }
     .topnav .inner { max-width: 1040px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
     .topnav .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--t-xl); color: var(--ink); text-decoration: none; }
-    .topnav .beta { font-size: var(--t-xs); font-weight: 600; color: var(--brand); background: var(--info-soft); border-radius: var(--r-s); padding: 1px 7px; letter-spacing: .02em; }
     .topnav .links { display: flex; gap: 18px; margin-left: 12px; }
     .topnav .links a { color: var(--ink-soft); text-decoration: none; font-size: var(--t-m); }
     .topnav .links a:hover, .topnav .links a.active { color: var(--brand); }
@@ -585,7 +584,7 @@
 <body>
   <nav class="topnav">
     <div class="inner">
-      <a href="/" class="brand">LawCheck <span class="beta">beta</span></a>
+      <a href="/" class="brand">LawCheck</a>
       <div class="links" id="navlinks">
         <a href="/" class="{% block nav_home %}{% endblock %}">Главная</a>
         <a href="/pricing" class="{% block nav_pricing %}{% endblock %}">Тарифы</a>
@@ -650,7 +649,7 @@
         <div class="requisites">
           {{ operator.name }}{% if operator.inn %} · ИНН {{ operator.inn }}{% endif %}{% if operator.ogrnip %} · ОГРНИП {{ operator.ogrnip }}{% endif %}{% if operator.email %} · <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>{% endif %}
         </div>
-        <div class="build">© 2026 LawCheck · beta · <a href="/privacy">политика обработки ПДн</a></div>
+        <div class="build">© 2026 LawCheck · <a href="/privacy">политика обработки ПДн</a></div>
       </div>
     </div>
   </footer>

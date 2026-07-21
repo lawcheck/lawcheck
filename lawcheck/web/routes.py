@@ -93,9 +93,23 @@ templates.env.globals["fix_template"] = _fix_template
 
 # === Главная: форма + список последних сканов ===
 
+# Публичная лента «Последние проверки» — это соцдоказательство и SEO-страницы.
+# Рядом с отчётами корпоративных клиентов не должно быть adult/треш-доменов:
+# один такой сосед закрывает вкладку B2B-клиенту. Фильтруем по подстроке в домене
+# (ловит зеркала и поддомены: pornhub.com, ru.xvideos.com, xn--… и т.п.).
+_FEED_BLOCK_SUBSTRINGS = (
+    "porn", "xvideos", "xnxx", "xhamster", "hentai", "sex", "escort",
+    "casino", "bet", "1xbet", "vulkan", "loan", "viagra", "cialis",
+)
+
+
+def _feed_domain_blocked(domain: str) -> bool:
+    return any(bad in domain for bad in _FEED_BLOCK_SUBSTRINGS)
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    raw_recent = await asyncio.to_thread(repo.list_recent_scans, 50)
+    raw_recent = await asyncio.to_thread(repo.list_recent_scans, 80)
     # Анти-соцдоказательство: один и тот же домен 10 раз подряд выглядит как
     # «сервисом пользуется только владелец». Дедуплицируем по домену и
     # показываем блок только при достаточном разнообразии.
@@ -103,7 +117,7 @@ async def index(request: Request):
     recent = []
     for s in raw_recent:
         domain = urlparse(s.url).netloc.lower().removeprefix("www.")
-        if domain in seen:
+        if domain in seen or _feed_domain_blocked(domain):
             continue
         seen.add(domain)
         recent.append(s)
@@ -476,8 +490,12 @@ async def tochka_webhook(request: Request, bg: BackgroundTasks):
 
 @router.get("/pricing", response_class=HTMLResponse)
 async def pricing(request: Request, scan: str = ""):
-    recent = await asyncio.to_thread(repo.list_recent_scans, 10)
-    example = next((s for s in recent if s.status == "done"), None)
+    recent = await asyncio.to_thread(repo.list_recent_scans, 30)
+    example = next(
+        (s for s in recent if s.status == "done"
+         and not _feed_domain_blocked(urlparse(s.url).netloc.lower().removeprefix("www."))),
+        None,
+    )
     # scan прилетает с CTA отчёта («Открыть исправления») — привяжем к нему покупку,
     # чтобы после оплаты открыть рецепты именно на этом отчёте. Заодно покажем
     # мост «для вашего отчёта: N исправлений готовы» вместо безликого hero.
