@@ -85,14 +85,6 @@
       — поля формы РКН с данными вашего сайта.
     </div>
   </div>
-  {% elif counts.critical or counts.warning %}
-  <div class="upsell">
-    <div class="upsell-text">
-      <strong>{% if risk and risk.max %}Закрыть риск на {{ risk.max|money }} ₽ — 990 ₽{% else %}Закрыть найденные нарушения — 990 ₽{% endif %}</strong>
-      <span>Готовые тексты исправлений под ваш сайт, шаблоны документов и PDF-заключение с подписью юриста{% if locked_count %}; откроются все {{ locked_count }} исправлени{{ 'е' if locked_count == 1 else ('я' if locked_count in (2,3,4) else 'й') }}{% endif %}. 990 ₽/мес, без автопродления.</span>
-    </div>
-    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">{% if risk and risk.max %}Закрыть риск — 990 ₽{% else %}Открыть Pro — 990 ₽{% endif %}</a>
-  </div>
   {% endif %}
 
   {% if risk and risk.max >= 1000000 %}
@@ -116,23 +108,6 @@
   </script>
   {% endif %}
 
-  {% if subscribed %}
-  <div class="subscribe-box done">
-    ✅ Готово — пришлём отчёт на почту и предупредим, если найдём новые нарушения.
-  </div>
-  {% else %}
-  <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post" data-goal="email_subscribe">
-    <div class="sub-text">
-      <strong>Получить отчёт на почту</strong>
-      <span>и узнать первым, если на сайте появятся новые нарушения</span>
-    </div>
-    <div class="sub-row">
-      <input type="email" name="email" placeholder="you@company.ru" required
-             aria-label="Email для отправки отчёта">
-      <button type="submit">Прислать</button>
-    </div>
-  </form>
-  {% endif %}
   {% endif %}
 </div>
 
@@ -186,6 +161,9 @@
         </li>
         {% endfor %}
       </ul>
+      {% if not unlocked and (counts.critical or counts.warning) %}
+      <a href="/pricing?scan={{ scan.id }}" class="toc-cta" data-goal="pricing_click">{% if risk and risk.max %}Закрыть риск — 990 ₽{% else %}Открыть Pro — 990 ₽{% endif %}</a>
+      {% endif %}
     </aside>
 
     <div class="report-body">
@@ -209,5 +187,36 @@
       {% endfor %}
     </div>
   </div>
+
+  {% if not unlocked and (counts.critical or counts.warning) %}
+  <div class="offer-final">
+    <div class="upsell">
+      <div class="upsell-text">
+        <strong>{% if risk and risk.max %}Закрыть риск на {{ risk.max|money }} ₽ — 990 ₽{% else %}Закрыть найденные нарушения — 990 ₽{% endif %}</strong>
+        <span>Готовые тексты исправлений под ваш сайт, шаблоны документов и PDF-заключение с подписью юриста{% if locked_count %}; откроются все {{ locked_count }} исправлени{{ 'е' if locked_count == 1 else ('я' if locked_count in (2,3,4) else 'й') }}{% endif %}. 990 ₽/мес, без автопродления.</span>
+      </div>
+      <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">{% if risk and risk.max %}Закрыть риск — 990 ₽{% else %}Открыть Pro — 990 ₽{% endif %}</a>
+    </div>
+    <p class="trust-row">Оплата разово, без автопродления · чек по 54-ФЗ на почту · по <a href="/oferta">оферте</a></p>
+  </div>
+  {% endif %}
+
+  {% if subscribed %}
+  <div class="subscribe-box done">
+    ✅ Готово — пришлём отчёт на почту и предупредим, если найдём новые нарушения.
+  </div>
+  {% else %}
+  <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post" data-goal="email_subscribe">
+    <div class="sub-text">
+      <strong>Получить отчёт на почту</strong>
+      <span>и узнать первым, если на сайте появятся новые нарушения</span>
+    </div>
+    <div class="sub-row">
+      <input type="email" name="email" placeholder="you@company.ru" required
+             aria-label="Email для отправки отчёта">
+      <button type="submit">Прислать</button>
+    </div>
+  </form>
+  {% endif %}
 {% endif %}
 {% endblock %}
