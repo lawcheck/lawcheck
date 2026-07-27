@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from urllib.parse import urljoin, urlparse
 
 from playwright.async_api import Browser as PWBrowser, async_playwright
@@ -6,6 +8,9 @@ from lawcheck.config import settings
 from lawcheck.crawler.snapshot import (
     CookieBanner, Form, FormField, Link, NetworkRequest, PageSnapshot,
 )
+from lawcheck.crawler.url_guard import is_safe
+
+log = logging.getLogger(__name__)
 
 _BANNER_JS = """
 () => {
@@ -106,6 +111,24 @@ class Browser:
             ignore_https_errors=True,
         )
         page = await ctx.new_page()
+
+        # Редиректы Chromium проходит сам, поэтому проверка стартового адреса
+        # не спасает: 302 на http://api:8000/inbox увёл бы краулер внутрь сети.
+        # Перехватываем навигации главного фрейма (каждый хоп редиректа — своя
+        # навигация) и обрываем те, что ведут не в публичный интернет.
+        # Подресурсы (картинки, скрипты) намеренно не проверяем: их тела в
+        # снапшот не попадают, а резолв на каждый запрос заметно замедлил бы обход.
+        async def _guard_navigation(route, request) -> None:
+            if not request.is_navigation_request():
+                await route.continue_()
+                return
+            if await asyncio.to_thread(is_safe, request.url):
+                await route.continue_()
+            else:
+                log.warning("навигация на непубличный адрес оборвана: %s", request.url)
+                await route.abort()
+
+        await page.route("**/*", _guard_navigation)
 
         network: list[NetworkRequest] = []
 

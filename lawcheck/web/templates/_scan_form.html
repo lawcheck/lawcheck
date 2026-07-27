@@ -10,7 +10,11 @@
              aria-label="Адрес сайта для проверки" autocomplete="off"
              autocapitalize="off" spellcheck="false">
     </div>
+    {% if url_error %}
+    <div class="field-error" id="scan-error" role="alert">Проверить этот адрес нельзя: {{ url_error }}.</div>
+    {% else %}
     <div class="field-error" id="scan-error" role="alert" hidden></div>
+    {% endif %}
     <button type="submit" id="scan-submit">Проверить за 60 секунд</button>
   </form>
   <div class="note">Не храним содержимое страниц после проверки.</div>

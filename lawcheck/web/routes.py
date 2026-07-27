@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from lawcheck.api.routes.scan import _run_scan
 from lawcheck.config import settings
+from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
@@ -162,7 +163,17 @@ async def oferta(request: Request):
 
 @router.get("/inbox", response_class=HTMLResponse)
 async def inbox(request: Request):
-    """Входящие: вопросы чат-виджета + email-лиды. Защита — basic_auth на Caddy."""
+    """Входящие: вопросы чат-виджета + email-лиды.
+
+    Основная защита — basic_auth на Caddy. Здесь она продублирована на уровне
+    приложения: запрос, пришедший мимо прокси (например, от собственного
+    краулера через SSRF на `http://api:8000/inbox`), несёт внутренний Host и до
+    данных не доходит. Одного слоя защиты мало, когда в сеть можно зайти сбоку.
+    """
+    expected = urlparse(settings.site_base_url).netloc.lower()
+    if expected and request.headers.get("host", "").lower() != expected:
+        # 404, а не 403: посторонним не сообщаем, что страница существует.
+        raise HTTPException(status_code=404, detail="not found")
     inquiries = await asyncio.to_thread(repo.list_inquiries, 200)
     leads = await asyncio.to_thread(repo.list_leads, 200)
     return templates.TemplateResponse(request, "inbox.html", {
@@ -521,6 +532,15 @@ async def create_scan_form(request: Request, bg: BackgroundTasks, url: str = For
                            max_pages: int = Form(10)):
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
+    try:
+        await asyncio.to_thread(check_url, url)
+    except UnsafeUrl as e:
+        return templates.TemplateResponse(request, "index.html",
+                                          {"recent": [], "url_error": str(e), "url": url},
+                                          status_code=422)
+    # Верхняя граница есть в API-схеме (ge=1, le=100) — публичная форма не должна
+    # быть защищена слабее.
+    max_pages = max(1, min(max_pages, 100))
     scan_id = uuid.uuid4().hex
     await asyncio.to_thread(repo.create_scan, scan_id, url, max_pages)
     # Залогинен — привяжем скан к аккаунту, чтобы он попал в «Мои отчёты».

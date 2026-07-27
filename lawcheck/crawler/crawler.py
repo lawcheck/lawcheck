@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from urllib.parse import unquote, urlparse
@@ -8,6 +9,7 @@ from lawcheck.config import settings
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.pdf_fetcher import fetch_pdf
 from lawcheck.crawler.snapshot import SiteSnapshot
+from lawcheck.crawler.url_guard import check_url, is_safe
 
 log = logging.getLogger(__name__)
 
@@ -92,6 +94,10 @@ class Crawler:
 
     async def crawl(self, start_url: str) -> SiteSnapshot:
         snapshot = SiteSnapshot(start_url=start_url)
+        # Стартовый адрес приходит от посетителя. Веб-форма и API проверяют его
+        # заранее, чтобы показать понятную ошибку; здесь проверка повторяется,
+        # потому что краулер вызывается и из воркера очереди.
+        check_url(start_url)
         base_domain = _registered_domain(start_url)
 
         visited: set[str] = set()
@@ -108,7 +114,6 @@ class Crawler:
             if _is_pdf(url):
                 # PDF не рендерится в Chromium — качаем через httpx и парсим pypdf.
                 # Делаем в threadpool, чтобы не блокировать event loop.
-                import asyncio
                 page = await asyncio.to_thread(fetch_pdf, url)
             else:
                 page = await self.browser.fetch(url)
@@ -120,6 +125,11 @@ class Crawler:
                 if _registered_domain(link.url) != base_domain:
                     continue
                 if not _is_content_url(link.url):
+                    continue
+                # Свой домен ещё не значит публичный адрес: поддомен вроде
+                # internal.example.ru может резолвиться в 10.0.0.0/8.
+                if not await asyncio.to_thread(is_safe, link.url):
+                    log.info("пропускаем непубличный адрес: %s", link.url)
                     continue
                 queue.append((_score_url(link.url), link.url))
 

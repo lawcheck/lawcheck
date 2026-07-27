@@ -13,6 +13,7 @@ from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResul
 from lawcheck.checks.registry import CHECKS
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
+from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.workers.queue import get_queue
 
@@ -56,6 +57,10 @@ async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
 
 @router.post("/scan", response_model=ScanCreated, status_code=202)
 async def create_scan(req: ScanRequest, bg: BackgroundTasks) -> ScanCreated:
+    try:
+        check_url(str(req.url))
+    except UnsafeUrl as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     scan_id = uuid.uuid4().hex
     await asyncio.to_thread(repo.create_scan, scan_id, str(req.url), req.max_pages)
 
