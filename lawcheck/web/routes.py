@@ -307,13 +307,14 @@ async def account(request: Request, order_id: str, attached: int = 0,
         if len(scans) >= 2:
             diff = _scan_diff(scans[1], scans[0])
     token = order.verify_token
-    if order.status == "paid" and order.monitored_url and not order.verified_at and not token:
+    active = repo.subscription_active(order)
+    if active and order.monitored_url and not order.verified_at and not token:
         token = await asyncio.to_thread(repo.ensure_verify_token, order_id, ownership.new_token())
     tg_deeplink = ""
     if settings.telegram_bot_username and order.monitored_url and order.verified_at:
         tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={order.id}"
     return templates.TemplateResponse(request, "account.html", {
-        "order": order, "scans": scans, "diff": diff,
+        "order": order, "scans": scans, "diff": diff, "active": active,
         "attached": bool(attached), "verified": bool(verified), "vfail": bool(vfail),
         "verify_token": token,
         "monitored_domain": ownership.registered_domain(order.monitored_url) if order.monitored_url else "",
@@ -326,8 +327,8 @@ async def account_monitor(request: Request, order_id: str, url: str = Form(...))
     order = await asyncio.to_thread(repo.get_order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="order not found")
-    if order.status != "paid":
-        raise HTTPException(status_code=403, detail="order not paid")
+    if not repo.subscription_active(order):
+        raise HTTPException(status_code=403, detail="subscription inactive")
     url = url.strip()
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
@@ -344,7 +345,7 @@ async def account_verify(request: Request, order_id: str, bg: BackgroundTasks):
     order = await asyncio.to_thread(repo.get_order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="order not found")
-    if order.status != "paid" or not order.monitored_url or not order.verify_token:
+    if not repo.subscription_active(order) or not order.monitored_url or not order.verify_token:
         raise HTTPException(status_code=403, detail="nothing to verify")
     method = await asyncio.to_thread(
         ownership.check_ownership, order.monitored_url, order.verify_token)
@@ -364,7 +365,7 @@ async def account_templates(request: Request, order_id: str):
     order = await asyncio.to_thread(repo.get_order, order_id)
     if order is None:
         raise HTTPException(status_code=404, detail="order not found")
-    if order.status != "paid":
+    if not repo.subscription_active(order):
         # Шаблоны — платный контент.
         return RedirectResponse(url=f"/account/{order_id}", status_code=303)
     return templates.TemplateResponse(request, "pro_templates.html", {"order": order})
