@@ -2,6 +2,38 @@
 {% block title %}LawCheck — проверка сайта на штрафы по 152-ФЗ{% endblock %}
 {% block nav_home %}active{% endblock %}
 
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "Проверка сайта на нарушения 152-ФЗ",
+  "serviceType": "Юридическая проверка сайта",
+  "provider": { "@type": "Organization", "name": "LawCheck" },
+  "areaServed": "RU",
+  "description": "Автоматическая проверка сайта на нарушения 152-ФЗ, ЗОЗПП, рекламе и защите детей: 30 проверок, цитаты со страниц, ссылки на нормы, оценка риска штрафа.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "RUB",
+    "description": "Бесплатная проверка — 60 секунд, без регистрации. PDF-отчёт — 990 ₽."
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Что проверяет LawCheck?", "acceptedAnswer": {"@type": "Answer", "text": "30 автоматических проверок по 152-ФЗ, ЗОЗПП, рекламе и защите детей: политика конфиденциальности, согласия у форм, cookie, маркировка рекламы, возрастная маркировка, реквизиты."}},
+    {"@type": "Question", "name": "Сколько стоит проверка сайта?", "acceptedAnswer": {"@type": "Answer", "text": "Бесплатно — веб-отчёт с цитатами и оценкой риска штрафа. PDF-заключение и шаблоны документов — 990 ₽."}},
+    {"@type": "Question", "name": "Нужно ли регистрироваться?", "acceptedAnswer": {"@type": "Answer", "text": "Нет. Проверка доступна без регистрации: вставляете адрес сайта и получаете отчёт."}},
+    {"@type": "Question", "name": "Какие законы проверяются?", "acceptedAnswer": {"@type": "Answer", "text": "152-ФЗ (персональные данные), ЗОЗПП (защита прав потребителей), 38-ФЗ (реклама), 436-ФЗ (защита детей от информации), ПП №2463, ГК/129-ФЗ (реквизиты)."}}
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="hero">
   <div>

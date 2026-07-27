@@ -592,6 +592,32 @@
   {% else %}
   <script>window.lcGoal = function () {};</script>
   {% endif %}
+  {# JSON-LD: Organization + WebSite — глобально на всех страницах #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "LawCheck",
+    "url": "{{ site_base_url }}",
+    "logo": "{{ site_base_url }}/static/favicon.svg",
+    "description": {{ self.meta_description()|tojson }},
+    "founder": {"@type": "Person", "name": {{ operator.name|tojson }}},
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": {{ operator.email|tojson }},
+      "contactType": "customer support",
+      "availableLanguage": ["ru"]
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "LawCheck",
+    "url": "{{ site_base_url }}"
+  }
+  </script>
   {% block head_extra %}{% endblock %}
 </head>
 <body>

@@ -2,6 +2,37 @@
 {% block title %}Тарифы · LawCheck{% endblock %}
 {% block nav_pricing %}active{% endblock %}
 
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "LawCheck",
+  "applicationCategory": "LegalService",
+  "operatingSystem": "Web",
+  "description": "Проверка сайта на нарушения 152-ФЗ, ЗОЗПП, рекламе и защите детей: цитаты со страниц, ссылки на нормы, оценка штрафа, еженедельный мониторинг.",
+  "offers": [
+    {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "RUB", "description": "1 сайт до 25 страниц, веб-отчёт, 5 проверок в сутки"},
+    {"@type": "Offer", "name": "Pro", "price": "990", "priceCurrency": "RUB", "description": "до 5 сайтов, PDF-заключение юриста, шаблоны, еженедельный мониторинг"},
+    {"@type": "Offer", "name": "Business", "price": "9900", "priceCurrency": "RUB", "description": "безлимит сайтов, API + webhook, white-label, SLA 99.9%"}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Это юридическая консультация?", "acceptedAnswer": {"@type": "Answer", "text": "Нет. Отчёт — автоматическая проверка и оценка рисков. Суммы штрафов ориентировочные. PDF-заключение на тарифе Pro готовит юрист-партнёр."}},
+    {"@type": "Question", "name": "Нужно ли подтверждать владение сайтом?", "acceptedAnswer": {"@type": "Answer", "text": "Для бесплатной проверки — нет. Для мониторинга и PDF-заключения потребуется подтвердить владение через DNS TXT или meta-тег."}},
+    {"@type": "Question", "name": "Откуда берутся суммы штрафов?", "acceptedAnswer": {"@type": "Answer", "text": "Это ориентировочные диапазоны по статьям КоАП РФ для оценки порядка риска, а не точный расчёт. Реальный размер определяет регулятор."}},
+    {"@type": "Question", "name": "Храните ли вы содержимое моего сайта?", "acceptedAnswer": {"@type": "Answer", "text": "Нет. После генерации отчёта содержимое страниц не сохраняется — остаются только findings и цитаты-доказательства."}},
+    {"@type": "Question", "name": "Есть ли автопродление подписки?", "acceptedAnswer": {"@type": "Answer", "text": "Нет. Оплата разовая за период, продление — вручную."}}
+  ]
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="price-hero">
   <span class="badge-pill"><span class="dot"></span>цены в рублях, без автопродления</span>

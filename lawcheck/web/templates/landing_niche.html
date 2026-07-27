@@ -2,6 +2,20 @@
 {% block title %}{{ L.meta_title }}{% endblock %}
 {% block meta_description %}{{ L.meta_description }}{% endblock %}
 
+{% block head_extra %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": {{ L.h1|tojson }},
+  "serviceType": "Юридическая проверка сайта",
+  "provider": { "@type": "Organization", "name": "LawCheck" },
+  "areaServed": "RU",
+  "description": {{ L.lead|tojson }}
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="hero">
   <div>
