@@ -8,7 +8,7 @@
     <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен —
       тариф активирован.</p>
     {% if order.scan_id %}
-    <a href="/report/{{ order.scan_id }}" class="btn-pay">Открыть отчёт с исправлениями</a>
+    <a href="/report/{{ order.scan_id }}?order={{ order.id }}" class="btn-pay">Открыть отчёт с исправлениями</a>
     <p class="pay-note">Все рекомендации «Как исправить» в отчёте теперь открыты.
       Шаблоны, мониторинг и PDF-заключение — в кабинете заказа ниже.</p>
     <a href="/account/{{ order.id }}" class="pay-back">Кабинет заказа</a>

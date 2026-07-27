@@ -77,11 +77,11 @@
     ✅ Доступ Pro активен — все рекомендации «Как исправить» открыты ниже.
     Шаблоны документов и PDF-заключение — в <a href="{{ cabinet_href }}">вашем кабинете</a>.
     <div style="margin-top: 8px;">
-      📄 <a href="/report/{{ scan.id }}/documents"><strong>Черновик Политики ПДн + текста согласия под ваш сайт</strong></a>
+      📄 <a href="/report/{{ scan.id }}/documents?order={{ unlock_order_id }}"><strong>Черновик Политики ПДн + текста согласия под ваш сайт</strong></a>
       — факты вашего сайта уже подставлены.
     </div>
     <div style="margin-top: 6px;">
-      📨 <a href="/report/{{ scan.id }}/rkn-notification"><strong>Черновик уведомления в Роскомнадзор</strong></a>
+      📨 <a href="/report/{{ scan.id }}/rkn-notification?order={{ unlock_order_id }}"><strong>Черновик уведомления в Роскомнадзор</strong></a>
       — поля формы РКН с данными вашего сайта.
     </div>
   </div>

@@ -79,17 +79,23 @@ def create_order(order_id: str, plan: str, amount: int, email: str = "",
                        scan_id=scan_id))
 
 
-def paid_order_id_for_scan(scan_id: str) -> str | None:
-    """id оплаченного заказа, оформленного с отчёта этого скана, или None.
-    По нему на странице отчёта открываются рецепты «Как исправить»,
-    а плашка ведёт в кабинет заказа за шаблонами и PDF."""
-    if not scan_id:
+def paid_order_id_for_scan(scan_id: str, order_id: str) -> str | None:
+    """id заказа, если ИМЕННО ЭТОТ заказ оплачен и оформлен с отчёта ЭТОГО скана.
+
+    Доступ к платному отчёту — свойство пары «покупатель + отчёт», а не самого
+    отчёта. Раньше здесь возвращался любой оплаченный заказ по скану, поэтому
+    оплата одного клиента открывала отчёт всем, кто знает ссылку — а ссылки на
+    последние сканы публикуются в ленте на главной.
+    """
+    if not scan_id or not order_id:
         return None
     with session_scope() as sess:
         return sess.execute(
-            select(Order.id)
-            .where(Order.scan_id == scan_id, Order.status == "paid")
-            .order_by(Order.paid_at.desc())
+            select(Order.id).where(
+                Order.id == order_id,
+                Order.scan_id == scan_id,
+                Order.status == "paid",
+            )
         ).scalars().first()
 
 
