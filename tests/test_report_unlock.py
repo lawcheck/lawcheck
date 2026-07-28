@@ -127,11 +127,79 @@ def test_rkn_notification_route_gated_by_payment(client):
     assert r2.status_code == 303 and "/pricing" in r2.headers["location"]
 
 
-def test_per_scan_purchase_still_unlocks_for_anyone(client):
+def test_razovaya_pokupka_otkryvaet_otchyot_pokupatelyu_po_ssylke(client):
+    """Покупатель без аккаунта предъявляет заказ в ссылке — отчёт открыт.
+
+    Раньше здесь проверялось обратное: покупка с этого скана открывала отчёт
+    КОМУ УГОДНО. Это ломалось о ленту «последние проверки» на главной, которая
+    публикует ссылки на сканы: оплата одного клиента раздавала его отчёт всем.
+    """
     sid = "sperscan00000000000000000000buy1"
     _scan_with_problems(sid, user_id=None)
     oid = uuid.uuid4().hex
     repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)  # покупка С ЭТОГО скана
     repo.mark_order_paid(oid)
-    html = client.get(f"/report/{sid}").text   # аноним, без входа
-    assert _locks(html) == 0
+
+    # Ссылка с заказом уводит на чистый URL: id заказа не должен оставаться
+    # в адресной строке, истории браузера и отчётах Метрики.
+    r = client.get(f"/report/{sid}?order={oid}")
+    assert r.status_code == 303
+    assert r.headers["location"] == f"/report/{sid}"
+    # Заказ запомнен в сессии — чистая ссылка открывает отчёт.
+    assert _locks(client.get(f"/report/{sid}").text) == 0
+
+
+def test_postoronniy_ne_vidit_oplachennyy_otchyot(client):
+    """Тот же оплаченный скан, но другой посетитель — замки на месте."""
+    sid = "sperscan00000000000000000000buy2"
+    _scan_with_problems(sid, user_id=None)
+    oid = uuid.uuid4().hex
+    repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)
+    repo.mark_order_paid(oid)
+
+    client.cookies.clear()  # посторонний: пришёл по ссылке из ленты на главной
+    assert _locks(client.get(f"/report/{sid}").text) >= 1
+    r = client.get(f"/report/{sid}/documents")
+    assert r.status_code == 303 and "/pricing" in r.headers["location"]
+
+
+def test_chuzhoy_zakaz_ne_otkryvaet_chuzhoy_otchyot(client):
+    """Оплаченный заказ по СВОЕМУ скану не открывает ЧУЖОЙ отчёт."""
+    my_sid = "sowned00000000000000000000000my1"
+    other_sid = "sother0000000000000000000000oth1"
+    _scan_with_problems(my_sid, user_id=None)
+    _scan_with_problems(other_sid, user_id=None)
+    oid = uuid.uuid4().hex
+    repo.create_order(oid, "pro", 990, "buyer@x.ru", my_sid)
+    repo.mark_order_paid(oid)
+
+    client.get(f"/report/{other_sid}?order={oid}")  # редирект на чистый URL
+    assert _locks(client.get(f"/report/{other_sid}").text) >= 1
+
+
+def test_vozvrat_iz_banka_daet_dostup_bez_akkaunta(client, monkeypatch):
+    """Главный путь покупателя: оплатил → вернулся на /pay/success → отчёт открыт.
+
+    Это единственный момент, когда оплату можно связать с браузером покупателя:
+    вебхук банка приходит без него.
+    """
+    sid = "spaysucc00000000000000000000pay1"
+    _scan_with_problems(sid, user_id=None)
+    oid = uuid.uuid4().hex
+    repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)
+    repo.set_order_payment(oid, "op-123", "https://bank.example/pay")
+    monkeypatch.setattr("lawcheck.web.routes.tochka.is_paid", lambda op: True)
+
+    assert client.get(f"/pay/success?order={oid}").status_code == 200
+    # Ссылка на отчёт без параметра — доступ уже в сессии.
+    assert _locks(client.get(f"/report/{sid}").text) == 0
+
+
+def test_neoplachennyy_zakaz_nichego_ne_otkryvaet(client):
+    sid = "sunpaid00000000000000000000unp1"
+    _scan_with_problems(sid, user_id=None)
+    oid = uuid.uuid4().hex
+    repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)  # создан, но не оплачен
+
+    client.get(f"/report/{sid}?order={oid}")
+    assert _locks(client.get(f"/report/{sid}").text) >= 1

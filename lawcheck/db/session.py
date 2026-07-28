@@ -7,6 +7,7 @@ import logging
 import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import timedelta
 from functools import lru_cache
 
 from sqlalchemy import create_engine, inspect, select, text
@@ -37,6 +38,7 @@ def init_db() -> None:
     _migrate_leads_followup()
     _migrate_findings_extra()
     _migrate_users_session_epoch()
+    _migrate_orders_paid_until()
 
 
 def _migrate_leads_followup() -> None:
@@ -103,6 +105,38 @@ def _migrate_users_session_epoch() -> None:
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN session_epoch INTEGER NOT NULL DEFAULT 0"))
     log.info("migrate: users.session_epoch column added")
+def _migrate_orders_paid_until() -> None:
+    """Досоздаёт `orders.paid_until` и выдаёт действующим заказам месяц с даты
+    выката. Идемпотентна.
+
+    Раньше доступ определялся `status == "paid"` без срока, то есть разовая
+    оплата открывала Pro навсегда. Бэкфилл сознательно считает срок от МОМЕНТА
+    МИГРАЦИИ, а не от `paid_at`: иначе все ранее оплатившие потеряли бы доступ
+    ровно в секунду выката, без предупреждения.
+    """
+    engine = get_engine()
+    insp = inspect(engine)
+    if "orders" not in insp.get_table_names():
+        return  # свежая БД — create_all уже создал колонку
+    cols = {c["name"] for c in insp.get_columns("orders")}
+    if "paid_until" in cols:
+        return
+    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
+    with engine.begin() as conn:
+        conn.execute(text(f"ALTER TABLE orders ADD COLUMN paid_until {ts}"))
+    log.info("migrate: orders.paid_until column added")
+
+    from lawcheck.db.models import Order, utcnow
+    from lawcheck.db.repo import PRO_PERIOD_DAYS
+    grace_until = utcnow() + timedelta(days=PRO_PERIOD_DAYS)
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Order).where(Order.status == "paid", Order.paid_until.is_(None))
+        ).scalars().all()
+        for order in rows:
+            order.paid_until = grace_until
+        if rows:
+            log.info("migrate: выдан месяц с даты выката %d оплаченным заказам", len(rows))
 
 
 @contextmanager

@@ -132,6 +132,12 @@ class Order(Base):
     # email). NULL = доступ только по магик-ссылке /account/{order_id}.
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"),
                                                 nullable=True, index=True)
+    # До какого момента активна подписка. Ставится при оплате (paid_at + период
+    # тарифа). NULL = подписка никогда не активировалась. Проверять доступ надо
+    # по этому полю, а не по status == "paid": статус фиксирует факт платежа
+    # и назад не меняется, а доступ ограничен во времени.
+    paid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                        nullable=True, index=True)
     operation_id: Mapped[str] = mapped_column(String(64), default="", index=True)
     payment_link: Mapped[str] = mapped_column(String(2048), default="")
     # Сайт, подключённый к еженедельному мониторингу (Pro). Пусто = не подключён.
