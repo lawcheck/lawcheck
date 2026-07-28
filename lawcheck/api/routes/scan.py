@@ -7,7 +7,7 @@ import asyncio
 import logging
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResult
 from lawcheck.checks.registry import CHECKS
@@ -15,6 +15,7 @@ from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
 from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
+from lawcheck.web import ratelimit
 from lawcheck.workers.queue import get_queue
 
 router = APIRouter()
@@ -56,7 +57,9 @@ async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
 
 
 @router.post("/scan", response_model=ScanCreated, status_code=202)
-async def create_scan(req: ScanRequest, bg: BackgroundTasks) -> ScanCreated:
+async def create_scan(req: ScanRequest, request: Request, bg: BackgroundTasks) -> ScanCreated:
+    ratelimit.enforce(request, "scan", limit=20, window_sec=3600,
+                      message="Слишком много проверок. Попробуйте через час.")
     try:
         check_url(str(req.url))
     except UnsafeUrl as e:

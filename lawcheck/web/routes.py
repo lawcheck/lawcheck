@@ -17,7 +17,7 @@ from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
 from lawcheck.reporting import fines, followup, policy_draft, rkn_notification_draft
-from lawcheck.web import auth, blog, deps, landings, ownership, rkn
+from lawcheck.web import auth, blog, deps, landings, ownership, ratelimit, rkn
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -104,6 +104,15 @@ _FEED_BLOCK_SUBSTRINGS = (
 )
 
 
+# 20 проверок в час с адреса: живому человеку хватает с запасом, скрипту — нет.
+_RL_SCAN = {"limit": 20, "window_sec": 3600}
+# Вебхук банка открыт всем, и каждый POST порождает исходящий запрос к API Точки
+# (находка №13). Настоящий банк столько не шлёт.
+_RL_WEBHOOK = {"limit": 60, "window_sec": 60}
+# Чат-виджет и подписка на отчёт шлют уведомления владельцу.
+_RL_INQUIRY = {"limit": 10, "window_sec": 3600}
+
+
 def _feed_domain_blocked(domain: str) -> bool:
     return any(bad in domain for bad in _FEED_BLOCK_SUBSTRINGS)
 
@@ -141,6 +150,8 @@ async def inquiry(request: Request, bg: BackgroundTasks,
     """Вопрос из чат-виджета. Сохраняем + мгновенный алерт владельцу в Telegram."""
     if website:  # honeypot: бот заполнил скрытое поле — тихо игнорируем
         return {"ok": True}
+    ratelimit.enforce(request, "inquiry", **_RL_INQUIRY,
+                      message="Слишком много сообщений. Попробуйте позже.")
     message = message.strip()
     contact = contact.strip()
     if len(message) < 2:
@@ -477,6 +488,9 @@ async def tochka_webhook(request: Request, bg: BackgroundTasks):
     """Вебхук acquiringInternetPayment. Тело — JWT; используем его только как
     триггер: вытаскиваем operationId без проверки подписи и перепроверяем
     статус авторизованным запросом к API банка."""
+    # Эндпоинт открыт всем, а каждый разобранный operationId порождает исходящий
+    # запрос к API банка — дешёвый способ нагрузить и нас, и Точку.
+    ratelimit.enforce(request, "tochka_webhook", **_RL_WEBHOOK)
     raw = (await request.body()).decode("utf-8", errors="replace").strip()
     operation_id = ""
     try:
@@ -530,6 +544,14 @@ async def pricing(request: Request, scan: str = ""):
 @router.post("/scan", response_class=HTMLResponse)
 async def create_scan_form(request: Request, bg: BackgroundTasks, url: str = Form(...),
                            max_pages: int = Form(10)):
+    # Скан поднимает Chromium и краулит ЧУЖОЙ сайт с нашего IP: без лимита это
+    # и расход ресурсов, и abuse-жалобы за чужой краулинг в нашу сторону.
+    if ratelimit.exceeded(request, "scan", **_RL_SCAN):
+        return templates.TemplateResponse(
+            request, "index.html",
+            {"recent": [], "url": url,
+             "url_error": "слишком много проверок с вашего адреса, попробуйте через час"},
+            status_code=429)
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     try:
