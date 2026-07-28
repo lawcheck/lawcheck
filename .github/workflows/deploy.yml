@@ -1,4 +1,10 @@
-# CI/CD: тесты + деплой на прод (VPS Timeweb) при push в main.
+# CI/CD: проверки на каждый pull request + деплой на прод (VPS Timeweb) при push
+# в main.
+#
+# Проверки СПЕЦИАЛЬНО стоят и на pull_request: раньше workflow триггерился только
+# на push в main, поэтому тесты шли уже после мержа. Сломанный тест ронял не мерж,
+# а деплой — то есть код к тому моменту уже лежал в main. Порядок был обратный
+# нужному.
 #
 # Повторяет ручную процедуру из handoff/TASKS.md §3: rsync кода на сервер,
 # затем docker compose build api worker && up -d (шаблоны/код вшиты в образ
@@ -13,16 +19,22 @@
 # в /root/.ssh/authorized_keys на сервере (отдельный ключ только для CI,
 # отзывается удалением строки github-actions-deploy@lawcheck).
 
-name: Deploy
+name: CI / Deploy
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-prod
-  cancel-in-progress: false
+  # Проверки PR: новый пуш отменяет предыдущий прогон, ждать его незачем.
+  # Деплой на прод: очередь без отмены, иначе выкат можно оборвать на середине.
+  group: >-
+    ${{ github.event_name == 'pull_request'
+        && format('pr-{0}', github.head_ref)
+        || 'deploy-prod' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   DEPLOY_HOST: 5.129.200.118
@@ -40,11 +52,19 @@ jobs:
           cache: pip
       - name: Установка зависимостей
         run: pip install -e ".[dev]"
+      - name: Линтер
+        run: ruff check lawcheck tests
       - name: Тесты
+        # METRIKA_ID пуст специально: настройки на раннере не должны отличаться
+        # от чистой машины, иначе тест снова начнёт зависеть от чужого .env.
+        env:
+          METRIKA_ID: ""
         run: pytest -q
 
   deploy:
     needs: test
+    # На pull_request джоб не запускается: PR проверяем, но не выкатываем.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
