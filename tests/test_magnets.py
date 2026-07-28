@@ -22,7 +22,15 @@ def client(monkeypatch):
     monkeypatch.setattr(settings, "seo_enabled", True)
     init_db()
     from lawcheck.api.main import create_app
-    with TestClient(create_app(), follow_redirects=False) as c:
+    app = create_app()
+    # routes.py решает, подключать ли роутер блога, ОДИН раз — на импорте модуля.
+    # `monkeypatch.setattr(settings, ...)` к тому моменту уже опоздал: на машине
+    # с SEO_ENABLED=true в .env роутер есть и тесты проходят, на чистом раннере
+    # CI его нет и страницы отдают 404. Подключаем явно, если его не оказалось.
+    if not any(getattr(r, "path", "").startswith("/blog/") for r in app.routes):
+        from lawcheck.web import blog as blog_web
+        app.include_router(blog_web.router)
+    with TestClient(app, follow_redirects=False) as c:
         yield c
 
 
