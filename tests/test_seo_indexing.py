@@ -41,6 +41,25 @@ def test_robots_ne_zakryvaet_sait(client):
     assert "Sitemap: http://testserver/sitemap.xml" in r.text
 
 
+def test_kazhdaya_stranica_so_svoim_description(client):
+    """Шаблон без своего meta_description наследует текст главной.
+
+    Четыре страницы делили одно описание, пока это не всплыло в обходе
+    всего sitemap: Lighthouse проверяет одну страницу и такое не видит.
+    """
+    import re
+
+    paths = ["/", "/pricing", "/privacy", "/oferta", "/uvedomlenie-rkn"]
+    seen: dict[str, str] = {}
+    for path in paths:
+        html = client.get(path).text
+        m = re.search(r'<meta name="description" content="(.*?)"', html, re.S)
+        assert m, f"{path}: нет meta description"
+        desc = m.group(1)
+        assert desc not in seen, f"{path} дублирует описание {seen[desc]}"
+        seen[desc] = path
+
+
 def test_sitemap_datiruet_listing_bloga_svezhei_statei(client, monkeypatch):
     """У /blog нет своей даты — берём её у самой свежей статьи на листинге."""
     monkeypatch.setattr(settings, "seo_enabled", True)
