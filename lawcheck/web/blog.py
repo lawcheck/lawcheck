@@ -5,6 +5,7 @@
 (файлы перечитываются на каждый запрос — их немного).
 """
 import logging
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -65,8 +66,20 @@ def list_articles() -> list[Article]:
     return sorted(items, key=lambda a: a.date, reverse=True)
 
 
+# Слаг приходит из URL и подставляется в путь к файлу. Сейчас обход каталога
+# невозможен (Starlette не пускает `%2F` в path-параметр — проверено), но
+# полагаться на поведение роутера в вопросе чтения файлов не стоит: список
+# разрешённых символов дешевле, чем разбор инцидента после смены версии.
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,80}$")
+
+
 def get_article(slug: str) -> Article | None:
+    if not _SLUG_RE.match(slug):
+        return None
     path = _CONTENT_DIR / f"{slug}.md"
+    # Вторая линия: файл обязан лежать внутри каталога статей.
+    if not path.resolve().is_relative_to(_CONTENT_DIR.resolve()):
+        return None
     if not path.is_file():
         return None
     return _parse_file(path)

@@ -21,7 +21,14 @@ from lawcheck.config import settings
 
 log = logging.getLogger(__name__)
 
-_PAID_STATUSES = {"APPROVED", "AUTHORIZED"}  # APPROVED — списание прошло
+# Деньги получены: списание прошло.
+_PAID_STATUSES = {"APPROVED"}
+# Платёж начат, но деньги ещё не наши. AUTHORIZED — сумма захолдирована на карте,
+# списания не было и холд может не завершиться. Раньше этот статус считался
+# оплатой, то есть доступ выдавался до получения денег. Теперь он ведёт в
+# отдельное состояние «платёж обрабатывается»: доступ не открываем, но и «не
+# оплачено» клиенту не показываем — статус дожмёт вебхук банка.
+_PENDING_STATUSES = {"AUTHORIZED", "CREATED", "PENDING", "IN_PROGRESS"}
 
 
 class TochkaNotConfigured(Exception):
@@ -102,16 +109,26 @@ def get_operation_status(operation_id: str) -> str:
     return str(status or "").upper()
 
 
-def is_paid(operation_id: str) -> bool:
-    """Оплачена ли операция. Никогда не бросает: вызывается на пути клиента,
-    только что заплатившего, и в вебхуке банка.
+def payment_state(operation_id: str) -> str:
+    """'paid' | 'pending' | 'unknown' — одним запросом к банку. Никогда не бросает.
 
-    ValueError покрывает и TochkaBadResponse, и JSONDecodeError на не-JSON
-    ответе. Раньше ловился только httpx.HTTPError, поэтому неожиданный формат
-    ответа давал 500 клиенту и бесконечные ретраи вебхука со стороны банка.
+    Вызывается на пути клиента, только что заплатившего, и в вебхуке банка,
+    поэтому исключение здесь недопустимо. ValueError покрывает и
+    TochkaBadResponse, и JSONDecodeError на не-JSON ответе.
     """
     try:
-        return get_operation_status(operation_id) in _PAID_STATUSES
+        status = get_operation_status(operation_id)
     except (httpx.HTTPError, ValueError) as e:
         log.warning("tochka: не удалось проверить операцию %s: %s", operation_id, e)
-        return False
+        return "unknown"
+    if status in _PAID_STATUSES:
+        return "paid"
+    if status in _PENDING_STATUSES:
+        return "pending"
+    log.info("tochka: операция %s в статусе %s", operation_id, status or "—")
+    return "unknown"
+
+
+def is_paid(operation_id: str) -> bool:
+    """Деньги получены. Холд (AUTHORIZED) оплатой НЕ считается."""
+    return payment_state(operation_id) == "paid"

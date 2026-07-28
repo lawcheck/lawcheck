@@ -25,6 +25,17 @@
     <p class="pay-note"><strong>Сохраните ссылку на кабинет</strong> — это ваш доступ
       к мониторингу, отчётам об изменениях и шаблонам. Чек придёт на почту, указанную при
       оплате. Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
+  {% elif pending %}
+    <h1>⏳ Платёж обрабатывается</h1>
+    <p>Банк подтвердил операцию по заказу <span class="mono">{{ order.id[:8] }}</span>,
+      но деньги ещё не списаны. Обычно это занимает несколько минут.</p>
+    <p class="pay-note">Доступ откроется автоматически — обновите страницу через пару минут.
+      Если через 15 минут ничего не изменилось, напишите на
+      <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>, мы проверим вручную.</p>
+    <div class="pay-row">
+      <a href="/pay/success?order={{ order.id }}" class="btn-pay">Обновить статус</a>
+      <a href="/account/{{ order.id }}" class="pay-back">Кабинет заказа</a>
+    </div>
   {% else %}
     <h1>Оплата не завершена</h1>
     <p>{% if order %}Заказ <span class="mono">{{ order.id[:8] }}</span> пока не оплачен.

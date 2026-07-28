@@ -152,3 +152,19 @@ def test_a2_soobshchaet_ob_oshibke_esli_vse_ssylki_bity():
     findings = PolicyValidityCheck().run(
         SiteSnapshot(start_url="https://mysite.ru/", pages=[home, broken]))
     assert findings[0].severity == Severity.CRITICAL
+
+
+# === №25: слаг статьи блога не должен превращаться в путь к файлу ===
+
+@pytest.mark.parametrize("slug", [
+    "../../etc/passwd",
+    "..%2F..%2Fsecret",
+    "/etc/passwd",
+    "articles/../../secret",
+    "ПОЛИТИКА",          # верхний регистр и кириллица не наши слаги
+    "a" * 200,
+    "",
+])
+def test_slag_bloga_otsekaetsya(slug):
+    from lawcheck.web.blog import get_article
+    assert get_article(slug) is None
