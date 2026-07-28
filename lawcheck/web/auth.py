@@ -120,6 +120,9 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     ratelimit.enforce(request, "login", **_RL_LOGIN, extra=email,
                       message="Слишком много попыток входа. Попробуйте через 15 минут.")
     user = await asyncio.to_thread(repo.get_user_by_email, email)
+    if user is None:
+        # Считаем хеш впустую: иначе несуществующий email виден по времени ответа.
+        await asyncio.to_thread(security.waste_time_like_verify, password)
     if user is None or not security.verify_password(password, user.password_hash):
         return templates.TemplateResponse(request, "login.html",
                                           {"error": "Неверный email или пароль.", "email": email},

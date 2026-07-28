@@ -401,10 +401,16 @@ def set_email_verified(user_id: int) -> None:
 
 
 def set_user_password(user_id: int, password_hash: str) -> None:
+    """Меняет пароль и завершает ВСЕ существующие сессии пользователя.
+
+    Пароль меняют в том числе когда аккаунт увели. Если старые cookie продолжают
+    пускать, смена пароля не решает исходную проблему.
+    """
     with session_scope() as sess:
         user = sess.get(User, user_id)
         if user:
             user.password_hash = password_hash
+            user.session_epoch = (user.session_epoch or 0) + 1
 
 
 # === Одноразовые токены (подтверждение email, сброс пароля) ===

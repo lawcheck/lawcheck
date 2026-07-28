@@ -37,6 +37,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=get_engine())
     _migrate_leads_followup()
     _migrate_findings_extra()
+    _migrate_users_session_epoch()
     _migrate_orders_paid_until()
 
 
@@ -88,6 +89,22 @@ def _migrate_findings_extra() -> None:
     log.info("migrate: findings.extra column added")
 
 
+def _migrate_users_session_epoch() -> None:
+    """Досоздаёт `users.session_epoch` (версия сессий). Идемпотентна.
+
+    Значение по умолчанию 0 совпадает с тем, что читается из старых cookie без
+    этого поля, поэтому уже вошедшие пользователи не разлогиниваются при выкате.
+    """
+    engine = get_engine()
+    insp = inspect(engine)
+    if "users" not in insp.get_table_names():
+        return  # свежая БД — create_all уже создал колонку
+    cols = {c["name"] for c in insp.get_columns("users")}
+    if "session_epoch" in cols:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN session_epoch INTEGER NOT NULL DEFAULT 0"))
+    log.info("migrate: users.session_epoch column added")
 def _migrate_orders_paid_until() -> None:
     """Досоздаёт `orders.paid_until` и выдаёт действующим заказам месяц с даты
     выката. Идемпотентна.

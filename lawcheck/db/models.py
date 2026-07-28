@@ -42,6 +42,11 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Версия сессий. Растёт при смене пароля: cookie со старым значением
+    # перестаёт пускать. Иначе смена пароля не выгоняет того, кто уже вошёл, —
+    # то есть не помогает ровно в том случае, ради которого её делают.
+    session_epoch: Mapped[int] = mapped_column(Integer, default=0, nullable=False,
+                                               server_default="0")
 
 
 class AuthToken(Base):
