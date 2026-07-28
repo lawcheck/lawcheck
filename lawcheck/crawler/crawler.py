@@ -1,4 +1,5 @@
 import asyncio
+import heapq
 import logging
 import re
 from urllib.parse import unquote, urlparse
@@ -44,6 +45,11 @@ _SKIP_EXT_RE = re.compile(
     r"css|js|mjs|map|json|xml|woff2?|ttf|otf|eot)$",
     re.I,
 )
+
+
+# Потолок очереди. Больше страниц, чем max_pages, всё равно не обойдём, а
+# держать в памяти десятки тысяч ссылок с календаря незачем.
+_MAX_QUEUE = 2000
 
 
 def _registered_domain(url: str) -> str:
@@ -101,11 +107,14 @@ class Crawler:
         base_domain = _registered_domain(start_url)
 
         visited: set[str] = set()
-        queue: list[tuple[int, str]] = [(0, start_url)]
+        queued: set[str] = set([start_url])
+        # Куча вместо списка с сортировкой: раньше очередь пересортировывалась
+        # на КАЖДОЙ итерации, то есть обход стоил O(n² log n) по числу ссылок.
+        queue: list[tuple[int, int, str]] = [(0, 0, start_url)]
+        seq = 0  # тай-брейкер, чтобы куча не сравнивала строки при равном score
 
         while queue and len(snapshot.pages) < self.max_pages:
-            queue.sort(key=lambda x: x[0])
-            _, url = queue.pop(0)
+            _, _, url = heapq.heappop(queue)
             if url in visited:
                 continue
             visited.add(url)
@@ -120,8 +129,12 @@ class Crawler:
             snapshot.pages.append(page)
 
             for link in page.links:
-                if link.url in visited:
+                if link.url in visited or link.url in queued:
                     continue
+                if len(queue) >= _MAX_QUEUE:
+                    # Календари, фильтры и пагинация плодят ссылки быстрее, чем
+                    # мы их разбираем. Бюджет страниц всё равно кончится раньше.
+                    break
                 if _registered_domain(link.url) != base_domain:
                     continue
                 if not _is_content_url(link.url):
@@ -131,7 +144,9 @@ class Crawler:
                 if not await asyncio.to_thread(is_safe, link.url):
                     log.info("пропускаем непубличный адрес: %s", link.url)
                     continue
-                queue.append((_score_url(link.url), link.url))
+                seq += 1
+                queued.add(link.url)
+                heapq.heappush(queue, (_score_url(link.url), seq, link.url))
 
         # Очередь не пуста => вышли по лимиту страниц, часть сайта не смотрели.
         snapshot.budget_reached = bool(queue)

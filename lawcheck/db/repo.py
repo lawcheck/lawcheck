@@ -2,7 +2,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
@@ -106,12 +106,16 @@ def mark_order_paid(order_id: str) -> bool:
     """Помечает заказ оплаченным. Возвращает True, если это был переход
     «не оплачен → оплачен» (для разовых уведомлений)."""
     with session_scope() as sess:
-        order = sess.get(Order, order_id)
-        if order and order.status != "paid":
-            order.status = "paid"
-            order.paid_at = utcnow()
-            return True
-    return False
+        # Одним UPDATE с условием в WHERE, а не «прочитали → проверили → записали»:
+        # вебхук банка и возврат клиента на /pay/success приходят одновременно,
+        # оба видят статус «не оплачен» и оба возвращают True — владелец получает
+        # два одинаковых уведомления об одной оплате.
+        result = sess.execute(
+            update(Order)
+            .where(Order.id == order_id, Order.status != "paid")
+            .values(status="paid", paid_at=utcnow())
+        )
+        return result.rowcount == 1
 
 
 def get_order(order_id: str) -> Order | None:

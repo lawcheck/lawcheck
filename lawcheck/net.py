@@ -9,6 +9,7 @@
    SNI/проверка сертификата остаются на api.telegram.org (меняем только адрес).
 """
 import socket
+import time
 
 _orig_getaddrinfo = socket.getaddrinfo
 
@@ -19,12 +20,17 @@ _TELEGRAM_FALLBACK_IPS = [
     "149.154.175.50", "91.108.4.5",
 ]
 _tg_ip_cache: str | None = None
+_tg_ip_cached_at: float = 0.0
+# Кеш протухает: без TTL выбранный адрес пиннился на весь процесс, и если он
+# переставал отвечать, воркер долбился в мёртвый IP до рестарта контейнера.
+_TG_IP_TTL_SEC = 600
 
 
 def _pick_telegram_ip() -> str | None:
-    global _tg_ip_cache
-    if _tg_ip_cache:
+    global _tg_ip_cache, _tg_ip_cached_at
+    if _tg_ip_cache and (time.monotonic() - _tg_ip_cached_at) < _TG_IP_TTL_SEC:
         return _tg_ip_cache
+    _tg_ip_cache = None
     candidates: list[str] = []
     try:
         candidates += [r[4][0] for r in _orig_getaddrinfo(_TELEGRAM_HOST, 443, socket.AF_INET)]
@@ -35,6 +41,7 @@ def _pick_telegram_ip() -> str | None:
         try:
             socket.create_connection((ip, 443), timeout=4).close()
             _tg_ip_cache = ip
+            _tg_ip_cached_at = time.monotonic()
             return ip
         except Exception:
             continue

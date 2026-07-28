@@ -26,7 +26,7 @@ _ERID_VALUE_RE = re.compile(r"^[A-Za-z0-9_\-]{6,}$")
 def erid_from_url(url: str) -> str | None:
     try:
         qs = parse_qs(urlparse(url).query)
-    except Exception:
+    except ValueError:  # битый URL (например, некорректный порт)
         return None
     for value in qs.get("erid", []):
         if value and _ERID_VALUE_RE.match(value):
