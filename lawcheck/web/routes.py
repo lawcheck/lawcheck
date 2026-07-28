@@ -16,10 +16,10 @@ from lawcheck.config import settings
 from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.payments import tochka
-from lawcheck.notify import telegram
+from lawcheck.notify import mailer, telegram
 from lawcheck.utils.email import valid_email
 from lawcheck.reporting import fines, followup, policy_draft, rkn_notification_draft
-from lawcheck.web import auth, blog, deps, landings, ownership, ratelimit, rkn
+from lawcheck.web import auth, blog, deps, landings, magnets, ownership, ratelimit, rkn
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
@@ -50,6 +50,8 @@ OPERATOR = {
 templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
 templates.env.globals["site_base_url"] = settings.site_base_url.rstrip("/")
+templates.env.globals["google_site_verification"] = settings.google_site_verification
+templates.env.globals["magnet_for"] = magnets.get  # статья блога → лид-магнит, если он есть
 
 # Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
 # и подключаются как под-роутеры — только когда SEO-контент готов к публикации.
@@ -213,7 +215,16 @@ async def inbox(request: Request):
 @router.get("/robots.txt", response_class=PlainTextResponse)
 async def robots() -> str:
     base = settings.site_base_url.rstrip("/")
-    return f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n"
+    # Clean-param — директива Яндекса: рекламные метки не меняют содержимое
+    # страницы, и без неё каждый переход из Директа (`?yclid=...`) робот видит
+    # как отдельный URL — дубли главной и лендингов в индексе.
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term"
+        "&yclid&_openstat&gclid\n"
+        f"Sitemap: {base}/sitemap.xml\n"
+    )
 
 
 @router.get("/sitemap.xml")
@@ -225,10 +236,16 @@ async def sitemap() -> Response:
         ("/uvedomlenie-rkn", None), ("/reestr-rkn", None),
     ]
     if settings.seo_enabled:
-        entries.append(("/blog", None))
-        for a in blog.list_articles():
-            lastmod = a.date.isoformat() if a.date and a.date.year > 1 else None
-            entries.append((f"/blog/{a.slug}", lastmod))
+        articles = [
+            (f"/blog/{a.slug}", a.date.isoformat() if a.date and a.date.year > 1 else None)
+            for a in blog.list_articles()
+        ]
+        # Дата листинга блога — дата самой свежей статьи на нём. Выдумывать
+        # lastmod для остальных страниц не из чего, поэтому там его нет:
+        # недостоверную дату поисковик всё равно игнорирует.
+        dates = [lm for _, lm in articles if lm]
+        entries.append(("/blog", max(dates) if dates else None))
+        entries += articles
         entries += [(f"/proverka/{niche}", None) for niche in landings.LANDINGS]
     items = "".join(
         f"<url><loc>{base}{path}</loc>" + (f"<lastmod>{lm}</lastmod>" if lm else "") + "</url>"
@@ -798,6 +815,41 @@ async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
                         f"📩 Новый лид: <b>{telegram.esc(email)}</b>\nсайт: {telegram.esc(scan.url)}\n"
                         f"отчёт: {settings.site_base_url}/report/{scan_id}")
     return RedirectResponse(url=f"/report/{scan_id}?sub=1", status_code=303)
+
+
+@router.post("/obrazec/{slug}", response_class=HTMLResponse)
+async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
+                      email: str = Form(...)):
+    """Прислать типовой документ на почту со страницы статьи блога.
+
+    Сам текст документа открыт на странице — он и приносит трафик. Почта здесь
+    конвертирует уже пришедшего читателя в лид, а не прячет контент.
+    """
+    magnet = magnets.get(slug)
+    if magnet is None:
+        raise HTTPException(status_code=404, detail="not found")
+    ratelimit.enforce(request, "magnet", **_RL_INQUIRY,
+                      message="Слишком много запросов. Попробуйте позже.")
+    email = email.strip().lower()
+    if not valid_email(email):
+        return RedirectResponse(url=f"/blog/{slug}?mfail=1#obrazec", status_code=303)
+
+    page_url = f"{settings.site_base_url}/blog/{slug}"
+    # scan_id у лида с магнита синтетический: скана за ним нет, и письмо-догонялка
+    # по отчёту такой лид пропустит (followup.run проверяет get_scan на None).
+    is_new = await asyncio.to_thread(repo.create_lead, f"magnet:{slug}", page_url, email)
+    body = (f"<p>Здравствуйте! Вот образец, который вы запросили на "
+            f"<a href=\"{page_url}\">{page_url}</a>.</p>"
+            f"<h2>{magnet.doc_title}</h2>{magnet.body_html}"
+            f"<hr><p>Подставить сюда реквизиты вашей компании, поля ваших форм и "
+            f"найденные на сайте трекеры — это делает LawCheck на тарифе Pro: "
+            f"<a href=\"{settings.site_base_url}/pricing\">{settings.site_base_url}/pricing</a></p>")
+    bg.add_task(mailer.send_email, email, magnet.doc_title, body)
+    if is_new:
+        log.info("magnet: %s запросил %s", email, slug)
+        bg.add_task(telegram.notify_owner,
+                    f"📄 Запросили образец: <b>{telegram.esc(email)}</b>\n{telegram.esc(slug)}")
+    return RedirectResponse(url=f"/blog/{slug}?msent=1#obrazec", status_code=303)
 
 
 @router.get("/unsubscribe/{token}", response_class=HTMLResponse)

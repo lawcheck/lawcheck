@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     tochka_base_url: str = "https://enter.tochka.com/uapi"
     site_base_url: str = "https://lawchek.ru"
 
+    # Код подтверждения прав из Google Search Console (значение content=
+    # мета-тега google-site-verification). Пусто — тег не выводится.
+    # Яндекс подтверждён своим тегом прямо в base.html.
+    google_site_verification: str = ""
+
     # Номер счётчика Яндекс.Метрики. Пусто — счётчик и cookie-баннер не выводятся.
     # Скрипт Метрики загружается только после клика «Принять» в cookie-баннере,
     # чтобы сайт проходил собственную проверку D2 (согласие до загрузки трекеров).
