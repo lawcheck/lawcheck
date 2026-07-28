@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.notify import mailer
+from lawcheck.utils.email import valid_email
 from lawcheck.web import deps, ratelimit, security
 
 log = logging.getLogger(__name__)
@@ -31,8 +32,6 @@ _RL_LOGIN = {"limit": 10, "window_sec": 15 * 60}
 _RL_RESET = {"limit": 3, "window_sec": _HOUR}
 
 
-def _valid_email(email: str) -> bool:
-    return "@" in email and "." in email.split("@")[-1]
 
 
 def _base() -> str:
@@ -89,7 +88,7 @@ async def register(request: Request, email: str = Form(...), password: str = For
                               "Попробуйте через час.")
     email = email.strip().lower()
     err = None
-    if not _valid_email(email):
+    if not valid_email(email):
         err = "Проверьте адрес email."
     elif len(password) < 8:
         err = "Пароль — минимум 8 символов."
@@ -200,7 +199,7 @@ async def forgot(request: Request, email: str = Form(...)):
     ratelimit.enforce(request, "reset", **_RL_RESET, extra=email,
                       message="Письмо со сбросом уже отправлено. Попробуйте через час.")
     # Не раскрываем, есть ли аккаунт (защита от перебора email) — ответ всегда один.
-    if _valid_email(email):
+    if valid_email(email):
         user = await asyncio.to_thread(repo.get_user_by_email, email)
         if user is not None:
             await asyncio.to_thread(_send_reset, user)

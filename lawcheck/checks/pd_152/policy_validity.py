@@ -28,6 +28,12 @@ class PolicyValidityCheck(Check):
         page = find_policy_page(snapshot, policy_url)
 
         if page is None:
+            if snapshot.budget_reached:
+                # Мы не дошли до документа в рамках лимита страниц. Это наше
+                # ограничение, а не нарушение на стороне сайта: выдать здесь
+                # предупреждение — значит написать клиенту претензию за то,
+                # чего мы не проверяли. Молчим, A1 (наличие ссылки) уже сказано.
+                return []
             return [Finding(
                 check_id=self.id, severity=Severity.WARNING, title=self.title,
                 evidence=f"Не удалось загрузить документ Политики ({policy_url}) — "

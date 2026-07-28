@@ -17,6 +17,7 @@ from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import telegram
+from lawcheck.utils.email import valid_email
 from lawcheck.reporting import fines, followup, policy_draft, rkn_notification_draft
 from lawcheck.web import auth, blog, deps, landings, ownership, ratelimit, rkn
 from lawcheck.workers.queue import get_queue
@@ -252,7 +253,7 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
     # Email — единственная связь с покупателем: без него оплаченный заказ
     # анонимен, а клиент, потерявший ссылку на кабинет, теряет доступ.
     email = email.strip().lower()
-    if "@" not in email or "." not in email.split("@")[-1]:
+    if not valid_email(email):
         raise HTTPException(status_code=422, detail="invalid email")
 
     if not tochka.is_configured():
@@ -738,7 +739,7 @@ async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
     if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
     email = email.strip().lower()
-    if "@" in email and "." in email.split("@")[-1]:
+    if valid_email(email):
         if await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email):
             log.info("lead: %s (скан %s, %s)", email, scan_id[:8], scan.url)
             bg.add_task(telegram.notify_owner,
