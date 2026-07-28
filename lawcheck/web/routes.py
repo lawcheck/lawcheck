@@ -149,9 +149,9 @@ async def inquiry(request: Request, bg: BackgroundTasks,
     log.info("inquiry #%s: %.60s | контакт: %s", inq_id, message, contact or "—")
     bg.add_task(
         telegram.notify_owner,
-        f"💬 Вопрос с сайта #{inq_id}\n{message[:1500]}\n\n"
-        f"Контакт: <b>{contact or 'не оставлен'}</b>"
-        + (f"\nСтраница: {page}" if page else ""),
+        f"💬 Вопрос с сайта #{inq_id}\n{telegram.esc(message[:1500])}\n\n"
+        f"Контакт: <b>{telegram.esc(contact) or 'не оставлен'}</b>"
+        + (f"\nСтраница: {telegram.esc(page)}" if page else ""),
     )
     return {"ok": True}
 
@@ -232,7 +232,7 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
     if not tochka.is_configured():
         # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
         bg.add_task(telegram.notify_owner,
-                    f"🔔 Клик «Оплатить {plan.capitalize()}» ({amount} ₽) от <b>{email}</b>. "
+                    f"🔔 Клик «Оплатить {plan.capitalize()}» ({amount} ₽) от <b>{telegram.esc(email)}</b>. "
                     f"Касса в fallback — возможно, придёт заявка на {OPERATOR['email']}.")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
@@ -260,7 +260,7 @@ async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
         if paid and await asyncio.to_thread(repo.mark_order_paid, order):
             bg.add_task(telegram.notify_owner,
                         f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.\n"
-                        f"Покупатель: <b>{o.email or 'email не указан'}</b>")
+                        f"Покупатель: <b>{telegram.esc(o.email) or 'email не указан'}</b>")
     tg_deeplink = ""
     if o and settings.telegram_bot_username:
         tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={o.id}"
@@ -494,7 +494,7 @@ async def tochka_webhook(request: Request, bg: BackgroundTasks):
                 bg.add_task(telegram.notify_owner,
                             f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
                             f"{order.plan.capitalize()} {order.amount} ₽.\n"
-                            f"Покупатель: <b>{order.email or 'email не указан'}</b>")
+                            f"Покупатель: <b>{telegram.esc(order.email) or 'email не указан'}</b>")
                 log.info("заказ %s оплачен (операция %s)", order.id, operation_id)
     return {"ok": True}
 
@@ -698,7 +698,7 @@ async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
         if await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email):
             log.info("lead: %s (скан %s, %s)", email, scan_id[:8], scan.url)
             bg.add_task(telegram.notify_owner,
-                        f"📩 Новый лид: <b>{email}</b>\nсайт: {scan.url}\n"
+                        f"📩 Новый лид: <b>{telegram.esc(email)}</b>\nсайт: {telegram.esc(scan.url)}\n"
                         f"отчёт: {settings.site_base_url}/report/{scan_id}")
     return RedirectResponse(url=f"/report/{scan_id}?sub=1", status_code=303)
 

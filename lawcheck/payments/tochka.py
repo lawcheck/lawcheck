@@ -28,6 +28,13 @@ class TochkaNotConfigured(Exception):
     """Эквайринг ещё не настроен (нет JWT) — используйте fallback-режим."""
 
 
+class TochkaBadResponse(ValueError):
+    """Банк ответил 200, но не тем, чего мы ждём.
+
+    Наследует ValueError, чтобы один `except` покрывал и это, и разбор не-JSON.
+    """
+
+
 @dataclass
 class PaymentLink:
     operation_id: str
@@ -65,11 +72,17 @@ def create_payment(*, amount_rub: int, purpose: str, order_id: str) -> PaymentLi
     with _client() as c:
         r = c.post("/acquiring/v1.0/payments", json=body)
         r.raise_for_status()
-        data = r.json().get("Data", {})
-    return PaymentLink(
-        operation_id=data.get("operationId", ""),
-        url=data.get("paymentLink", ""),
-    )
+        payload = r.json()
+    data = payload.get("Data") if isinstance(payload, dict) else None
+    operation_id = (data or {}).get("operationId") or ""
+    url = (data or {}).get("paymentLink") or ""
+    # Пустые поля молча пропускать нельзя: клиент уедет на пустую ссылку, а заказ
+    # останется без operation_id — и подтвердить оплату будет уже нечем никогда
+    # (pay_success требует o.operation_id). Лучше показать fallback-страницу.
+    if not operation_id or not url:
+        log.error("tochka: ответ без operationId/paymentLink: %.500s", r.text)
+        raise TochkaBadResponse("банк не вернул платёжную ссылку")
+    return PaymentLink(operation_id=operation_id, url=url)
 
 
 def get_operation_status(operation_id: str) -> str:
@@ -79,15 +92,26 @@ def get_operation_status(operation_id: str) -> str:
     with _client() as c:
         r = c.get(f"/acquiring/v1.0/payments/{operation_id}")
         r.raise_for_status()
-        data = r.json().get("Data", {})
-    ops = data.get("Operation") or []
-    status = (ops[0].get("status", "") if ops else data.get("status", "")) or ""
-    return status.upper()
+        payload = r.json()
+    data = payload.get("Data") if isinstance(payload, dict) else None
+    if not isinstance(data, dict):
+        raise TochkaBadResponse("в ответе банка нет объекта Data")
+    ops = data.get("Operation")
+    first = ops[0] if isinstance(ops, list) and ops else data
+    status = first.get("status") if isinstance(first, dict) else None
+    return str(status or "").upper()
 
 
 def is_paid(operation_id: str) -> bool:
+    """Оплачена ли операция. Никогда не бросает: вызывается на пути клиента,
+    только что заплатившего, и в вебхуке банка.
+
+    ValueError покрывает и TochkaBadResponse, и JSONDecodeError на не-JSON
+    ответе. Раньше ловился только httpx.HTTPError, поэтому неожиданный формат
+    ответа давал 500 клиенту и бесконечные ретраи вебхука со стороны банка.
+    """
     try:
         return get_operation_status(operation_id) in _PAID_STATUSES
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, ValueError) as e:
         log.warning("tochka: не удалось проверить операцию %s: %s", operation_id, e)
         return False

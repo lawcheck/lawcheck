@@ -4,6 +4,7 @@ Best-effort: ошибки отправки никогда не ломают по
 только пишутся в лог. Вызывать желательно через BackgroundTasks, чтобы
 не добавлять задержку запросу.
 """
+import html
 import logging
 
 import httpx
@@ -13,6 +14,18 @@ from lawcheck.config import settings
 log = logging.getLogger(__name__)
 
 _API = "https://api.telegram.org/bot{token}/{method}"
+
+
+def esc(value) -> str:
+    """Экранировать пользовательские данные для HTML-разметки сообщения.
+
+    Сообщения уходят с parse_mode=HTML, поэтому `<` в чужой строке — это не
+    «кривой текст», а 400 от Telegram. Ошибка отправки глушится в лог, так что
+    уведомление просто пропадает: оплата прошла, а владелец о ней не узнал.
+    Всё, что пришло от посетителя (email, текст вопроса, URL сайта, заголовки
+    находок с чужих страниц), обязано пройти через esc().
+    """
+    return html.escape(str(value if value is not None else ""))
 
 
 def is_configured() -> bool:
