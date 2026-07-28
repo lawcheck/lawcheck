@@ -10,6 +10,35 @@ from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, Order, Scan, U
 from lawcheck.db.session import session_scope
 
 
+# Период тарифа Pro. Совпадает с назначением платежа «LawCheck Pro, 1 месяц»
+# (web/routes.py::_PLANS) — менять только вместе с ним.
+PRO_PERIOD_DAYS = 30
+
+
+def _active_clauses() -> list:
+    """WHERE-условия «подписка действует» для запросов. Тот же смысл, что и
+    subscription_active(), но применимо в SQL."""
+    return [Order.status == "paid",
+            Order.paid_until.is_not(None),
+            Order.paid_until > utcnow()]
+
+
+def subscription_active(order: Order | None) -> bool:
+    """Активна ли подписка по заказу прямо сейчас.
+
+    Единственное место, где решается «оплачено и ещё действует». Заказ без
+    paid_until активным не считается: подписка либо активировалась и имеет срок,
+    либо её нет.
+    """
+    if order is None or order.status != "paid" or order.paid_until is None:
+        return False
+    until = order.paid_until
+    # sqlite отдаёт naive datetime — нормализуем к UTC (как в consume_auth_token).
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return until > datetime.now(timezone.utc)
+
+
 def create_scan(scan_id: str, url: str, max_pages: int | None) -> None:
     with session_scope() as sess:
         sess.add(Scan(id=scan_id, url=url, status="pending", max_pages=max_pages))
@@ -103,13 +132,16 @@ def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> No
 
 
 def mark_order_paid(order_id: str) -> bool:
-    """Помечает заказ оплаченным. Возвращает True, если это был переход
-    «не оплачен → оплачен» (для разовых уведомлений)."""
+    """Помечает заказ оплаченным и открывает подписку на период тарифа.
+    Возвращает True, если это был переход «не оплачен → оплачен»
+    (для разовых уведомлений)."""
     with session_scope() as sess:
         order = sess.get(Order, order_id)
         if order and order.status != "paid":
+            now = utcnow()
             order.status = "paid"
-            order.paid_at = utcnow()
+            order.paid_at = now
+            order.paid_until = now + timedelta(days=PRO_PERIOD_DAYS)
             return True
     return False
 
@@ -228,7 +260,7 @@ def list_monitored_orders() -> list[Order]:
     with session_scope() as sess:
         rows = sess.execute(
             select(Order).where(
-                Order.status == "paid",
+                *_active_clauses(),
                 Order.monitored_url != "",
                 Order.verified_at.is_not(None),
             )
@@ -455,19 +487,19 @@ def claim_for_user(user_id: int, email: str) -> int:
 
 
 def user_has_paid_order(user_id: int) -> bool:
-    """Есть ли у пользователя оплаченный заказ (активная Pro-подписка).
+    """Есть ли у пользователя ДЕЙСТВУЮЩАЯ Pro-подписка.
     По ней его собственные отчёты открываются целиком."""
     with session_scope() as sess:
         return sess.execute(
-            select(Order.id).where(Order.user_id == user_id, Order.status == "paid")
+            select(Order.id).where(Order.user_id == user_id, *_active_clauses())
         ).first() is not None
 
 
 def latest_paid_order_id_for_user(user_id: int) -> str | None:
-    """id последнего оплаченного заказа пользователя (для ссылок в кабинет и
-    шаблоны при подписочной разблокировке отчёта). None — если оплат нет."""
+    """id последнего заказа с действующей подпиской (для ссылок в кабинет и
+    шаблоны при подписочной разблокировке отчёта). None — если подписки нет."""
     with session_scope() as sess:
         return sess.execute(
-            select(Order.id).where(Order.user_id == user_id, Order.status == "paid")
+            select(Order.id).where(Order.user_id == user_id, *_active_clauses())
             .order_by(Order.paid_at.desc())
         ).scalars().first()

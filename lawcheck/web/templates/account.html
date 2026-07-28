@@ -8,7 +8,8 @@
       <h1 style="font-size: 22px; margin: 0 0 4px;">Кабинет заказа <span class="mono">{{ order.id[:8] }}</span></h1>
       <div class="stamp">
         тариф {{ order.plan|capitalize }} · {{ order.created_at.strftime('%d.%m.%Y') }} ·
-        {% if order.status == 'paid' %}<span class="pill ok">оплачен</span>
+        {% if active %}<span class="pill ok">активен до {{ order.paid_until.strftime('%d.%m.%Y') }}</span>
+        {% elif order.status == 'paid' %}<span class="pill warning">доступ истёк{% if order.paid_until %} {{ order.paid_until.strftime('%d.%m.%Y') }}{% endif %}</span>
         {% else %}<span class="pill warning">{{ 'ожидает оплаты' if order.status in ('created','pending') else order.status }}</span>{% endif %}
       </div>
     </div>
@@ -16,14 +17,19 @@
   <p class="account-note">Сохраните ссылку на эту страницу — это ваш доступ к функциям тарифа.
     Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
 
-  {% if order.status != 'paid' %}
+  {% if not active and order.status == 'paid' %}
+  <div class="status-banner error" style="margin-top: 12px;">
+    Доступ по этому заказу закончился. Мониторинг остановлен, шаблоны и PDF закрыты.
+    <a href="/pricing">Продлить Pro</a> — 990 ₽ за месяц.
+  </div>
+  {% elif order.status != 'paid' %}
   <div class="status-banner error" style="margin-top: 12px;">
     Заказ не оплачен. <a href="/pricing">Вернуться к тарифам</a> или написать нам, если оплата уже прошла.
   </div>
   {% endif %}
 </div>
 
-{% if order.status == 'paid' %}
+{% if active %}
 <div class="card">
   <h2 style="font-size: 18px; margin: 0 0 10px;">Еженедельный мониторинг</h2>
   {% if attached %}
