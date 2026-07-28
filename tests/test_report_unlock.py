@@ -140,9 +140,12 @@ def test_razovaya_pokupka_otkryvaet_otchyot_pokupatelyu_po_ssylke(client):
     repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)  # покупка С ЭТОГО скана
     repo.mark_order_paid(oid)
 
-    html = client.get(f"/report/{sid}?order={oid}").text
-    assert _locks(html) == 0
-    # Заказ запомнен в сессии — ссылка без параметра продолжает работать.
+    # Ссылка с заказом уводит на чистый URL: id заказа не должен оставаться
+    # в адресной строке, истории браузера и отчётах Метрики.
+    r = client.get(f"/report/{sid}?order={oid}")
+    assert r.status_code == 303
+    assert r.headers["location"] == f"/report/{sid}"
+    # Заказ запомнен в сессии — чистая ссылка открывает отчёт.
     assert _locks(client.get(f"/report/{sid}").text) == 0
 
 
@@ -170,7 +173,8 @@ def test_chuzhoy_zakaz_ne_otkryvaet_chuzhoy_otchyot(client):
     repo.create_order(oid, "pro", 990, "buyer@x.ru", my_sid)
     repo.mark_order_paid(oid)
 
-    assert _locks(client.get(f"/report/{other_sid}?order={oid}").text) >= 1
+    client.get(f"/report/{other_sid}?order={oid}")  # редирект на чистый URL
+    assert _locks(client.get(f"/report/{other_sid}").text) >= 1
 
 
 def test_vozvrat_iz_banka_daet_dostup_bez_akkaunta(client, monkeypatch):
@@ -197,4 +201,5 @@ def test_neoplachennyy_zakaz_nichego_ne_otkryvaet(client):
     oid = uuid.uuid4().hex
     repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)  # создан, но не оплачен
 
-    assert _locks(client.get(f"/report/{sid}?order={oid}").text) >= 1
+    client.get(f"/report/{sid}?order={oid}")
+    assert _locks(client.get(f"/report/{sid}").text) >= 1

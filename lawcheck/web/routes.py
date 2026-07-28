@@ -638,6 +638,14 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
     if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
 
+    if order:
+        # Заказ предъявлен ссылкой. Запоминаем его в сессии и уводим на чистый
+        # URL: иначе id заказа остаётся в адресной строке, в истории браузера и
+        # уезжает в Яндекс.Метрику, которая шлёт путь и query текущей страницы.
+        await _unlock_order_id(request, scan, order)
+        clean = f"/report/{scan_id}" + ("?sub=1" if sub else "")
+        return RedirectResponse(url=clean, status_code=303)
+
     by_prefix: dict[str, list] = defaultdict(list)
     counts = {"critical": 0, "warning": 0, "info": 0, "ok": 0}
     for f in scan.findings:
