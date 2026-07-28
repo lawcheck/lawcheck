@@ -257,6 +257,11 @@ async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
     if o and o.operation_id:
         # Не верим redirect'у: подтверждаем оплату запросом к API банка.
         paid = await asyncio.to_thread(tochka.is_paid, o.operation_id)
+        if paid:
+            # Покупатель вернулся из банка в своём браузере — единственный момент,
+            # когда мы можем связать оплату с этой сессией. Без этого он попадёт
+            # на свой же отчёт как посторонний.
+            _remember_order(request, o.id)
         if paid and await asyncio.to_thread(repo.mark_order_paid, order):
             bg.add_task(telegram.notify_owner,
                         f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.\n"
@@ -581,46 +586,86 @@ _BLOCK_DEFS = [
 _FREE_RECIPES = 2
 
 
-async def _unlock_order_id(request: Request, scan) -> str | None:
-    """id оплаченного заказа, дающего полный доступ к отчёту этого скана:
-    разовая покупка с него ИЛИ Pro-подписка залогиненного владельца скана."""
-    oid = await asyncio.to_thread(repo.paid_order_id_for_scan, scan.id)
-    if not oid:
-        user = await deps.current_user(request)
-        if user is not None and scan.user_id == user.id:
-            oid = await asyncio.to_thread(repo.latest_paid_order_id_for_user, user.id)
-    return oid
+# Купленные заказы, предъявленные в этой cookie-сессии. Нужны, чтобы отчёт
+# открывался и без ?order= в ссылке — например, когда клиент вернулся из истории
+# браузера или пришёл по ссылке из ленты на свой же оплаченный отчёт.
+_ORDERS_SESSION_KEY = "orders"
+
+
+def _remember_order(request: Request, order_id: str) -> None:
+    sess = request.scope.get("session")
+    if sess is None or not order_id:
+        return
+    known = [o for o in sess.get(_ORDERS_SESSION_KEY, []) if isinstance(o, str)]
+    if order_id not in known:
+        # Ограничиваем длину: сессия едет в cookie, она не резиновая.
+        sess[_ORDERS_SESSION_KEY] = (known + [order_id])[-20:]
+
+
+def _session_order_ids(request: Request) -> list[str]:
+    sess = request.scope.get("session") or {}
+    return [o for o in sess.get(_ORDERS_SESSION_KEY, []) if isinstance(o, str)]
+
+
+async def _unlock_order_id(request: Request, scan, order: str = "") -> str | None:
+    """id заказа, дающего ЭТОМУ посетителю полный доступ к отчёту скана.
+
+    Три пути, и все три — про личность посетителя, а не про факт оплаты скана:
+    1. `?order=<id>` в ссылке — та же капабилити-модель, что у /account/{order_id};
+    2. заказ, уже предъявленный в этой сессии (после оплаты или по такой ссылке);
+    3. владелец скана с действующей Pro-подпиской.
+
+    Предъявленный заказ обязан быть оформлен именно с этого отчёта — чужой
+    оплаченный заказ чужой отчёт не открывает.
+    """
+    for candidate in [order, *_session_order_ids(request)]:
+        oid = await asyncio.to_thread(repo.paid_order_id_for_scan, scan.id, candidate)
+        if oid:
+            _remember_order(request, oid)
+            return oid
+    user = await deps.current_user(request)
+    if user is not None and scan.user_id == user.id:
+        return await asyncio.to_thread(repo.latest_paid_order_id_for_user, user.id)
+    return None
 
 
 @router.get("/report/{scan_id}/documents", response_class=HTMLResponse)
-async def report_documents(request: Request, scan_id: str):
+async def report_documents(request: Request, scan_id: str, order: str = ""):
     """Авто-черновик Политики ПДн + текста согласия под конкретный сайт (Pro)."""
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
     if scan is None or scan.status != "done":
         raise HTTPException(status_code=404, detail="scan not found")
-    if not await _unlock_order_id(request, scan):
+    if not await _unlock_order_id(request, scan, order):
         return RedirectResponse(url=f"/pricing?scan={scan_id}", status_code=303)
     html = await asyncio.to_thread(policy_draft.render, scan)
     return HTMLResponse(content=html)
 
 
 @router.get("/report/{scan_id}/rkn-notification", response_class=HTMLResponse)
-async def report_rkn_notification(request: Request, scan_id: str):
+async def report_rkn_notification(request: Request, scan_id: str, order: str = ""):
     """Черновик уведомления в РКН под конкретный сайт (Pro)."""
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
     if scan is None or scan.status != "done":
         raise HTTPException(status_code=404, detail="scan not found")
-    if not await _unlock_order_id(request, scan):
+    if not await _unlock_order_id(request, scan, order):
         return RedirectResponse(url=f"/pricing?scan={scan_id}", status_code=303)
     html = await asyncio.to_thread(rkn_notification_draft.render, scan)
     return HTMLResponse(content=html)
 
 
 @router.get("/report/{scan_id}", response_class=HTMLResponse)
-async def report(request: Request, scan_id: str, sub: int = 0):
+async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
     if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
+
+    if order:
+        # Заказ предъявлен ссылкой. Запоминаем его в сессии и уводим на чистый
+        # URL: иначе id заказа остаётся в адресной строке, в истории браузера и
+        # уезжает в Яндекс.Метрику, которая шлёт путь и query текущей страницы.
+        await _unlock_order_id(request, scan, order)
+        clean = f"/report/{scan_id}" + ("?sub=1" if sub else "")
+        return RedirectResponse(url=clean, status_code=303)
 
     by_prefix: dict[str, list] = defaultdict(list)
     counts = {"critical": 0, "warning": 0, "info": 0, "ok": 0}
@@ -656,7 +701,7 @@ async def report(request: Request, scan_id: str, sub: int = 0):
     # Разблокировка «Как исправить»: (1) разовая покупка с этого отчёта, либо
     # (2) Pro-подписка — залогиненный ВЛАДЕЛЕЦ скана с оплаченным заказом видит
     # свои отчёты открытыми целиком (чужие сканы так не открываются).
-    unlock_order_id = await _unlock_order_id(request, scan)
+    unlock_order_id = await _unlock_order_id(request, scan, order)
     unlocked = bool(unlock_order_id)
     cabinet_href = f"/account/{unlock_order_id}" if unlock_order_id else "/dashboard"
     # База для ссылок на готовый текст в шаблонах (доступна при оплаченном заказе).
@@ -682,6 +727,7 @@ async def report(request: Request, scan_id: str, sub: int = 0):
         "open_rec_ids": open_rec_ids,
         "locked_count": locked_count,
         "unlocked": unlocked,
+        "unlock_order_id": unlock_order_id or "",
         "cabinet_href": cabinet_href,
         "templates_href": templates_href,
         "subscribed": bool(sub),
