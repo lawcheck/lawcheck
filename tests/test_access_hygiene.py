@@ -21,7 +21,12 @@ def client(monkeypatch):
     monkeypatch.setattr(settings, "database_url", f"sqlite:///{tmp}")
     monkeypatch.setattr(settings, "session_secret", "test-secret")
     monkeypatch.setattr(settings, "site_base_url", "http://testserver")
+    # metrika_id попадает в globals шаблонов при ИМПОРТЕ модуля, поэтому патчить
+    # только settings недостаточно: на машине с METRIKA_ID в .env тест проходил,
+    # а в CI с пустым ключом падал. Патчим и то, и другое.
     monkeypatch.setattr(settings, "metrika_id", "12345")
+    from lawcheck.web import routes as web_routes
+    monkeypatch.setitem(web_routes.templates.env.globals, "metrika_id", "12345")
     monkeypatch.setattr("lawcheck.web.auth.mailer.send_email", lambda *a, **k: True)
     init_db()
     from lawcheck.api.main import create_app
