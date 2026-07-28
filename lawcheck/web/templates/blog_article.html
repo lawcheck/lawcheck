@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% block title %}{{ article.title }} · LawCheck{% endblock %}
+{# Без « · LawCheck»: суффикс съедал 11 символов у каждого заголовка, а они
+   в юридической теме и так длинные. Бренд в сниппете виден по домену. #}
+{% block title %}{{ article.title }}{% endblock %}
 {% block meta_description %}{{ article.description }}{% endblock %}
 {% block og_type %}article{% endblock %}
 {% block nav_blog %}active{% endblock %}
@@ -26,6 +28,34 @@
   {% endif %}
 
   {{ article.html|safe }}
+
+  {% set magnet = magnet_for(article.slug) %}
+  {% if magnet %}
+  <section id="obrazec" class="magnet">
+    <h2>{{ magnet.doc_title }}</h2>
+    {# Текст открыт намеренно: запрос «образец» ловится содержимым документа,
+       а закрытый файл поисковик не проиндексирует. #}
+    <div class="magnet-doc">{{ magnet.body_html|safe }}</div>
+
+    {% if request.query_params.get('msent') %}
+      <p class="magnet-ok">Отправили на почту. Если письма нет — проверьте «Спам».</p>
+    {% else %}
+      {% if request.query_params.get('mfail') %}
+      <p class="magnet-err">Проверьте адрес — похоже, в нём опечатка.</p>
+      {% endif %}
+      <form class="magnet-form" action="/obrazec/{{ magnet.slug }}" method="post" data-goal="magnet_submit">
+        <label for="magnet-email">Прислать копию на почту, чтобы не потерялась</label>
+        <input id="magnet-email" type="email" name="email" required autocomplete="email"
+               placeholder="you@example.ru">
+        <button type="submit">{{ magnet.button }}</button>
+      </form>
+    {% endif %}
+
+    <p class="magnet-upsell">Это типовая форма с пропусками. Заполнить её
+      реквизитами вашей компании, полями ваших форм и найденными на сайте
+      трекерами LawCheck умеет сам — <a href="/pricing">на тарифе Pro</a>.</p>
+  </section>
+  {% endif %}
 
   <div class="cta-inline">
     <div class="ci-text">Узнайте, какие из этих нарушений есть на вашем сайте</div>

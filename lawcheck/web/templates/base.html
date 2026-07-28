@@ -535,6 +535,23 @@
     .cta-inline .ci-text { font-size: var(--t-l); font-weight: 600; min-width: 0; }
     .cta-inline a { flex-shrink: 0; background: var(--brand); color: #fff; padding: 11px 20px; border-radius: var(--r-m); text-decoration: none; font-weight: 600; font-size: var(--t-m); }
     .cta-inline a:hover { background: var(--brand-hover); }
+
+    /* --- Лид-магнит в статье: открытый текст документа + форма на почту --- */
+    .magnet { margin: 32px 0; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); }
+    .magnet h2 { margin: 0 0 14px; font-size: var(--t-h3); }
+    /* overflow-wrap: ряды подчёркиваний в бланке — один неразрывный токен,
+       без этого они вылезают за блок на узких экранах (проверено на 375px). */
+    .magnet-doc { border: 1px solid var(--line2); border-radius: var(--r-m); padding: 18px; background: var(--page); font-size: var(--t-m); overflow-wrap: anywhere; }
+    .magnet-doc p { margin: 0 0 10px; }
+    .magnet-doc p:last-child { margin-bottom: 0; }
+    .magnet-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+    .magnet-form label { flex-basis: 100%; font-size: var(--t-s); color: var(--ink-soft); }
+    .magnet-form input { flex: 1; min-width: 200px; border: 1px solid var(--line); border-radius: var(--r-m); padding: 11px 12px; font-size: var(--t-m); font-family: inherit; }
+    .magnet-form button { flex-shrink: 0; background: var(--brand); color: #fff; border: 0; padding: 12px 20px; border-radius: var(--r-m); font-weight: 600; font-size: var(--t-m); cursor: pointer; font-family: inherit; }
+    .magnet-form button:hover { background: var(--brand-hover); }
+    .magnet-ok { margin-top: 16px; color: var(--ok); font-weight: 600; font-size: var(--t-m); }
+    .magnet-err { margin-top: 16px; color: var(--crit); font-size: var(--t-m); }
+    .magnet-upsell { margin: 16px 0 0; font-size: var(--t-s); color: var(--muted); }
   </style>
   {% if metrika_id and not no_analytics %}
   <script>
