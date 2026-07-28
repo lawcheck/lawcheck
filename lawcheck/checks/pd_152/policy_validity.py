@@ -11,6 +11,13 @@ from lawcheck.crawler.snapshot import SiteSnapshot
 LAW_REF = "ст. 18.1 ч. 2 152-ФЗ"
 TITLE = "Политика обработки ПДн доступна и содержит текст"
 CHECK_ID = "A2"
+# Порог «это заглушка, а не документ». Обоснование, а не круглое число с потолка:
+# минимальная Политика по ст. 18.1 ч. 2 152-ФЗ обязана раскрыть цели обработки,
+# категории ПДн и субъектов, способы, сроки и порядок обращения субъекта. Даже
+# предельно сухо это ~1,5–2 тыс. знаков; всё, что короче, на практике оказывается
+# страницей «Политика конфиденциальности» с одним абзацем или PDF без текстового
+# слоя. Порог намеренно занижен: пропустить сомнительный документ дешевле, чем
+# обвинить нормальный (см. lawcheck/checks/CLAUDE.md).
 MIN_TEXT_LEN = 1500
 
 
@@ -24,8 +31,21 @@ class PolicyValidityCheck(Check):
             # Без ссылки на Политику проверять нечего — это уже зафиксировано в A1.
             return []
 
-        policy_url = links[0][1]
-        page = find_policy_page(snapshot, policy_url)
+        # Ссылок на Политику может быть несколько: устаревшая в футере и живая
+        # на отдельной странице. Берём ЛУЧШИЙ доступный документ, а не первый
+        # попавшийся — иначе вывод зависит от порядка обхода.
+        candidates = []
+        for _, url in links:
+            page = find_policy_page(snapshot, url)
+            if page is not None:
+                candidates.append((url, page))
+        if candidates:
+            policy_url, page = max(
+                candidates,
+                key=lambda cp: (not cp[1].error and cp[1].status < 400, len(cp[1].text or "")),
+            )
+        else:
+            policy_url, page = links[0][1], None
 
         if page is None:
             if snapshot.budget_reached:

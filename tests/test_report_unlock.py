@@ -188,7 +188,7 @@ def test_vozvrat_iz_banka_daet_dostup_bez_akkaunta(client, monkeypatch):
     oid = uuid.uuid4().hex
     repo.create_order(oid, "pro", 990, "buyer@x.ru", sid)
     repo.set_order_payment(oid, "op-123", "https://bank.example/pay")
-    monkeypatch.setattr("lawcheck.web.routes.tochka.is_paid", lambda op: True)
+    monkeypatch.setattr("lawcheck.web.routes.tochka.payment_state", lambda op: "paid")
 
     assert client.get(f"/pay/success?order={oid}").status_code == 200
     # Ссылка на отчёт без параметра — доступ уже в сессии.

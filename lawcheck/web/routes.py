@@ -279,25 +279,29 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
 
 @router.get("/pay/success", response_class=HTMLResponse)
 async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
-    paid = False
+    state = "unknown"
     o = await asyncio.to_thread(repo.get_order, order) if order else None
     if o and o.operation_id:
         # Не верим redirect'у: подтверждаем оплату запросом к API банка.
-        paid = await asyncio.to_thread(tochka.is_paid, o.operation_id)
-        if paid:
+        state = await asyncio.to_thread(tochka.payment_state, o.operation_id)
+        if state == "paid":
             # Покупатель вернулся из банка в своём браузере — единственный момент,
             # когда мы можем связать оплату с этой сессией. Без этого он попадёт
             # на свой же отчёт как посторонний.
             _remember_order(request, o.id)
-        if paid and await asyncio.to_thread(repo.mark_order_paid, order):
-            bg.add_task(telegram.notify_owner,
-                        f"💰 Оплачен заказ <b>{o.id[:8]}</b> — {o.plan.capitalize()} {o.amount} ₽.\n"
-                        f"Покупатель: <b>{telegram.esc(o.email) or 'email не указан'}</b>")
+            if await asyncio.to_thread(repo.mark_order_paid, order):
+                bg.add_task(telegram.notify_owner,
+                            f"💰 Оплачен заказ <b>{o.id[:8]}</b> — "
+                            f"{o.plan.capitalize()} {o.amount} ₽.\n"
+                            f"Покупатель: <b>{telegram.esc(o.email) or 'email не указан'}</b>")
     tg_deeplink = ""
     if o and settings.telegram_bot_username:
         tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={o.id}"
+    # pending — деньги захолдированы, но не списаны: доступ не открываем, однако
+    # и «оплата не прошла» не пишем. Дожмёт вебхук банка.
     return templates.TemplateResponse(request, "pay_result.html",
-                                      {"ok": paid, "order": o, "tg_deeplink": tg_deeplink})
+                                      {"ok": state == "paid", "pending": state == "pending",
+                                       "order": o, "tg_deeplink": tg_deeplink})
 
 
 @router.get("/pay/fail", response_class=HTMLResponse)
