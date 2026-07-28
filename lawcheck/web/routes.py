@@ -135,6 +135,45 @@ def _feed_domain_blocked(domain: str) -> bool:
     return any(bad in domain for bad in _FEED_BLOCK_SUBSTRINGS)
 
 
+# Отчёты по умолчанию закрыты от индексации, и вот почему. К 28.07.2026 Яндекс
+# держал в поиске 105 страниц сайта, почти все — `/report/{id}` о чужих сайтах.
+# Профиль запросов домена определяли не «уведомление РКН» и «152-ФЗ», а названия
+# порносайтов: 14 из топ-20 запросов и ~70% показов приходились на людей, искавших
+# отчёт по adult-домену, который кто-то прогнал через сканер. Плюс в индексе лежали
+# заключения о нарушениях на поддоменах Госуслуг и у крупных ритейлеров — публичное
+# обвинение чужого сайта в нарушении закона от лица юридического сервиса.
+#
+# Фильтр `_FEED_BLOCK_SUBSTRINGS` убирает такие домены из ленты на главной, но сам
+# отчёт остаётся доступным по ссылке и индексируемым — лента лишь один из путей,
+# которым робот о нём узнаёт.
+#
+# Ссылка продолжает работать: `noindex` закрывает поиск, а не доступ.
+#
+# Набор ниже — фиксированная витрина из ранних проверок: обычные небольшие
+# коммерческие сайты. Намеренно не входят adult, госдомены, медицина
+# (спецкатегория ПДн), юрфирмы, конкурирующие сканеры, тестовые хосты и URL
+# с токенами в query. Список меняется только руками.
+_INDEXABLE_REPORTS = frozenset({
+    "a3b79625c0b74c10adda48a571016583",  # seltex-iv.ru
+    "3c67c09aaaaa4e158e83ce3eda2e03c7",  # wako-lab.ru
+    "6b0d701982a443a2886f362a06fdc359",  # caspiancluster.ru
+    "d4596cf540524275ae2fdab71ea8d4a3",  # loftpromusic.ru
+    "a9d2507fe94c42f0bb1a37ca3e047abc",  # dilerpro.ru
+    "c13654dc73134e2ca6716113bf51ae8a",  # hardkam.ru
+    "1152495aadbc433e937c44fc58c95b7a",  # yarfanera.ru
+    "b77c041e036a4510b735b932a3fdbde0",  # kortingshop.ru
+    "d037e3b17bcd4d848047358cc3823342",  # stroyhub03.ru
+    "8d52d5441af242ceadc90ea17a13681d",  # smrtour.ru
+})
+
+
+def _report_indexing(response: Response, scan_id: str) -> Response:
+    """Закрыть отчёт от поиска, если он не из фиксированной витрины."""
+    if scan_id not in _INDEXABLE_REPORTS:
+        response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     raw_recent = await asyncio.to_thread(repo.list_recent_scans, 80)
@@ -247,6 +286,9 @@ async def sitemap() -> Response:
         entries.append(("/blog", max(dates) if dates else None))
         entries += articles
         entries += [(f"/proverka/{niche}", None) for niche in landings.LANDINGS]
+    # Витрина отчётов: остальные закрыты `noindex` в `_report_indexing`, эти —
+    # единственные, которым место в поиске, поэтому заявляем их явно.
+    entries += [(f"/report/{scan_id}", None) for scan_id in sorted(_INDEXABLE_REPORTS)]
     items = "".join(
         f"<url><loc>{base}{path}</loc>" + (f"<lastmod>{lm}</lastmod>" if lm else "") + "</url>"
         for path, lm in entries
@@ -783,7 +825,7 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
         open_rec_ids = {f.id for f in free_sample}
         locked_count = max(0, len(all_problems) - len(open_rec_ids))
 
-    return templates.TemplateResponse(request, "report.html", {
+    return _report_indexing(templates.TemplateResponse(request, "report.html", {
         "scan": scan,
         "blocks": blocks,
         "counts": counts,
@@ -798,7 +840,7 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
         "cabinet_href": cabinet_href,
         "templates_href": templates_href,
         "subscribed": bool(sub),
-    })
+    }), scan_id)
 
 
 @router.post("/report/{scan_id}/subscribe", response_class=HTMLResponse)

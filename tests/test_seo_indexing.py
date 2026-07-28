@@ -1,5 +1,6 @@
-"""Директивы для поисковых роботов: robots.txt и lastmod в sitemap.xml."""
+"""Директивы для поисковых роботов: robots.txt, sitemap.xml, индексация отчётов."""
 import tempfile
+import uuid
 from pathlib import Path
 
 import pytest
@@ -58,6 +59,42 @@ def test_kazhdaya_stranica_so_svoim_description(client):
         desc = m.group(1)
         assert desc not in seen, f"{path} дублирует описание {seen[desc]}"
         seen[desc] = path
+
+
+def test_chuzhoy_otchet_zakryt_ot_poiska(client):
+    """Отчёты о чужих сайтах не должны попадать в индекс.
+
+    К 28.07.2026 Яндекс держал в поиске 105 страниц, почти все — отчёты, и
+    70% показов домена приходилось на запросы вида «hentasis5» — по отчёту
+    об adult-домене, который кто-то прогнал через сканер.
+    """
+    from lawcheck.db import repo
+    scan_id = uuid.uuid4().hex
+    repo.create_scan(scan_id, "https://example.ru", max_pages=5)
+    r = client.get(f"/report/{scan_id}")
+    assert r.status_code == 200
+    assert r.headers["x-robots-tag"] == "noindex, follow"
+
+
+def test_vitrina_otchetov_ostaetsya_otkrytoy(client, monkeypatch):
+    """Фиксированный набор — единственное исключение, у него noindex нет."""
+    from lawcheck.web import routes
+    from lawcheck.db import repo
+    scan_id = uuid.uuid4().hex
+    repo.create_scan(scan_id, "https://example.ru", max_pages=5)
+    monkeypatch.setattr(routes, "_INDEXABLE_REPORTS", frozenset({scan_id}))
+    r = client.get(f"/report/{scan_id}")
+    assert r.status_code == 200
+    assert "x-robots-tag" not in r.headers
+
+
+def test_v_sitemap_tolko_vitrina_otchetov(client, monkeypatch):
+    from lawcheck.web import routes
+    r = client.get("/sitemap.xml")
+    for scan_id in routes._INDEXABLE_REPORTS:
+        assert f"<loc>http://testserver/report/{scan_id}</loc>" in r.text
+    # Ровно столько, сколько в наборе — случайные отчёты в карту не попадают.
+    assert r.text.count("/report/") == len(routes._INDEXABLE_REPORTS)
 
 
 def test_sitemap_datiruet_listing_bloga_svezhei_statei(client, monkeypatch):
