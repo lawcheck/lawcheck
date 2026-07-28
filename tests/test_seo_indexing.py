@@ -1,0 +1,56 @@
+"""Директивы для поисковых роботов: robots.txt и lastmod в sitemap.xml."""
+import tempfile
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from lawcheck.config import settings
+from lawcheck.db import session
+from lawcheck.db.session import init_db
+
+
+@pytest.fixture()
+def client(monkeypatch):
+    tmp = Path(tempfile.mkdtemp()) / "seo.db"
+    session.get_engine.cache_clear()
+    session.get_sessionmaker.cache_clear()
+    monkeypatch.setattr(settings, "database_url", f"sqlite:///{tmp}")
+    monkeypatch.setattr(settings, "session_secret", "test-secret-please-ignore")
+    monkeypatch.setattr(settings, "site_base_url", "http://testserver")
+    init_db()
+    from lawcheck.api.main import create_app
+    with TestClient(create_app(), follow_redirects=False) as c:
+        yield c
+
+
+def test_robots_skleivaet_reklamnye_metki(client):
+    """Переход из Директа несёт yclid — без Clean-param это дубль главной."""
+    r = client.get("/robots.txt")
+    assert r.status_code == 200
+    clean = [ln for ln in r.text.splitlines() if ln.startswith("Clean-param:")]
+    assert len(clean) == 1
+    for param in ("utm_source", "utm_medium", "utm_campaign", "yclid", "_openstat"):
+        assert param in clean[0]
+
+
+def test_robots_ne_zakryvaet_sait(client):
+    r = client.get("/robots.txt")
+    assert "Allow: /" in r.text
+    assert "Disallow: /" not in r.text
+    assert "Sitemap: http://testserver/sitemap.xml" in r.text
+
+
+def test_sitemap_datiruet_listing_bloga_svezhei_statei(client, monkeypatch):
+    """У /blog нет своей даты — берём её у самой свежей статьи на листинге."""
+    monkeypatch.setattr(settings, "seo_enabled", True)
+    from lawcheck.web import blog
+
+    dates = [a.date.isoformat() for a in blog.list_articles()
+             if a.date and a.date.year > 1]
+    assert dates, "в блоге нет ни одной датированной статьи — тест бессмыслен"
+
+    r = client.get("/sitemap.xml")
+    assert r.status_code == 200
+    assert (f"<loc>http://testserver/blog</loc><lastmod>{max(dates)}</lastmod>"
+            in r.text)

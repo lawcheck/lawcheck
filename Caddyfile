@@ -5,6 +5,29 @@
 lawchek.ru {
 	encode zstd gzip
 
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		# `?` — поставить, только если приложение не прислало своё. На страницах
+		# вида /account/{order_id} routes.py отдаёт no-referrer: сам URL там
+		# является пропуском, и он не должен утечь в Referer.
+		?Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Шрифты не меняются — их можно кэшировать на год.
+	@fonts path /static/fonts/*
+	header @fonts Cache-Control "public, max-age=31536000, immutable"
+
+	# Остальная статика (favicon, картинки) имён с хэшем не имеет: обновление
+	# файла не меняет URL. Месяц — потолок, после которого правку уже не
+	# доставить вернувшемуся посетителю.
+	@static {
+		path /static/*
+		not path /static/fonts/*
+	}
+	header @static Cache-Control "public, max-age=2592000"
+
 	# Access-лог для серверной аналитики (GoAccess читает его из общего тома).
 	log {
 		output file /var/log/caddy/access.log {

@@ -50,6 +50,7 @@ OPERATOR = {
 templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
 templates.env.globals["site_base_url"] = settings.site_base_url.rstrip("/")
+templates.env.globals["google_site_verification"] = settings.google_site_verification
 
 # Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
 # и подключаются как под-роутеры — только когда SEO-контент готов к публикации.
@@ -213,7 +214,16 @@ async def inbox(request: Request):
 @router.get("/robots.txt", response_class=PlainTextResponse)
 async def robots() -> str:
     base = settings.site_base_url.rstrip("/")
-    return f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n"
+    # Clean-param — директива Яндекса: рекламные метки не меняют содержимое
+    # страницы, и без неё каждый переход из Директа (`?yclid=...`) робот видит
+    # как отдельный URL — дубли главной и лендингов в индексе.
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term"
+        "&yclid&_openstat&gclid\n"
+        f"Sitemap: {base}/sitemap.xml\n"
+    )
 
 
 @router.get("/sitemap.xml")
@@ -225,10 +235,16 @@ async def sitemap() -> Response:
         ("/uvedomlenie-rkn", None), ("/reestr-rkn", None),
     ]
     if settings.seo_enabled:
-        entries.append(("/blog", None))
-        for a in blog.list_articles():
-            lastmod = a.date.isoformat() if a.date and a.date.year > 1 else None
-            entries.append((f"/blog/{a.slug}", lastmod))
+        articles = [
+            (f"/blog/{a.slug}", a.date.isoformat() if a.date and a.date.year > 1 else None)
+            for a in blog.list_articles()
+        ]
+        # Дата листинга блога — дата самой свежей статьи на нём. Выдумывать
+        # lastmod для остальных страниц не из чего, поэтому там его нет:
+        # недостоверную дату поисковик всё равно игнорирует.
+        dates = [lm for _, lm in articles if lm]
+        entries.append(("/blog", max(dates) if dates else None))
+        entries += articles
         entries += [(f"/proverka/{niche}", None) for niche in landings.LANDINGS]
     items = "".join(
         f"<url><loc>{base}{path}</loc>" + (f"<lastmod>{lm}</lastmod>" if lm else "") + "</url>"

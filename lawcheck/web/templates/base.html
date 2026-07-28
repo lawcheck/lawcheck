@@ -8,6 +8,7 @@
   <title>{% block title %}LawCheck{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Автоматическая проверка сайта на нарушения 152-ФЗ и смежных законов: политика конфиденциальности, согласия у форм, cookie, реклама. Конкретные цитаты со страниц и оценка риска штрафа.{% endblock %}">
   <meta name="yandex-verification" content="89b1f3af94c61af6" />
+  {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}" />{% endif %}
   {% set _canonical = site_base_url ~ request.url.path %}
   <link rel="canonical" href="{{ _canonical }}">
   <meta property="og:site_name" content="LawCheck">
