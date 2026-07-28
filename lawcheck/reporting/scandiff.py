@@ -1,5 +1,6 @@
 """Сравнение двух сканов одного сайта — общая логика для кабинета и
 клиентских Telegram-уведомлений мониторинга."""
+from lawcheck.notify.telegram import esc
 
 _SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2}
 
@@ -25,13 +26,15 @@ def format_for_telegram(url: str, diff: dict, report_url: str | None = None) -> 
     """Текст diff для Telegram-клиента. None — если изменений нет (не слать)."""
     if not diff["new"] and not diff["fixed"]:
         return None
-    lines = [f"🔍 Изменения на <b>{url}</b> с прошлой проверки:"]
+    # url и заголовки находок — данные с чужого сайта, а сообщение уходит
+    # с parse_mode=HTML: незакрытый тег обернётся ошибкой 400 и молчанием.
+    lines = [f"🔍 Изменения на <b>{esc(url)}</b> с прошлой проверки:"]
     if diff["new"]:
         lines.append(f"\n🔴 Новые ({len(diff['new'])}):")
-        lines += [f"• {f.title}" for f in diff["new"][:8]]
+        lines += [f"• {esc(f.title)}" for f in diff["new"][:8]]
     if diff["fixed"]:
         lines.append(f"\n✅ Исправлено ({len(diff['fixed'])}):")
-        lines += [f"• {f.title}" for f in diff["fixed"][:8]]
+        lines += [f"• {esc(f.title)}" for f in diff["fixed"][:8]]
     if report_url:
         lines.append(f"\nОтчёт: {report_url}")
     return "\n".join(lines)
