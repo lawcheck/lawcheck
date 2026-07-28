@@ -133,4 +133,9 @@ class Crawler:
                     continue
                 queue.append((_score_url(link.url), link.url))
 
+        # Очередь не пуста => вышли по лимиту страниц, часть сайта не смотрели.
+        snapshot.budget_reached = bool(queue)
+        if snapshot.budget_reached:
+            log.info("бюджет страниц исчерпан (%d), в очереди осталось %d",
+                     self.max_pages, len(queue))
         return snapshot

@@ -61,6 +61,11 @@ class PageSnapshot:
 class SiteSnapshot:
     start_url: str
     pages: list[PageSnapshot] = field(default_factory=list)
+    # Обход остановлен лимитом страниц, а в очереди ещё что-то оставалось.
+    # Проверкам это нужно, чтобы отличить «документа нет / не открывается» от
+    # «мы до него просто не дошли»: второе — наше ограничение, и вменять его
+    # владельцу сайта в юридическом отчёте нельзя.
+    budget_reached: bool = False
 
     def all_forms(self) -> list[Form]:
         return [f for p in self.pages for f in p.forms]
