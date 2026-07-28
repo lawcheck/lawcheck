@@ -535,7 +535,7 @@
     .cta-inline a { flex-shrink: 0; background: var(--brand); color: #fff; padding: 11px 20px; border-radius: var(--r-m); text-decoration: none; font-weight: 600; font-size: var(--t-m); }
     .cta-inline a:hover { background: var(--brand-hover); }
   </style>
-  {% if metrika_id %}
+  {% if metrika_id and not no_analytics %}
   <script>
     // Яндекс.Метрика грузится ТОЛЬКО после «Принять» в cookie-баннере —
     // иначе сайт не пройдёт собственную проверку D2 (трекеры до согласия).
@@ -692,7 +692,7 @@
       </div>
     </div>
   </footer>
-  {% if metrika_id %}
+  {% if metrika_id and not no_analytics %}
   <div class="cookie-bar" id="cookie-bar" hidden>
     <div class="cookie-text">
       Используем cookie Яндекс.Метрики, чтобы понимать, как пользуются сервисом.

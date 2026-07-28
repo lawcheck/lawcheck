@@ -39,6 +39,7 @@ def login_user(request: Request, user: User) -> None:
         sess["uid"] = user.id
         sess["email"] = user.email
         sess["verified"] = user.email_verified_at is not None
+        sess["epoch"] = user.session_epoch or 0
 
 
 def mark_session_verified(request: Request) -> None:
@@ -57,4 +58,14 @@ async def current_user(request: Request) -> User | None:
     uid = session_uid(request)
     if not uid:
         return None
-    return await asyncio.to_thread(repo.get_user_by_id, uid)
+    user = await asyncio.to_thread(repo.get_user_by_id, uid)
+    if user is None:
+        return None
+    # Смена пароля увеличивает epoch — старые cookie перестают пускать.
+    # Сессии, выданные до появления поля, несут 0 и совпадают с дефолтом,
+    # поэтому уже вошедшие пользователи не разлогиниваются при выкате.
+    sess = _session(request)
+    if (sess or {}).get("epoch", 0) != (user.session_epoch or 0):
+        logout_user(request)
+        return None
+    return user

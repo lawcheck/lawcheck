@@ -1,6 +1,7 @@
 """Web-UI: главная с формой, страница ожидания, отчёт и оплата."""
 import asyncio
 import logging
+import secrets
 import uuid
 from collections import defaultdict
 from pathlib import Path
@@ -111,6 +112,20 @@ _RL_SCAN = {"limit": 20, "window_sec": 3600}
 _RL_WEBHOOK = {"limit": 60, "window_sec": 60}
 # Чат-виджет и подписка на отчёт шлют уведомления владельцу.
 _RL_INQUIRY = {"limit": 10, "window_sec": 3600}
+
+
+def _private_page(response: Response) -> Response:
+    """Пометить страницу, чей URL сам по себе является пропуском.
+
+    `/account/{order_id}` — магик-ссылка: кто знает id, тот и владелец заказа.
+    Такой URL нельзя отдавать третьим сторонам, поэтому: no-referrer (не утечёт
+    при переходе по внешней ссылке), noindex (не попадёт в поиск) и отключённая
+    Метрика в шаблоне (она шлёт путь текущей страницы, и Referrer-Policy её
+    не останавливает — это отдельный канал утечки).
+    """
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 def _feed_domain_blocked(domain: str) -> bool:
@@ -334,13 +349,13 @@ async def account(request: Request, order_id: str, attached: int = 0,
     tg_deeplink = ""
     if settings.telegram_bot_username and order.monitored_url and order.verified_at:
         tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={order.id}"
-    return templates.TemplateResponse(request, "account.html", {
-        "order": order, "scans": scans, "diff": diff,
+    return _private_page(templates.TemplateResponse(request, "account.html", {
+        "order": order, "scans": scans, "diff": diff, "no_analytics": True,
         "attached": bool(attached), "verified": bool(verified), "vfail": bool(vfail),
         "verify_token": token,
         "monitored_domain": ownership.registered_domain(order.monitored_url) if order.monitored_url else "",
         "tg_deeplink": tg_deeplink,
-    })
+    }))
 
 
 @router.post("/account/{order_id}/monitor", response_class=HTMLResponse)
@@ -389,7 +404,8 @@ async def account_templates(request: Request, order_id: str):
     if order.status != "paid":
         # Шаблоны — платный контент.
         return RedirectResponse(url=f"/account/{order_id}", status_code=303)
-    return templates.TemplateResponse(request, "pro_templates.html", {"order": order})
+    return _private_page(templates.TemplateResponse(
+        request, "pro_templates.html", {"order": order, "no_analytics": True}))
 
 
 @router.post("/internal/monitoring/run")
@@ -399,7 +415,10 @@ async def monitoring_run(request: Request, bg: BackgroundTasks):
     Для каждого оплаченного заказа с подключённым сайтом запускает новый скан,
     если последнему больше 6 дней.
     """
-    if not settings.internal_key or request.headers.get("X-Internal-Key") != settings.internal_key:
+    # compare_digest вместо != — сравнение секретов не должно зависеть по времени
+    # от того, сколько первых символов угадано.
+    given = request.headers.get("X-Internal-Key") or ""
+    if not settings.internal_key or not secrets.compare_digest(given, settings.internal_key):
         raise HTTPException(status_code=403, detail="forbidden")
     from datetime import datetime, timedelta, timezone
     started = []
@@ -430,7 +449,10 @@ async def followups_run(request: Request, limit: int = 20, dry_run: bool = False
     Отбор и текст — reporting/followup.py. `limit` бережёт репутацию домена:
     лучше слать понемногу, чем залпом с молодого домена.
     """
-    if not settings.internal_key or request.headers.get("X-Internal-Key") != settings.internal_key:
+    # compare_digest вместо != — сравнение секретов не должно зависеть по времени
+    # от того, сколько первых символов угадано.
+    given = request.headers.get("X-Internal-Key") or ""
+    if not settings.internal_key or not secrets.compare_digest(given, settings.internal_key):
         raise HTTPException(status_code=403, detail="forbidden")
     summary = await asyncio.to_thread(followup.run, limit, 24, 14, dry_run)
     log.info("followups: %s", summary)
