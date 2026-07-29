@@ -82,10 +82,12 @@
     </ul>
     <form class="buy-form" action="/buy/pro" method="post" data-goal="pay_click">
       {% if scan_id %}<input type="hidden" name="scan_id" value="{{ scan_id }}">{% endif %}
+      <div class="buy-steps">Сначала email – на него придут доступ в кабинет и чек.
+        Дальше откроется страница оплаты картой.</div>
       <input type="email" name="email" required autocomplete="email"
              placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
-      <button type="submit" class="plan-cta primary">Оплатить Pro — 990 ₽/мес</button>
-      <div class="buy-email-note">На этот email — доступ к кабинету и чек · Оплачивая, принимаете <a href="/oferta">оферту</a></div>
+      <button type="submit" class="plan-cta primary">Перейти к оплате – 990 ₽/мес</button>
+      <div class="buy-email-note">Платёж принимает банк Точка · Оплачивая, принимаете <a href="/oferta">оферту</a></div>
     </form>
   </div>
 
@@ -101,7 +103,8 @@
       <li>выделенный юрист в Telegram</li>
       <li>custom-правила под ваш бизнес</li>
     </ul>
-    <a href="mailto:{{ operator.email }}?subject=LawCheck Business" class="plan-cta ghost">Связаться</a>
+    <a href="mailto:{{ operator.email }}?subject=LawCheck%20Business" class="plan-cta ghost"
+       data-lc-chat="Интересует Business. Сайтов: … Страниц: … Что нужно: ">Связаться</a>
   </div>
 </section>
 

@@ -416,6 +416,7 @@
       border: 1px solid var(--line); border-radius: var(--r-m); padding: 11px 12px; font-size: var(--t-m); font-family: inherit; }
     form.buy-form input[type=email]:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
     form.buy-form button.plan-cta { width: 100%; border: 0; cursor: pointer; }
+    .buy-steps { font-size: var(--t-xs); color: var(--muted); margin-bottom: 8px; line-height: 1.4; }
     .buy-email-note { font-size: var(--t-xs); color: var(--muted); margin-top: 8px; text-align: center; }
     .buy-email-note a { color: var(--muted); }
 
@@ -767,6 +768,20 @@
       function close() { panel.hidden = true; toggle.setAttribute("aria-expanded", "false"); }
       toggle.addEventListener("click", function () { panel.hidden ? open() : close(); });
       closeB.addEventListener("click", close);
+
+      // Кнопки на страницах открывают этот же виджет: mailto молча не срабатывает,
+      // если в системе не назначен почтовый клиент. href остаётся фолбэком без JS.
+      document.addEventListener("click", function (e) {
+        var el = e.target.closest && e.target.closest("[data-lc-chat]");
+        if (!el) return;
+        e.preventDefault();
+        var m = document.getElementById("lc-chat-msg");
+        if (m && !m.value.trim()) m.value = el.getAttribute("data-lc-chat");
+        // после отправки форма спрятана — возвращаем её, иначе клик упрётся в «спасибо»
+        form.hidden = false; done.hidden = true; status.hidden = true;
+        sendB.disabled = false; sendB.textContent = "Отправить";
+        open();
+      });
 
       form.addEventListener("submit", function (e) {
         e.preventDefault();
