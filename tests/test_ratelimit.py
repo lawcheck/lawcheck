@@ -164,7 +164,9 @@ def test_skan_ogranichen_i_soobshchaet_ponyatno(client):
 
 
 def test_chat_vidzhet_ogranichen(client):
-    codes = [client.post("/inquiry", data={"message": "вопрос номер такой-то"}).status_code
+    codes = [client.post("/inquiry", data={"message": "вопрос номер такой-то",
+                                           "contact": "@maxim",
+                                           "pd_consent": "1"}).status_code
              for _ in range(12)]
     assert codes[-1] == 429
 

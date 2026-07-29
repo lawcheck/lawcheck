@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -111,6 +111,13 @@ class Inquiry(Base):
     contact: Mapped[str] = mapped_column(String(255), default="")
     page: Mapped[str] = mapped_column(String(2048), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    # Отдельная галочка на рекламные письма (ст. 18 ФЗ «О рекламе»): ответить на
+    # вопрос можно всегда, а вот предлагать тарифы — только с этим согласием.
+    # Доказательство согласия = сама запись: галочка + `created_at` + текст в git.
+    ad_consent: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Токен отписки: тот же роут /unsubscribe, что и у лидов с отчёта.
+    unsub_token: Mapped[str] = mapped_column(String(64), default="")
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Order(Base):

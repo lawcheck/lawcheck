@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from lawcheck.checks.base import Finding as CheckFinding
 from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, Order, Scan, User, utcnow
 from lawcheck.db.session import session_scope
+from lawcheck.utils.contact import contact_url
 
 
 # Период тарифа Pro. Совпадает с назначением платежа «LawCheck Pro, 1 месяц»
@@ -326,13 +327,59 @@ def reset_verification(order_id: str) -> None:
             order.verified_at = None
 
 
-def create_inquiry(message: str, contact: str, page: str) -> int:
+def create_inquiry(message: str, contact: str, page: str, ad_consent: bool = False) -> int:
     """Сохраняет вопрос из чат-виджета. Возвращает id записи."""
     with session_scope() as sess:
-        inq = Inquiry(message=message[:4000], contact=contact[:255], page=page[:2048])
+        inq = Inquiry(message=message[:4000], contact=contact[:255], page=page[:2048],
+                      ad_consent=ad_consent, unsub_token=secrets.token_urlsafe(24))
         sess.add(inq)
         sess.flush()
         return inq.id
+
+
+def inquiries_with_ad_consent(limit: int = 100) -> list[Inquiry]:
+    """Заявки, которым по ст. 18 ФЗ «О рекламе» можно писать предложения:
+    галочка стоит, отписки не было."""
+    with session_scope() as sess:
+        return list(sess.execute(
+            select(Inquiry).where(Inquiry.ad_consent.is_(True),
+                                  Inquiry.unsubscribed_at.is_(None))
+            .order_by(Inquiry.created_at.desc()).limit(limit)
+        ).scalars().all())
+
+
+def _contact_key(contact: str) -> str:
+    """Ключ «это один и тот же человек» для свободной строки контакта.
+
+    Сравнивать сырые строки нельзя: `@maxim` и `t.me/maxim` — один телеграм,
+    `Ya@Mail.ru` и `ya@mail.ru` — один ящик. Отписался бы он тогда только от
+    одной из своих заявок и продолжил получать рекламу.
+    """
+    return (contact_url(contact) or contact).strip().lower()
+
+
+def unsubscribe_inquiry(token: str) -> str | None:
+    """Отписка заявки по токену. Отписывает все заявки того же человека.
+    Возвращает контакт для страницы-подтверждения или None. Идемпотентна."""
+    if not token:
+        return None
+    with session_scope() as sess:
+        inq = sess.execute(
+            select(Inquiry).where(Inquiry.unsub_token == token)
+        ).scalars().first()
+        if inq is None:
+            return None
+        now = utcnow()
+        key = _contact_key(inq.contact)
+        # Ключ считается в Python, поэтому перебираем подписанных. Их единицы:
+        # рассылка идёт только по галочке, а фильтр по ней — в SQL.
+        rows = sess.execute(
+            select(Inquiry).where(Inquiry.unsubscribed_at.is_(None))
+        ).scalars().all()
+        for row in rows:
+            if _contact_key(row.contact) == key:
+                row.unsubscribed_at = now
+        return inq.contact
 
 
 def list_inquiries(limit: int = 100) -> list[Inquiry]:

@@ -10,6 +10,7 @@ import logging
 import httpx
 
 from lawcheck.config import settings
+from lawcheck.utils.contact import contact_url
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +27,22 @@ def esc(value) -> str:
     находок с чужих страниц), обязано пройти через esc().
     """
     return html.escape(str(value if value is not None else ""))
+
+
+def contact_link(contact: str) -> str:
+    """Контакт из заявки — кликабельной ссылкой, чтобы ответить в один тап.
+
+    Заявок мало и отвечает на них владелец руками, поэтому вся ценность
+    уведомления в скорости. Разбор строки — в `utils/contact.py`, здесь только
+    HTML: url собран из проверенных символов, но всё равно идёт через esc() —
+    `&` в валидном адресе (`a&b@x.ru`) Telegram в HTML-режиме не прощает, а
+    ошибка отправки глушится в лог, и владелец о заявке не узнаёт.
+    """
+    contact = (contact or "").strip()
+    if not contact:
+        return "не оставлен"
+    url = contact_url(contact)
+    return f'<a href="{esc(url)}">{esc(contact)}</a>' if url else esc(contact)
 
 
 def is_configured() -> bool:
