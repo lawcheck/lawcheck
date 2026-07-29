@@ -453,7 +453,9 @@
     #lc-chat-toggle .lc-chat-ic { font-size: var(--t-xl); line-height: 1; }
     @media (max-width: 480px) { #lc-chat-toggle .lc-chat-cap { display: none; }
       #lc-chat-toggle { padding: 14px; } }
-    #lc-chat-panel { position: fixed; right: 18px; bottom: 74px; z-index: 46;
+    /* z-index выше куки-бара (50): с двумя галочками панель на мобильном достаёт
+       до бара, и кнопка «Отправить» оказывалась под ним. */
+    #lc-chat-panel { position: fixed; right: 18px; bottom: 74px; z-index: 51;
       width: 340px; max-width: calc(100vw - 36px); background: var(--surface);
       border: 1px solid var(--line); border-radius: var(--r-l); overflow: hidden;
       box-shadow: 0 12px 40px rgba(0,0,0,.18); }
@@ -468,6 +470,10 @@
       font-family: inherit; margin-bottom: 8px; resize: vertical; }
     #lc-chat-form textarea:focus, #lc-chat-form input[type=text]:focus {
       outline: 2px solid var(--brand); outline-offset: 1px; }
+    .lc-chat-consent { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;
+      font-size: var(--t-xs); line-height: 1.35; color: var(--muted); cursor: pointer; }
+    .lc-chat-consent input { margin: 2px 0 0; flex: 0 0 auto; }
+    .lc-chat-consent a { color: var(--brand); }
     #lc-chat-send { width: 100%; background: var(--brand); color: #fff; border: 0;
       border-radius: var(--r-m); padding: 11px; font-size: var(--t-m); font-weight: 600; cursor: pointer; }
     #lc-chat-send:hover { background: var(--brand-hover); }
@@ -739,10 +745,23 @@
         <form id="lc-chat-form">
           <textarea name="message" id="lc-chat-msg" rows="3" required
                     placeholder="Ваш вопрос…" aria-label="Сообщение"></textarea>
-          <input type="text" name="contact" id="lc-chat-contact"
+          <input type="text" name="contact" id="lc-chat-contact" required
                  placeholder="Telegram / email / телефон для ответа" aria-label="Контакт">
           <input type="text" name="website" id="lc-chat-hp" tabindex="-1" autocomplete="off"
                  style="position:absolute;left:-9999px" aria-hidden="true">
+          {# Два согласия, оба без checked: обработка ПДн обязательна (ст. 9 152-ФЗ),
+             рекламные письма — добровольно (ст. 18 ФЗ «О рекламе»). Своя же проверка
+             формы считает предустановленную галочку отсутствием согласия. #}
+          <label class="lc-chat-consent">
+            <input type="checkbox" name="pd_consent" id="lc-chat-pd" value="1" required>
+            <span>Даю согласие на обработку персональных данных по
+              <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
+          </label>
+          <label class="lc-chat-consent">
+            <input type="checkbox" name="ad_consent" id="lc-chat-ad" value="1">
+            <span>Согласен на получение рекламных писем о проверках сайта и штрафах
+              по 152-ФЗ. Отписка – по ссылке в любом письме</span>
+          </label>
           <button type="submit" id="lc-chat-send">Отправить</button>
           <div class="lc-chat-status" id="lc-chat-status" hidden></div>
         </form>
@@ -788,6 +807,15 @@
         status.hidden = true;
         var msg = (document.getElementById("lc-chat-msg").value || "").trim();
         if (msg.length < 2) { status.textContent = "Напишите вопрос."; status.hidden = false; return; }
+        var cnt = (document.getElementById("lc-chat-contact").value || "").trim();
+        if (cnt.length < 3) {
+          status.textContent = "Оставьте контакт, иначе ответить будет некуда.";
+          status.hidden = false; return;
+        }
+        if (!document.getElementById("lc-chat-pd").checked) {
+          status.textContent = "Без согласия на обработку данных мы не можем сохранить контакт.";
+          status.hidden = false; return;
+        }
         sendB.disabled = true; sendB.textContent = "Отправляем…";
         var body = new FormData(form);
         body.set("page", location.pathname);

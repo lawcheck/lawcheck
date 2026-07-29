@@ -15,7 +15,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from lawcheck.config import settings
-from lawcheck.db.models import Base, Lead
+from lawcheck.db.models import Base, Inquiry, Lead
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ def init_db() -> None:
     """Создаёт таблицы, если их нет. Для MVP — вместо Alembic."""
     Base.metadata.create_all(bind=get_engine())
     _migrate_leads_followup()
+    _migrate_inquiries_consent()
     _migrate_findings_extra()
     _migrate_users_session_epoch()
     _migrate_orders_paid_until()
@@ -72,6 +73,41 @@ def _migrate_leads_followup() -> None:
             lead.unsub_token = secrets.token_urlsafe(24)
         if rows:
             log.info("migrate: backfilled unsub_token for %d leads", len(rows))
+
+
+def _migrate_inquiries_consent() -> None:
+    """Досоздаёт в `inquiries` колонки согласия на рекламу и отписки. Идемпотентна.
+
+    Старым заявкам `ad_consent` остаётся FALSE: галочки в форме тогда не было,
+    задним числом согласие не появляется — писать им предложения нельзя.
+    """
+    engine = get_engine()
+    insp = inspect(engine)
+    if "inquiries" not in insp.get_table_names():
+        return  # свежая БД — create_all уже создал колонки
+    cols = {c["name"] for c in insp.get_columns("inquiries")}
+    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
+    boolean = "BOOLEAN" if engine.dialect.name == "postgresql" else "INTEGER"
+    stmts = []
+    if "ad_consent" not in cols:
+        stmts.append(f"ALTER TABLE inquiries ADD COLUMN ad_consent {boolean} NOT NULL DEFAULT FALSE")
+    if "unsub_token" not in cols:
+        stmts.append("ALTER TABLE inquiries ADD COLUMN unsub_token VARCHAR(64) DEFAULT ''")
+    if "unsubscribed_at" not in cols:
+        stmts.append(f"ALTER TABLE inquiries ADD COLUMN unsubscribed_at {ts}")
+    if stmts:
+        with engine.begin() as conn:
+            for stmt in stmts:
+                conn.execute(text(stmt))
+        log.info("migrate: inquiries consent columns added (%d)", len(stmts))
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Inquiry).where((Inquiry.unsub_token == "") | (Inquiry.unsub_token.is_(None)))
+        ).scalars().all()
+        for inq in rows:
+            inq.unsub_token = secrets.token_urlsafe(24)
+        if rows:
+            log.info("migrate: backfilled unsub_token for %d inquiries", len(rows))
 
 
 def _migrate_findings_extra() -> None:

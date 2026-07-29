@@ -19,7 +19,17 @@
       </div>
       <div class="inbox-msg">{{ q.message }}</div>
       <div class="inbox-contact">
-        контакт: {% if q.contact %}<strong>{{ q.contact }}</strong>{% else %}<span class="muted">не оставлен</span>{% endif %}
+        контакт:
+        {% if q.contact %}
+          {% set url = contact_url(q.contact) %}
+          {% if url %}<a href="{{ url }}"><strong>{{ q.contact }}</strong></a>
+          {% else %}<strong>{{ q.contact }}</strong>{% endif %}
+        {% else %}<span class="muted">не оставлен</span>{% endif %}
+        {# Без галочки писать можно только по существу вопроса: предложение тарифов
+           без согласия — реклама по ст. 18 ФЗ «О рекламе». #}
+        {% if q.unsubscribed_at %} · <span class="muted">отписался</span>
+        {% elif q.ad_consent %} · <strong>📬 можно писать предложения</strong>
+        {% else %} · <span class="muted">только ответ на вопрос</span>{% endif %}
       </div>
     </div>
     {% endfor %}

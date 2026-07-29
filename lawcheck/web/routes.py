@@ -17,6 +17,7 @@ from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.payments import tochka
 from lawcheck.notify import mailer, telegram
+from lawcheck.utils.contact import contact_url
 from lawcheck.utils.email import valid_email
 from lawcheck.reporting import fines, followup, policy_draft, rkn_notification_draft
 from lawcheck.web import auth, blog, deps, landings, magnets, ownership, ratelimit, rkn
@@ -36,6 +37,7 @@ def _money(value: int) -> str:
 
 templates.env.filters["money"] = _money
 templates.env.globals["fine_group"] = fines.group_for  # вызывается внутри Jinja-макроса
+templates.env.globals["contact_url"] = contact_url  # контакт заявки ссылкой в /inbox
 
 # Реквизиты оператора сервиса — единый источник для подвала и /privacy.
 # None = реквизит ещё не указан, шаблоны не выводят пустые поля.
@@ -200,11 +202,24 @@ async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+def _checked(value: str) -> bool:
+    """Отмечен ли чекбокс. Пустая строка приходит от снятого поля, но `bool()`
+    здесь мало: строку `0` или `false` (скрытое поле-спутник, чужая интеграция)
+    truthiness превратила бы в согласие, которого человек не давал."""
+    return value.strip().lower() in {"1", "on", "true", "yes", "да"}
+
+
 @router.post("/inquiry")
 async def inquiry(request: Request, bg: BackgroundTasks,
                   message: str = Form(...), contact: str = Form(""),
-                  page: str = Form(""), website: str = Form("")):
-    """Вопрос из чат-виджета. Сохраняем + мгновенный алерт владельцу в Telegram."""
+                  page: str = Form(""), website: str = Form(""),
+                  pd_consent: str = Form(""), ad_consent: str = Form("")):
+    """Вопрос из чат-виджета. Сохраняем + мгновенный алерт владельцу в Telegram.
+
+    Два разных согласия: на обработку ПДн (обязательное — без него нельзя даже
+    хранить контакт, ст. 9 152-ФЗ) и на рекламные письма (добровольное,
+    ст. 18 ФЗ «О рекламе»). Второе не влияет на ответ по существу вопроса.
+    """
     if website:  # honeypot: бот заполнил скрытое поле — тихо игнорируем
         return {"ok": True}
     ratelimit.enforce(request, "inquiry", **_RL_INQUIRY,
@@ -213,12 +228,21 @@ async def inquiry(request: Request, bg: BackgroundTasks,
     contact = contact.strip()
     if len(message) < 2:
         raise HTTPException(status_code=422, detail="empty message")
-    inq_id = await asyncio.to_thread(repo.create_inquiry, message, contact, page)
-    log.info("inquiry #%s: %.60s | контакт: %s", inq_id, message, contact or "—")
+    # Заявка без обратного адреса мертва в момент создания: ответить некуда,
+    # а вопрос из виджета — единственный канал, где человек пишет сам.
+    if len(contact) < 3:
+        raise HTTPException(status_code=422, detail="empty contact")
+    if not _checked(pd_consent):
+        raise HTTPException(status_code=422, detail="no pd consent")
+    ads = _checked(ad_consent)
+    inq_id = await asyncio.to_thread(repo.create_inquiry, message, contact, page, ads)
+    log.info("inquiry #%s: %.60s | контакт: %s | реклама: %s",
+             inq_id, message, contact, "да" if ads else "нет")
     bg.add_task(
         telegram.notify_owner,
         f"💬 Вопрос с сайта #{inq_id}\n{telegram.esc(message[:1500])}\n\n"
-        f"Контакт: <b>{telegram.esc(contact) or 'не оставлен'}</b>"
+        f"Ответить: <b>{telegram.contact_link(contact)}</b>"
+        + ("\n📬 Согласие на рассылку — можно писать предложения" if ads else "")
         + (f"\nСтраница: {telegram.esc(page)}" if page else ""),
     )
     return {"ok": True}
@@ -896,8 +920,14 @@ async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
 
 @router.get("/unsubscribe/{token}", response_class=HTMLResponse)
 async def unsubscribe(request: Request, token: str):
-    """Отписка от писем-догонялок по токену из футера письма (ст. 18 ФЗ «О рекламе»)."""
+    """Отписка от рассылки по токену из письма (ст. 18 ФЗ «О рекламе»).
+
+    Токен ищем и среди лидов с отчёта, и среди заявок из чат-виджета: ссылка
+    в футере письма одна, а откуда человек к нам попал — ему знать незачем.
+    """
     email = await asyncio.to_thread(repo.unsubscribe_lead, token)
+    if not email:
+        email = await asyncio.to_thread(repo.unsubscribe_inquiry, token)
     if email:
         title = "Вы отписаны"
         message = (f"Больше не будем писать на {email}. "
