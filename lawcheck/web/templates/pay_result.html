@@ -43,7 +43,8 @@
       Не нашли такой заказ. Попробуйте ещё раз с страницы тарифов.{% endif %}</p>
     <div class="pay-row">
       <a href="/pricing" class="btn-pay">Попробовать снова</a>
-      <a href="mailto:{{ operator.email }}" class="pay-back">Написать в поддержку</a>
+      <a href="mailto:{{ operator.email }}" class="pay-back"
+         data-lc-chat="Оплата не прошла{% if order %}, заказ {{ order.id[:8] }}{% endif %}. Что случилось: ">Написать в поддержку</a>
     </div>
   {% endif %}
 </div>
