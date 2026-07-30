@@ -34,6 +34,10 @@ def main() -> None:
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    # httpx на INFO печатает URL запроса целиком, а токен бота — часть пути
+    # (/bot<TOKEN>/sendMessage). Иначе секрет оседает в логах контейнера,
+    # которые читает кто угодно с доступом к серверу.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     summary = inbox.run(limit=args.limit, dry_run=args.dry_run)
     mode = "DRY-RUN" if summary["dry_run"] else "РАЗБОР"
     print(f"[{mode}] непрочитанных: {summary['seen']}, "
