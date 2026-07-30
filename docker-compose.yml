@@ -90,6 +90,25 @@ services:
           sleep $$(( 3600 - $$(date -u +%s) % 3600 ))
         done
 
+  # Входящие на служебный ящик → алерт владельцу в Telegram: ответы лидов на
+  # письма-догонялки и отбойники почтовика. Раз в 5 минут — здесь гейт по часу
+  # не нужен, письмо ждать сутки нельзя. Дубли отсекает флаг \Seen самого IMAP,
+  # см. notify/inbox.py. БД не трогает, поэтому depends_on пустой.
+  inbox:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        while true; do
+          python -m lawcheck.tools.poll_inbox --limit 20 || true
+          sleep 300
+        done
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
