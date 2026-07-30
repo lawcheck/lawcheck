@@ -58,3 +58,17 @@ def test_smtp_error_returns_false(monkeypatch):
 def test_empty_recipient_is_false(monkeypatch):
     monkeypatch.setattr(mailer.settings, "smtp_host", "smtp.example.com")
     assert mailer.send_email("", "Тема", "<p>тело</p>") is False
+
+
+def test_reply_to_set_when_configured(monkeypatch):
+    monkeypatch.setattr(mailer.settings, "reply_to", "maxim@lawchek.ru")
+    msg = mailer._build_message("u@x.ru", "Тема", "<p>тело</p>", "тело")
+    assert msg["Reply-To"] == "maxim@lawchek.ru"
+
+
+def test_no_reply_to_header_when_empty(monkeypatch):
+    """Пустая настройка = заголовка нет вовсе. Reply-To на несуществующий ящик
+    отбивает ответы, поэтому включается только явным адресом в .env."""
+    monkeypatch.setattr(mailer.settings, "reply_to", "")
+    msg = mailer._build_message("u@x.ru", "Тема", "<p>тело</p>", "тело")
+    assert msg["Reply-To"] is None

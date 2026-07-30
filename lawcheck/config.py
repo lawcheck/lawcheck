@@ -63,6 +63,16 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "LawCheck <noreply@lawchek.ru>"
     smtp_starttls: bool = True
+    # Адрес для ответов. Пусто — заголовок не ставим, ответ уходит на smtp_from
+    # (то есть на noreply@, который читать некому). Заполнять ТОЛЬКО когда ящик
+    # реально заведён: Reply-To на несуществующий адрес хуже, чем его отсутствие.
+    reply_to: str = ""
+
+    # Чтение входящих: ответы лидов и отбойники почтовика → алерт в Telegram.
+    # Логин и пароль берём те же, что у SMTP (это один ящик). imap_host пуст —
+    # выводим из smtp_host заменой smtp. → imap. (у Timeweb это работает).
+    imap_host: str = ""
+    imap_port: int = 993
 
     # Секрет подписи cookie-сессий (Starlette SessionMiddleware). Пусто — вход
     # в аккаунты выключен (сессии нечем подписать), сайт работает как раньше.

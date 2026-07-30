@@ -30,6 +30,11 @@ def _build_message(to: str, subject: str, html_body: str, text_body: str | None)
     name, addr = parseaddr(settings.smtp_from)
     msg["From"] = formataddr((name, addr)) if name else (addr or settings.smtp_from)
     msg["To"] = to
+    # Без Reply-To ответ уходит на From, то есть на noreply@ — а письмо-догонялка
+    # прямо просит ответить. Ставим, только если адрес задан: заголовок с
+    # несуществующим ящиком отбивает ответы вместо того, чтобы их доставлять.
+    if settings.reply_to:
+        msg["Reply-To"] = settings.reply_to
     msg["Subject"] = subject
     # text/plain — обязательная альтернатива для клиентов без HTML и для антиспама.
     msg.set_content(text_body or _html_to_text(html_body))
