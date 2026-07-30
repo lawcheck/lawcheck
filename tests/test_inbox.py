@@ -125,3 +125,20 @@ def test_skips_when_not_configured(monkeypatch):
     monkeypatch.setattr(settings, "imap_host", "")
     summary = inbox.run()
     assert summary == {"seen": 0, "notified": 0, "skipped": 0, "dry_run": False}
+
+
+def test_cli_entrypoint_forces_ipv4():
+    """Контейнер IPv4-only: без force_ipv4 httpx берёт IPv6-адрес
+    api.telegram.org и уведомления не уходят никогда. Точка входа поллера
+    не проходит через api/main.py, поэтому патч обязан быть в ней самой."""
+    import importlib
+    import socket
+
+    from lawcheck import net
+
+    socket.getaddrinfo = net._orig_getaddrinfo
+    try:
+        importlib.reload(importlib.import_module("lawcheck.tools.poll_inbox"))
+        assert socket.getaddrinfo is not net._orig_getaddrinfo
+    finally:
+        net.force_ipv4()

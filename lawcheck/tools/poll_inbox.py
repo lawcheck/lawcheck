@@ -16,7 +16,13 @@ from __future__ import annotations
 import argparse
 import logging
 
+from lawcheck.net import force_ipv4
 from lawcheck.notify import inbox
+
+# Контейнер IPv4-only, а httpx без Happy Eyeballs берёт IPv6-адрес
+# api.telegram.org → «Network is unreachable». Отдельная точка входа не
+# проходит через api/main.py, поэтому патч нужен здесь и до первого запроса.
+force_ipv4()
 
 
 def main() -> None:
