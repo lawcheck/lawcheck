@@ -85,10 +85,14 @@ jobs:
             lawcheck pyproject.toml Dockerfile Caddyfile docker-compose.yml \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
 
-      - name: Сборка и перезапуск api + worker
+      # Сервисы НЕ перечисляем поимённо: со списком новый сервис в compose
+      # молча не доезжает на прод — его приходится поднимать руками, и об этом
+      # узнаёшь, когда он не работает. `up -d` без аргументов трогает только те
+      # контейнеры, у которых изменилась конфигурация или образ.
+      - name: Сборка и перезапуск сервисов
         run: |
           ssh "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "cd ${DEPLOY_PATH} && docker compose build api worker && docker compose up -d api worker"
+            "cd ${DEPLOY_PATH} && docker compose build && docker compose up -d --remove-orphans"
 
       - name: Проверка живости
         run: |
