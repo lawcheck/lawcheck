@@ -61,6 +61,35 @@ services:
         condition: service_healthy
     command: ["rq", "worker", "--url", "redis://redis:6379/0", "lawcheck"]
 
+  # Письма-догонялки лидам (scan_submit → оплата). Раз в сутки в 09:00 МСК
+  # (06 UTC) — утро читается лучше ночи. Повтор безвреден: отправленным
+  # проставлен `Lead.mailed_at`, и в выборку они больше не попадают, а если
+  # письмо не ушло — метка не ставится и лид достанется следующему прогону.
+  # Кому и что шлём — reporting/followup.py, docs/followup-email-kit.md.
+  followups:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        while true; do
+          if [ "$$(date -u +%H)" = "06" ]; then
+            python -m lawcheck.tools.send_followups --limit 20 || true
+          fi
+          # Спим до верха следующего часа, а не ровно 3600: фиксированный sleep
+          # накапливает сдвиг на время прогона и однажды перескочит час 06.
+          sleep $$(( 3600 - $$(date -u +%s) % 3600 ))
+        done
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped

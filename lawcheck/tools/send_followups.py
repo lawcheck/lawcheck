@@ -4,16 +4,16 @@
 Отбор: лид оставил email на отчёте, но не оплатил; скан завершён и с нарушениями;
 письмо ещё не отправляли; не отписан; возраст в окне [--delay-hours; --max-age-days].
 
-Запуск в контейнере web (там БД и настроенный SMTP):
+Планово гоняется сервисом `followups` из docker-compose.yml — раз в сутки
+в 09:00 МСК. Повтор безвреден: отправленным проставлен `Lead.mailed_at`.
+
+Руками (в контейнере api — там БД и настроенный SMTP):
 
     # посмотреть, кому уйдёт, ничего не отправляя
-    docker compose exec web python -m lawcheck.tools.send_followups --dry-run
+    docker compose exec api python -m lawcheck.tools.send_followups --dry-run
 
     # разослать (не больше 20 писем за прогон)
-    docker compose exec web python -m lawcheck.tools.send_followups --limit 20
-
-Планово — раз в сутки (cron/RQ). До включения эквайринга Точки CTA письма
-ведёт на отчёт (fallback-заявка), после — на реальную оплату.
+    docker compose exec api python -m lawcheck.tools.send_followups --limit 20
 """
 from __future__ import annotations
 
