@@ -361,6 +361,43 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
     return RedirectResponse(url=link.url, status_code=303)
 
 
+@router.get("/pay/retry/{order_id}", response_class=HTMLResponse)
+async def pay_retry(request: Request, order_id: str):
+    """Перевыпуск платёжной ссылки по существующему заказу — цель ссылки из
+    письма-напоминания о брошенной оплате.
+
+    Ссылку Точки нельзя просто переслать из `Order.payment_link`: её срок жизни
+    задаёт банк, и через неделю-другую она мертва. Поэтому выписываем новую, но
+    ПО ТОМУ ЖЕ заказу — иначе каждое напоминание плодило бы дубль в `orders`,
+    и отличить отработку письма от свежего спроса стало бы нечем.
+
+    Сумму берём из заказа, а не из прайса: человек платит ту цену, которую
+    видел при оформлении, даже если тариф с тех пор подорожал.
+    """
+    order = await asyncio.to_thread(repo.get_order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="order not found")
+    if order.status == "paid":
+        return RedirectResponse(url=f"/account/{order_id}", status_code=303)
+
+    purpose = _PLANS.get(order.plan, (f"LawCheck {order.plan}", order.amount))[0]
+    if not tochka.is_configured():
+        return templates.TemplateResponse(request, "pay_fallback.html",
+                                          {"plan": order.plan, "amount": order.amount})
+    try:
+        link = await asyncio.to_thread(
+            tochka.create_payment,
+            amount_rub=order.amount, purpose=f"{purpose} (заказ {order_id[:8]})",
+            order_id=order_id, email=order.email,
+        )
+    except Exception:
+        log.exception("tochka: не удалось перевыпустить ссылку по заказу %s", order_id)
+        return templates.TemplateResponse(request, "pay_fallback.html",
+                                          {"plan": order.plan, "amount": order.amount})
+    await asyncio.to_thread(repo.set_order_payment, order_id, link.operation_id, link.url)
+    return RedirectResponse(url=link.url, status_code=303)
+
+
 @router.get("/pay/success", response_class=HTMLResponse)
 async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
     state = "unknown"

@@ -40,6 +40,7 @@ def init_db() -> None:
     _migrate_findings_extra()
     _migrate_users_session_epoch()
     _migrate_orders_paid_until()
+    _migrate_orders_reminded_at()
 
 
 def _migrate_leads_followup() -> None:
@@ -173,6 +174,27 @@ def _migrate_orders_paid_until() -> None:
             order.paid_until = grace_until
         if rows:
             log.info("migrate: выдан месяц с даты выката %d оплаченным заказам", len(rows))
+
+
+def _migrate_orders_reminded_at() -> None:
+    """Досоздаёт `orders.reminded_at` — отметку о разовом напоминании про
+    брошенную оплату. Идемпотентна.
+
+    Бэкфилла нет намеренно: колонка остаётся NULL, но заказы старше
+    `--max-age-days` в выборку всё равно не попадают, поэтому письма задним
+    числом по всей истории не уедут.
+    """
+    engine = get_engine()
+    insp = inspect(engine)
+    if "orders" not in insp.get_table_names():
+        return  # свежая БД — create_all уже создал колонку
+    cols = {c["name"] for c in insp.get_columns("orders")}
+    if "reminded_at" in cols:
+        return
+    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
+    with engine.begin() as conn:
+        conn.execute(text(f"ALTER TABLE orders ADD COLUMN reminded_at {ts}"))
+    log.info("migrate: orders.reminded_at column added")
 
 
 @contextmanager
