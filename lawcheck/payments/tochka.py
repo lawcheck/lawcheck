@@ -31,6 +31,15 @@ _PAID_STATUSES = {"APPROVED"}
 _PENDING_STATUSES = {"AUTHORIZED", "CREATED", "PENDING", "IN_PROGRESS"}
 
 
+# Способы оплаты в платёжной ссылке. Карта временно отключена: с 14.07.2026 ни
+# один платёж картой не доходит до транзакции — банк возвращает плательщика на
+# failRedirectUrl, 3DS не запрашивается, в операции не появляется ни одной
+# попытки (status остаётся CREATED). СБП при этом проходит. Пока Точка
+# разбирается, карта в ссылке только отнимает клиентов: они упираются в форму,
+# которая всё равно откажет. Вернуть "card" сразу, как эквайринг починят.
+_PAYMENT_MODES = ["sbp"]
+
+
 class TochkaNotConfigured(Exception):
     """Эквайринг ещё не настроен (нет JWT) — используйте fallback-режим."""
 
@@ -69,7 +78,7 @@ def create_payment(*, amount_rub: int, purpose: str, order_id: str) -> PaymentLi
             "customerCode": settings.tochka_customer_code,
             "amount": f"{amount_rub}.00",
             "purpose": purpose,
-            "paymentMode": ["card", "sbp"],
+            "paymentMode": _PAYMENT_MODES,
             "redirectUrl": f"{settings.site_base_url}/pay/success?order={order_id}",
             "failRedirectUrl": f"{settings.site_base_url}/pay/fail?order={order_id}",
         }
