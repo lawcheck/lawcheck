@@ -388,7 +388,7 @@ async def pay_retry(request: Request, order_id: str):
         link = await asyncio.to_thread(
             tochka.create_payment,
             amount_rub=order.amount, purpose=f"{purpose} (заказ {order_id[:8]})",
-            order_id=order_id,
+            order_id=order_id, email=order.email,
         )
     except Exception:
         log.exception("tochka: не удалось перевыпустить ссылку по заказу %s", order_id)

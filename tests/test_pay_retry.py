@@ -37,8 +37,8 @@ def _add_order(oid: str = "o1", *, status: str = "pending", amount: int = 990) -
 def _stub_tochka(monkeypatch, seen: dict):
     from lawcheck.web import routes
 
-    def fake_create(*, amount_rub: int, purpose: str, order_id: str) -> PaymentLink:
-        seen.update(amount=amount_rub, purpose=purpose, order_id=order_id)
+    def fake_create(*, amount_rub: int, purpose: str, order_id: str, email: str) -> PaymentLink:
+        seen.update(amount=amount_rub, purpose=purpose, order_id=order_id, email=email)
         return PaymentLink(operation_id="op-new", url="https://bank/new")
 
     monkeypatch.setattr(routes.tochka, "is_configured", lambda: True)
@@ -66,6 +66,9 @@ def test_pending_order_gets_fresh_link(client, monkeypatch):
     # Заказ переиспользован, а не продублирован — иначе не отличить отработку
     # напоминания от свежего спроса.
     assert seen["order_id"] == "o1"
+    # Email обязателен: без него банк не проведёт оплату картой (чек 54-ФЗ),
+    # а перевыпуск ссылки — ровно тот путь, где его легко забыть.
+    assert seen["email"] == "a@x.ru"
     order = repo.get_order("o1")
     assert (order.operation_id, order.payment_link) == ("op-new", "https://bank/new")
 
