@@ -3,14 +3,19 @@
 Документация: https://developers.tochka.com/docs/tochka-api/internet-acquiring-integration
 
 Поток:
-1. create_payment() → POST /acquiring/v1.0/payments → банк возвращает
-   operationId и paymentLink; клиента редиректим на ссылку.
+1. create_payment() → POST /acquiring/v1.0/payments_with_receipt → банк
+   возвращает operationId и paymentLink; клиента редиректим на ссылку.
 2. Банк шлёт вебхук acquiringInternetPayment (JWT). Вебхук используем только
    как триггер: фактический статус ВСЕГДА перепроверяем авторизованным
    get_operation_status() — это снимает вопрос подделки вебхука.
 
-ВНИМАНИЕ: имена полей выверены по публичной документации; финальная сверка —
-на тестовом платеже в 1 ₽ после подключения эквайринга в ЛК Точки.
+Почему метод с чеком, а не простой /payments: к терминалу подключена онлайн-касса
+(digitalKassaTochka), и без данных для чека карточный канал молча отклоняет платёж.
+Проверено 04.08.2026 двумя ссылками на один и тот же терминал: через /payments
+плательщика возвращало на failRedirectUrl, 3DS не запрашивался и в операции не
+появлялось ни одной попытки (status оставался CREATED); через
+/payments_with_receipt та же карта дала APPROVED. СБП проходил в обоих случаях —
+поэтому поломка месяц оставалась незаметной.
 """
 import logging
 from dataclasses import dataclass
@@ -60,24 +65,41 @@ def _client() -> httpx.Client:
     )
 
 
-def create_payment(*, amount_rub: int, purpose: str, order_id: str) -> PaymentLink:
-    """Создаёт платёжную ссылку (карты + СБП). Суммы — в рублях."""
+def create_payment(*, amount_rub: int, purpose: str, order_id: str, email: str) -> PaymentLink:
+    """Создаёт платёжную ссылку (карты + СБП). Суммы — в рублях.
+
+    email обязателен: на него касса шлёт фискальный чек, а без блоков Client и
+    Items банк не проводит оплату картой (см. шапку модуля).
+    """
     if not is_configured():
         raise TochkaNotConfigured
+    amount = f"{amount_rub}.00"
     body = {
         "Data": {
             "customerCode": settings.tochka_customer_code,
-            "amount": f"{amount_rub}.00",
+            "amount": amount,
             "purpose": purpose,
             "paymentMode": ["card", "sbp"],
             "redirectUrl": f"{settings.site_base_url}/pay/success?order={order_id}",
             "failRedirectUrl": f"{settings.site_base_url}/pay/fail?order={order_id}",
+            "Client": {"email": email},
+            # Позиция чека ровно одна: тариф. vatType none — НДС не выделяем;
+            # если перейдём на режим с НДС, ставку править здесь.
+            "Items": [{
+                "name": purpose,
+                "amount": amount,
+                "quantity": 1,
+                "vatType": "none",
+                "paymentMethod": "full_payment",
+                "paymentObject": "service",
+                "measure": "шт.",
+            }],
         }
     }
     if settings.tochka_merchant_id:
         body["Data"]["merchantId"] = settings.tochka_merchant_id
     with _client() as c:
-        r = c.post("/acquiring/v1.0/payments", json=body)
+        r = c.post("/acquiring/v1.0/payments_with_receipt", json=body)
         r.raise_for_status()
         payload = r.json()
     data = payload.get("Data") if isinstance(payload, dict) else None
