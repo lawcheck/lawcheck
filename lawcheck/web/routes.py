@@ -352,6 +352,7 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
         link = await asyncio.to_thread(
             tochka.create_payment,
             amount_rub=amount, purpose=f"{purpose} (заказ {order_id[:8]})", order_id=order_id,
+            email=email,
         )
     except Exception:
         log.exception("tochka: не удалось создать платёжную ссылку")

@@ -19,8 +19,11 @@ def configured(monkeypatch):
     monkeypatch.setattr(tochka.settings, "site_base_url", "https://lawchek.ru")
 
 
-def _client_returning(payload, status_code=200, text=""):
-    """Подменяет httpx.Client так, что любой запрос отдаёт заданный ответ."""
+def _client_returning(payload, status_code=200, text="", sent=None):
+    """Подменяет httpx.Client так, что любой запрос отдаёт заданный ответ.
+
+    sent — необязательный dict, куда сложим url и тело POST-запроса.
+    """
     class FakeResponse:
         def __init__(self):
             self.status_code = status_code
@@ -42,7 +45,10 @@ def _client_returning(payload, status_code=200, text=""):
         def __exit__(self, *a):
             return False
 
-        def post(self, *a, **k):
+        def post(self, url, *a, **k):
+            if sent is not None:
+                sent["url"] = url
+                sent["json"] = k.get("json")
             return FakeResponse()
 
         def get(self, *a, **k):
@@ -56,9 +62,29 @@ def _client_returning(payload, status_code=200, text=""):
 def test_create_payment_vozvrashchaet_ssylku(monkeypatch):
     monkeypatch.setattr(tochka, "_client", _client_returning(
         {"Data": {"operationId": "op-1", "paymentLink": "https://bank.example/pay/1"}}))
-    link = tochka.create_payment(amount_rub=990, purpose="Pro", order_id="ord1")
+    link = tochka.create_payment(amount_rub=990, purpose="Pro", order_id="ord1",
+                                 email="buyer@example.com")
     assert link.operation_id == "op-1"
     assert link.url == "https://bank.example/pay/1"
+
+
+def test_create_payment_idyot_s_chekom(monkeypatch):
+    """Без Client и Items банк не проводит карту — платёж молча отваливается
+    до 3DS, а СБП при этом работает. Ровно так оплата картой была сломана
+    с 14.07 по 05.08.2026, и заметить это по статусам операций нельзя."""
+    sent = {}
+    monkeypatch.setattr(tochka, "_client", _client_returning(
+        {"Data": {"operationId": "op-1", "paymentLink": "https://bank.example/pay/1"}}, sent=sent))
+    tochka.create_payment(amount_rub=990, purpose="LawCheck Pro", order_id="ord1",
+                          email="buyer@example.com")
+    assert sent["url"] == "/acquiring/v1.0/payments_with_receipt"
+    data = sent["json"]["Data"]
+    assert data["Client"] == {"email": "buyer@example.com"}
+    assert data["paymentMode"] == ["card", "sbp"]
+    item = data["Items"][0]
+    assert item["name"] == "LawCheck Pro"
+    assert item["amount"] == data["amount"] == "990.00"
+    assert item["quantity"] == 1
 
 
 @pytest.mark.parametrize("payload", [
@@ -74,7 +100,8 @@ def test_create_payment_padaet_vmesto_pustoy_ssylki(monkeypatch, payload):
     останется без operation_id — подтвердить оплату будет уже нечем."""
     monkeypatch.setattr(tochka, "_client", _client_returning(payload))
     with pytest.raises(tochka.TochkaBadResponse):
-        tochka.create_payment(amount_rub=990, purpose="Pro", order_id="ord1")
+        tochka.create_payment(amount_rub=990, purpose="Pro", order_id="ord1",
+                              email="buyer@example.com")
 
 
 # === is_paid: никогда не бросает ===
@@ -121,6 +148,7 @@ def test_is_paid_ne_padaet_na_http_oshibke(monkeypatch):
 def test_bez_nastroennogo_ekvayringa_brosaet(monkeypatch):
     monkeypatch.setattr(tochka.settings, "tochka_jwt", "")
     with pytest.raises(tochka.TochkaNotConfigured):
-        tochka.create_payment(amount_rub=990, purpose="Pro", order_id="ord1")
+        tochka.create_payment(amount_rub=990, purpose="Pro", order_id="ord1",
+                              email="buyer@example.com")
     with pytest.raises(tochka.TochkaNotConfigured):
         tochka.get_operation_status("op-1")
