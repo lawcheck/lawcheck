@@ -169,6 +169,44 @@ def get_order_by_operation(operation_id: str) -> Order | None:
         ).scalar_one_or_none()
 
 
+def orders_to_remind(delay_hours: int = 6, max_age_days: int = 14,
+                     limit: int = 20) -> list[Order]:
+    """Заказы с брошенной оплатой, которым пора отправить разовое напоминание:
+    статус `pending` (ссылка выдана, денег нет), `reminded_at` пуст, есть email,
+    возраст в окне [delay_hours; max_age_days], и с этого email НЕ оплачен
+    никакой другой заказ. Возвращает detached-объекты.
+
+    Верхняя граница возраста тут не косметика: напоминать про заказ трёхнедельной
+    давности поздно и выглядит навязчиво, а платёжная ссылка к тому моменту
+    всё равно мертва (её перевыпускает /pay/retry).
+    """
+    now = utcnow()
+    lo = now - timedelta(days=max_age_days)
+    hi = now - timedelta(hours=delay_hours)
+    with session_scope() as sess:
+        paid_emails = set(sess.execute(
+            select(Order.email).where(Order.status == "paid", Order.email != "")
+        ).scalars())
+        rows = sess.execute(
+            select(Order).where(
+                Order.status == "pending",
+                Order.reminded_at.is_(None),
+                Order.email != "",
+                Order.created_at >= lo,
+                Order.created_at <= hi,
+            ).order_by(Order.created_at)
+        ).scalars().all()
+        return [o for o in rows if o.email not in paid_emails][:limit]
+
+
+def mark_order_reminded(order_id: str) -> None:
+    """Проставляет момент отправки напоминания (защита от повторной отправки)."""
+    with session_scope() as sess:
+        order = sess.get(Order, order_id)
+        if order and order.reminded_at is None:
+            order.reminded_at = utcnow()
+
+
 # === Лиды (email со страницы отчёта) ===
 
 def create_lead(scan_id: str, url: str, email: str) -> bool:
