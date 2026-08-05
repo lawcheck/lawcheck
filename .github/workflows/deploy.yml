@@ -92,7 +92,7 @@ jobs:
           rsync -az \
             --exclude '__pycache__/' --exclude '.git/' --exclude '.venv/' \
             --exclude '*.db' --exclude '.env' \
-            lawcheck pyproject.toml Dockerfile Caddyfile docker-compose.yml \
+            lawcheck alembic alembic.ini pyproject.toml Dockerfile Caddyfile docker-compose.yml \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
 
       # Сервисы НЕ перечисляем поимённо: со списком новый сервис в compose
