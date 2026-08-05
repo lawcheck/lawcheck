@@ -52,3 +52,10 @@ snapshots/
 
 # Handoff-файлы (могут содержать секреты) — не коммитить
 handoff/
+
+# Hermes + skills
+.hermes/
+.agents/
+.claude/
+skills-lock.json
+

@@ -35,9 +35,9 @@
 {% endblock %}
 
 {% block content %}
-<section class="hero">
+<section class="hero reveal">
   <div>
-    <span class="badge-pill"><span class="dot"></span>30 проверок · 6 законов</span>
+    <span class="badge-pill">30 проверок · 6 законов</span>
     <h1>Проверьте сайт на нарушения, за которые штрафуют по <span class="accent">152-ФЗ</span> — за 60 секунд.</h1>
     <p class="sub">
       Обходим сайт и находим нарушения по 152-ФЗ, ЗОЗПП, рекламе и защите детей.
@@ -56,41 +56,28 @@
 </section>
 
 <div class="mini-cards">
-  <div class="mc"><div class="t">Политика ПДн</div><div class="d">наличие, валидность и обязательные разделы</div></div>
-  <div class="mc"><div class="t">Формы и реквизиты</div><div class="d">согласия у форм, ИНН/ОГРН, реестр РКН</div></div>
-  <div class="mc"><div class="t">Cookies и реклама</div><div class="d">трекеры, трансграничная передача, маркировка</div></div>
+  <div class="mc reveal"><div class="t">Политика ПДн</div><div class="d">наличие, валидность и обязательные разделы</div></div>
+  <div class="mc reveal"><div class="t">Формы и реквизиты</div><div class="d">согласия у форм, ИНН/ОГРН, реестр РКН</div></div>
+  <div class="mc reveal"><div class="t">Cookies и реклама</div><div class="d">трекеры, трансграничная передача, маркировка</div></div>
 </div>
 
-<section class="section">
-  <div class="kicker numbered">цена вопроса</div>
+<section class="section reveal">
+  <div class="kicker">цена вопроса</div>
   <h2>Сколько стоят нарушения</h2>
   <p class="lead">Ориентировочные диапазоны штрафов для юрлиц по КоАП РФ. Не точный расчёт — оценка порядка риска, который находит проверка.</p>
   <div class="fine-cards">
-    <div class="fine-card">
-      <div class="amount">до 700 000 ₽</div>
-      <div class="reason">Сбор ПДн без надлежащего согласия</div>
-      <div class="src">ст. 13.11 ч. 2 КоАП РФ</div>
-    </div>
-    <div class="fine-card">
-      <div class="amount">до 6 000 000 ₽</div>
-      <div class="reason">Нарушение локализации и трансграничной передачи ПДн</div>
-      <div class="src">ст. 13.11 ч. 8 КоАП РФ</div>
-    </div>
-    <div class="fine-card">
-      <div class="amount">до 500 000 ₽</div>
-      <div class="reason">Реклама без маркировки и нарушения 38-ФЗ</div>
-      <div class="src">ст. 14.3 КоАП РФ</div>
-    </div>
+    <div class="fine-card reveal"><div class="amount">до 700 000 ₽</div><div class="reason">Сбор ПДн без надлежащего согласия</div><div class="src">ст. 13.11 ч. 2 КоАП РФ</div></div>
+    <div class="fine-card reveal"><div class="amount">до 6 000 000 ₽</div><div class="reason">Нарушение локализации и трансграничной передачи ПДн</div><div class="src">ст. 13.11 ч. 8 КоАП РФ</div></div>
+    <div class="fine-card reveal"><div class="amount">до 500 000 ₽</div><div class="reason">Реклама без маркировки и нарушения 38-ФЗ</div><div class="src">ст. 14.3 КоАП РФ</div></div>
   </div>
   <div class="fine-disclaimer">Суммы ориентировочные и требуют юридической проверки: редакции статей КоАП меняются (в т.ч. реформа ответственности за ПДн — 420-ФЗ от 30.05.2025).</div>
 </section>
 
-<section class="section">
-  <div class="kicker numbered">что попадает в отчёт</div>
+<section class="section reveal">
   <h2>Где нарушение, чем грозит и как исправить</h2>
   <p class="lead">По каждому нарушению — где нашли, цитата со страницы, какая норма нарушена и готовый текст для исправления.</p>
   <div class="what-grid">
-    <ul class="checklist">
+    <ul class="checklist reveal">
       <li><span class="num">1</span><div><div class="ct">URL и цитата</div><div class="cd">точная страница и фрагмент, который вызвал срабатывание</div></div></li>
       <li><span class="num">2</span><div><div class="ct">Норма закона</div><div class="cd">статья и пункт + внутренний код правила</div></div></li>
       <li><span class="num">3</span><div><div class="ct">Степень риска</div><div class="cd">критично / предупреждение / информация</div></div></li>
@@ -98,7 +85,7 @@
       <li><span class="num">5</span><div><div class="ct">Оценка штрафа</div><div class="cd">ориентировочный диапазон по статье КоАП</div></div></li>
     </ul>
 
-    <div class="finding critical" style="background: var(--surface);">
+    <div class="finding critical reveal" style="background: var(--surface);">
       <div class="head">
         <span class="pill critical">критично</span>
         <span class="title">Форма заявки собирает ПДн без согласия на обработку</span>
@@ -112,8 +99,7 @@
   </div>
 </section>
 
-<section class="section">
-  <div class="kicker numbered">чем мы отличаемся</div>
+<section class="section reveal">
   <h2>Проверить сайт может любой сервис. Следить за ним — только мы</h2>
   <p class="lead">Бесплатные чекеры покажут проблемы один раз и попрощаются. LawCheck отдаёт полный отчёт с цитатами бесплатно, а на Pro — следит за сайтом каждую неделю и подключает живого юриста.</p>
   <div class="cmp-wrap">
@@ -131,19 +117,23 @@
   </div>
 </section>
 
-<section class="section">
+<div class="pull-quote reveal">
+  <blockquote>Не ждите предписания от РКН — проверьте сайт за минуту и закройте риски до проверки.</blockquote>
+  <cite>ст. 13.11 КоАП РФ · до 6 000 000 ₽ за повторное нарушение</cite>
+</div>
+
+<section class="section reveal">
   <div class="numbers">
-    <div class="n"><div class="big">30</div><div class="cap">автоматических проверок</div><div class="src">152-ФЗ, ЗОЗПП, реклама, дети</div></div>
-    <div class="n"><div class="big">6</div><div class="cap">законов и подзаконных актов</div><div class="src">152-ФЗ · ЗОЗПП · ПП №2463 · 38-ФЗ · 436-ФЗ · ГК/129-ФЗ</div></div>
-    <div class="n"><div class="big crit">700 000 ₽</div><div class="cap">штраф по одной статье</div><div class="src">ст. 13.11 ч. 2 КоАП РФ (ориентировочно)</div></div>
+    <div class="n reveal"><div class="big">30</div><div class="cap">автоматических проверок</div><div class="src">152-ФЗ, ЗОЗПП, реклама, дети</div></div>
+    <div class="n reveal"><div class="big">6</div><div class="cap">законов и подзаконных актов</div><div class="src">152-ФЗ · ЗОЗПП · ПП №2463 · 38-ФЗ · 436-ФЗ · ГК/129-ФЗ</div></div>
+    <div class="n reveal"><div class="big crit">700 000 ₽</div><div class="cap">штраф по одной статье</div><div class="src">ст. 13.11 ч. 2 КоАП РФ (ориентировочно)</div></div>
   </div>
 </section>
 
 {% if recent %}
-<section class="section">
-  <div class="kicker numbered">соцдоказательство</div>
+<section class="section reveal">
   <h2>Последние публичные проверки</h2>
-  <div class="card recent" style="margin-top: 12px;">
+  <div class="card recent reveal" style="margin-top: 12px;">
     {% for s in recent %}
     <div class="row">
       <div>
@@ -159,14 +149,14 @@
 </section>
 {% endif %}
 
-<section class="section">
-  <div class="kicker numbered">кто за этим стоит</div>
+<section class="section reveal">
+  <div class="kicker">кто за этим стоит</div>
   <h2>Заключения готовит практикующий юрист</h2>
   <p class="lead">Нарушения находит автоматика, а PDF-заключение на платном тарифе проверяет и подписывает юрист-партнёр.</p>
   {% include "_expert.html" %}
 </section>
 
-<div class="footer-cta">
+<div class="footer-cta reveal">
   <h2>Узнайте, за что ваш сайт могут оштрафовать — до того, как это узнает РКН</h2>
   <p>Бесплатная проверка за 60 секунд, без регистрации.</p>
   <div class="row">
