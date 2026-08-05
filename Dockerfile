@@ -14,8 +14,10 @@ WORKDIR /app
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir -e .
 
-# Затем кладём приложение
+# Затем кладём приложение и миграции
 COPY lawcheck ./lawcheck
+COPY alembic.ini ./
+COPY alembic ./alembic
 
 # Дальше работаем от непривилегированного пользователя (он есть в образе
 # Playwright, браузеры в /ms-playwright читаемы всем).
