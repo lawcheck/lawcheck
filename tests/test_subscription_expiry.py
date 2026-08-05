@@ -5,11 +5,10 @@
 """
 import tempfile
 import uuid
-from datetime import timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
-from sqlalchemy import text
 
 from lawcheck.config import settings
 from lawcheck.db import repo, session
@@ -137,25 +136,7 @@ def test_istekshiy_zakaz_ne_puskaet_k_platnym_funkciyam(client):
     assert r.headers["location"] == f"/account/{expired_id}"
 
 
-def test_migraciya_daet_mesyac_s_daty_vykata(db):
-    """Бэкфилл: заказ, оплаченный до появления срока, получает месяц с момента
-    миграции, а не с даты оплаты — иначе доступ пропал бы в секунду выката."""
-    oid = uuid.uuid4().hex
-    davno = utcnow() - timedelta(days=200)
-    with session_scope() as sess:
-        sess.add(Order(id=oid, plan="pro", amount=990, status="paid",
-                       paid_at=davno, paid_until=None))
-    # Эмулируем состояние старой БД: колонка есть, но значение не заполнено.
-    with session.get_engine().begin() as conn:
-        conn.execute(text("UPDATE orders SET paid_until = NULL"))
-        conn.execute(text("ALTER TABLE orders RENAME COLUMN paid_until TO paid_until_tmp"))
-
-    session._migrate_orders_paid_until()  # колонки paid_until нет → должна досоздать
-
-    order = repo.get_order(oid)
-    assert order.paid_until is not None
-    assert repo.subscription_active(order) is True
-    # Срок считается от миграции, а не от давней оплаты.
-    # sqlite отдаёт naive datetime — нормализуем, как это делает subscription_active.
-    until = order.paid_until.replace(tzinfo=timezone.utc)
-    assert until > utcnow() + timedelta(days=repo.PRO_PERIOD_DAYS - 1)
+# Тест бэкфилла `_migrate_orders_paid_until` удалён вместе с самой миграцией:
+# она отработала на проде в июле, её результат вошёл в baseline Alembic, и
+# проверять в коде больше нечего. Само правило «оплачено и ещё действует»
+# проверяется тестами выше.

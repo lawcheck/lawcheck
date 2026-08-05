@@ -35,34 +35,17 @@ def test_migracii_sovpadayut_s_modelyami(tmp_path, monkeypatch):
     assert diff == [], f"схема после миграций разошлась с моделями: {diff}"
 
 
-def test_baseline_daet_tu_zhe_shemu_chto_create_all(tmp_path, monkeypatch):
-    """Ровно то, на чём держится безопасность `alembic stamp head` на проде.
+def test_init_db_podnimaet_shemu_s_nulya(tmp_path, monkeypatch):
+    """init_db на пустой базе должен дать рабочую схему — теперь через Alembic."""
+    from lawcheck.db import repo, session as db_session
 
-    База там создана `create_all` плюс ручными `_migrate_*`. Если baseline
-    описывает что-то другое, `stamp` соврёт: Alembic будет считать схему
-    приведённой, а она другая.
-    """
-    from lawcheck.db import session as db_session
-
-    migrated = f"sqlite:///{tmp_path / 'a.db'}"
-    monkeypatch.setattr(settings, "database_url", migrated)
-    command.upgrade(Config(str(_ROOT / "alembic.ini")), "head")
-
-    created = f"sqlite:///{tmp_path / 'b.db'}"
-    monkeypatch.setattr(settings, "database_url", created)
+    monkeypatch.setattr(settings, "database_url", f"sqlite:///{tmp_path / 'fresh.db'}")
     db_session.get_engine.cache_clear()
     db_session.get_sessionmaker.cache_clear()
-    db_session.init_db()
-    db_session.get_engine.cache_clear()
-    db_session.get_sessionmaker.cache_clear()
-
-    def schema(url: str) -> set[str]:
-        engine = create_engine(url)
-        with engine.connect() as conn:
-            rows = conn.exec_driver_sql(
-                "SELECT type, name, COALESCE(sql, '') FROM sqlite_master "
-                "WHERE name NOT LIKE 'sqlite_%' AND name NOT LIKE 'alembic_%'"
-            ).fetchall()
-        return {" ".join(str(c).split()) for c in ("|".join(r) for r in rows)}
-
-    assert schema(migrated) == schema(created)
+    try:
+        db_session.init_db()
+        repo.create_scan("s1", "https://example.com/", 5)
+        assert repo.get_scan("s1") is not None
+    finally:
+        db_session.get_engine.cache_clear()
+        db_session.get_sessionmaker.cache_clear()

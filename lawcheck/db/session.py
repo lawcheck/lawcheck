@@ -2,22 +2,27 @@
 
 Для MVP — синхронный SQLAlchemy. Все вызовы из async-эндпойнтов оборачиваем
 в asyncio.to_thread() (см. api/routes/scan.py).
+
+Схему приводит в порядок Alembic (`alembic/`). Раньше здесь жили `create_all`
+и шесть функций `_migrate_*` с ручными ALTER: `create_all` умеет только создать
+отсутствующую таблицу, а добавить колонку в существующую — нет, и молчит об
+этом. Каждое новое поле приходилось дописывать руками и там, и на проде.
 """
 import logging
-import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import timedelta
 from functools import lru_cache
+from pathlib import Path
 
-from sqlalchemy import create_engine, inspect, select, text
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from lawcheck.config import settings
-from lawcheck.db.models import Base, Inquiry, Lead
 
 log = logging.getLogger(__name__)
+
+_ALEMBIC_INI = Path(__file__).parent.parent.parent / "alembic.ini"
 
 
 @lru_cache(maxsize=1)
@@ -33,168 +38,25 @@ def get_sessionmaker() -> sessionmaker[Session]:
 
 
 def init_db() -> None:
-    """Создаёт таблицы, если их нет. Для MVP — вместо Alembic."""
-    Base.metadata.create_all(bind=get_engine())
-    _migrate_leads_followup()
-    _migrate_inquiries_consent()
-    _migrate_findings_extra()
-    _migrate_users_session_epoch()
-    _migrate_orders_paid_until()
-    _migrate_orders_reminded_at()
+    """Привести схему к последней ревизии Alembic.
 
-
-def _migrate_leads_followup() -> None:
-    """Лёгкая миграция вместо Alembic: досоздаёт колонки follow-up в `leads`
-    и генерирует `unsub_token` для старых записей. Идемпотентна — `create_all`
-    не изменяет уже существующую таблицу, поэтому колонки добавляем вручную."""
-    engine = get_engine()
-    insp = inspect(engine)
-    if "leads" not in insp.get_table_names():
-        return  # свежая БД — create_all уже создал колонки
-    cols = {c["name"] for c in insp.get_columns("leads")}
-    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
-    stmts = []
-    if "unsub_token" not in cols:
-        stmts.append("ALTER TABLE leads ADD COLUMN unsub_token VARCHAR(64) DEFAULT ''")
-    if "mailed_at" not in cols:
-        stmts.append(f"ALTER TABLE leads ADD COLUMN mailed_at {ts}")
-    if "unsubscribed_at" not in cols:
-        stmts.append(f"ALTER TABLE leads ADD COLUMN unsubscribed_at {ts}")
-    if stmts:
-        with engine.begin() as conn:
-            for stmt in stmts:
-                conn.execute(text(stmt))
-        log.info("migrate: leads follow-up columns added (%d)", len(stmts))
-    # Бэкфилл токенов отписки для строк без него (старые лиды + только что добавленная колонка).
-    with session_scope() as sess:
-        rows = sess.execute(
-            select(Lead).where((Lead.unsub_token == "") | (Lead.unsub_token.is_(None)))
-        ).scalars().all()
-        for lead in rows:
-            lead.unsub_token = secrets.token_urlsafe(24)
-        if rows:
-            log.info("migrate: backfilled unsub_token for %d leads", len(rows))
-
-
-def _migrate_inquiries_consent() -> None:
-    """Досоздаёт в `inquiries` колонки согласия на рекламу и отписки. Идемпотентна.
-
-    Старым заявкам `ad_consent` остаётся FALSE: галочки в форме тогда не было,
-    задним числом согласие не появляется — писать им предложения нельзя.
+    Вызывается при старте API и из батч-инструментов. Идемпотентно: если база
+    уже на head, Alembic ничего не делает. Накатывает только `api` — воркер
+    сюда не заходит, поэтому гонки двух контейнеров нет.
     """
-    engine = get_engine()
-    insp = inspect(engine)
-    if "inquiries" not in insp.get_table_names():
-        return  # свежая БД — create_all уже создал колонки
-    cols = {c["name"] for c in insp.get_columns("inquiries")}
-    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
-    boolean = "BOOLEAN" if engine.dialect.name == "postgresql" else "INTEGER"
-    stmts = []
-    if "ad_consent" not in cols:
-        stmts.append(f"ALTER TABLE inquiries ADD COLUMN ad_consent {boolean} NOT NULL DEFAULT FALSE")
-    if "unsub_token" not in cols:
-        stmts.append("ALTER TABLE inquiries ADD COLUMN unsub_token VARCHAR(64) DEFAULT ''")
-    if "unsubscribed_at" not in cols:
-        stmts.append(f"ALTER TABLE inquiries ADD COLUMN unsubscribed_at {ts}")
-    if stmts:
-        with engine.begin() as conn:
-            for stmt in stmts:
-                conn.execute(text(stmt))
-        log.info("migrate: inquiries consent columns added (%d)", len(stmts))
-    with session_scope() as sess:
-        rows = sess.execute(
-            select(Inquiry).where((Inquiry.unsub_token == "") | (Inquiry.unsub_token.is_(None)))
-        ).scalars().all()
-        for inq in rows:
-            inq.unsub_token = secrets.token_urlsafe(24)
-        if rows:
-            log.info("migrate: backfilled unsub_token for %d inquiries", len(rows))
+    from alembic import command
+    from alembic.config import Config
 
-
-def _migrate_findings_extra() -> None:
-    """Досоздаёт `findings.extra` (структурные факты проверки) на БД,
-    созданных до появления колонки в модели. Идемпотентна."""
-    engine = get_engine()
-    insp = inspect(engine)
-    if "findings" not in insp.get_table_names():
-        return  # свежая БД — create_all уже создал колонку
-    cols = {c["name"] for c in insp.get_columns("findings")}
-    if "extra" in cols:
-        return
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE findings ADD COLUMN extra JSON"))
-    log.info("migrate: findings.extra column added")
-
-
-def _migrate_users_session_epoch() -> None:
-    """Досоздаёт `users.session_epoch` (версия сессий). Идемпотентна.
-
-    Значение по умолчанию 0 совпадает с тем, что читается из старых cookie без
-    этого поля, поэтому уже вошедшие пользователи не разлогиниваются при выкате.
-    """
-    engine = get_engine()
-    insp = inspect(engine)
-    if "users" not in insp.get_table_names():
-        return  # свежая БД — create_all уже создал колонку
-    cols = {c["name"] for c in insp.get_columns("users")}
-    if "session_epoch" in cols:
-        return
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN session_epoch INTEGER NOT NULL DEFAULT 0"))
-    log.info("migrate: users.session_epoch column added")
-def _migrate_orders_paid_until() -> None:
-    """Досоздаёт `orders.paid_until` и выдаёт действующим заказам месяц с даты
-    выката. Идемпотентна.
-
-    Раньше доступ определялся `status == "paid"` без срока, то есть разовая
-    оплата открывала Pro навсегда. Бэкфилл сознательно считает срок от МОМЕНТА
-    МИГРАЦИИ, а не от `paid_at`: иначе все ранее оплатившие потеряли бы доступ
-    ровно в секунду выката, без предупреждения.
-    """
-    engine = get_engine()
-    insp = inspect(engine)
-    if "orders" not in insp.get_table_names():
-        return  # свежая БД — create_all уже создал колонку
-    cols = {c["name"] for c in insp.get_columns("orders")}
-    if "paid_until" in cols:
-        return
-    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
-    with engine.begin() as conn:
-        conn.execute(text(f"ALTER TABLE orders ADD COLUMN paid_until {ts}"))
-    log.info("migrate: orders.paid_until column added")
-
-    from lawcheck.db.models import Order, utcnow
-    from lawcheck.db.repo import PRO_PERIOD_DAYS
-    grace_until = utcnow() + timedelta(days=PRO_PERIOD_DAYS)
-    with session_scope() as sess:
-        rows = sess.execute(
-            select(Order).where(Order.status == "paid", Order.paid_until.is_(None))
-        ).scalars().all()
-        for order in rows:
-            order.paid_until = grace_until
-        if rows:
-            log.info("migrate: выдан месяц с даты выката %d оплаченным заказам", len(rows))
-
-
-def _migrate_orders_reminded_at() -> None:
-    """Досоздаёт `orders.reminded_at` — отметку о разовом напоминании про
-    брошенную оплату. Идемпотентна.
-
-    Бэкфилла нет намеренно: колонка остаётся NULL, но заказы старше
-    `--max-age-days` в выборку всё равно не попадают, поэтому письма задним
-    числом по всей истории не уедут.
-    """
-    engine = get_engine()
-    insp = inspect(engine)
-    if "orders" not in insp.get_table_names():
-        return  # свежая БД — create_all уже создал колонку
-    cols = {c["name"] for c in insp.get_columns("orders")}
-    if "reminded_at" in cols:
-        return
-    ts = "TIMESTAMP WITH TIME ZONE" if engine.dialect.name == "postgresql" else "TIMESTAMP"
-    with engine.begin() as conn:
-        conn.execute(text(f"ALTER TABLE orders ADD COLUMN reminded_at {ts}"))
-    log.info("migrate: orders.reminded_at column added")
+    cfg = Config(str(_ALEMBIC_INI))
+    # Не давать Alembic переопределить логирование приложения: его ini ставит
+    # root-логгер в WARN, и логи сервиса замолчали бы после первого же старта.
+    cfg.attributes["configure_logger"] = False
+    # Своё соединение, а не отдельный движок из alembic.ini: иначе миграции
+    # уедут в другую базу — на sqlite `:memory:` это видно сразу.
+    with get_engine().begin() as connection:
+        cfg.attributes["connection"] = connection
+        command.upgrade(cfg, "head")
+    log.info("db: схема приведена к последней ревизии")
 
 
 @contextmanager
