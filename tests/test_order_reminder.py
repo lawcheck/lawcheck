@@ -54,6 +54,29 @@ def test_already_reminded_skipped():
     assert repo.orders_to_remind() == []
 
 
+def test_odin_email_odno_pismo():
+    """Сломанная кнопка оплаты плодит по десятку заказов на адрес. Письмо
+    должно уйти одно — про самый свежий заказ, у него живее ссылка."""
+    _add_order("o1", "a@x.ru", days_ago=3)
+    _add_order("o2", "a@x.ru", days_ago=2)
+    _add_order("o3", "a@x.ru", days_ago=1)
+    assert [o.id for o in repo.orders_to_remind()] == ["o3"]
+
+
+def test_email_s_otpravlennym_napominaniem_bolshe_ne_beryotsya():
+    """Иначе адрес получал бы по письму за каждый свой брошенный заказ —
+    по одному на прогон, растянуто на дни."""
+    _add_order("o1", "a@x.ru", reminded=True)
+    _add_order("o2", "a@x.ru")
+    assert repo.orders_to_remind() == []
+
+
+def test_raznye_email_ne_meshayut_drug_drugu():
+    _add_order("o1", "a@x.ru")
+    _add_order("o2", "b@x.ru")
+    assert {o.id for o in repo.orders_to_remind()} == {"o1", "o2"}
+
+
 def test_too_recent_skipped():
     _add_order("o1", "a@x.ru", days_ago=0.1)  # моложе delay_hours=6
     assert repo.orders_to_remind() == []
