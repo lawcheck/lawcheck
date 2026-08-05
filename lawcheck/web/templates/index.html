@@ -3,7 +3,7 @@
 {% block nav_home %}active{% endblock %}
 
 {% block head_extra %}
-<script type="application/ld+json">
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
 {
   "@context": "https://schema.org",
   "@type": "Service",
@@ -20,7 +20,7 @@
   }
 }
 </script>
-<script type="application/ld+json">
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -171,7 +171,14 @@
   <p>Бесплатная проверка за 60 секунд, без регистрации.</p>
   <div class="row">
     <a href="/pricing" class="btn-ghost">Тарифы</a>
-    <a href="#top" class="btn-dark" onclick="document.querySelector('.form-card input').focus()">Проверить сайт</a>
+    <a href="#top" class="btn-dark" id="cta-focus-form">Проверить сайт</a>
   </div>
 </div>
 {% endblock %}
+
+<script nonce="{{ csp_nonce(request) }}">
+  document.getElementById("cta-focus-form").addEventListener("click", function () {
+    var input = document.querySelector(".form-card input");
+    if (input) input.focus();
+  });
+</script>

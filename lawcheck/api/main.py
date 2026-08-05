@@ -1,9 +1,12 @@
 import logging
 import secrets
 from pathlib import Path
+from urllib.parse import urlparse
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from lawcheck.config import settings
@@ -23,6 +26,85 @@ _STATIC_DIR = Path(web_routes.__file__).parent / "static"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 
+# Методы, которые не меняют состояние, проверять незачем.
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
+
+
+async def _reject_cross_origin(request: Request, call_next):
+    """CSRF-защита проверкой Origin: чужой сайт не должен слать нам формы.
+
+    Cookie-сессия помечена SameSite=lax, и этого почти достаточно. Почти —
+    потому что вся защита держится на одной настройке, а `strict` поставить
+    нельзя: возврат из банка на /pay/success приходит кросс-сайтовым переходом,
+    и без cookie покупатель попал бы на свой же отчёт как посторонний.
+
+    Проверяем Origin, а не токен в форме: одно место вместо скрытого поля в
+    каждом шаблоне, и новые формы закрыты автоматически. Origin браузер шлёт
+    на любой POST; его отсутствие — это curl, cron или вебхук банка, поэтому
+    пустой заголовок пропускаем. Сравниваем с Host запроса, а не с настройкой:
+    так одинаково работает и прод, и локальная разработка.
+    """
+    if request.method not in _SAFE_METHODS:
+        origin = request.headers.get("origin") or ""
+        host = (request.headers.get("host") or "").lower()
+        # Вебхуки банка и Telegram приходят без Origin и не от браузера.
+        if origin and host and urlparse(origin).netloc.lower() != host:
+            log.warning("csrf: отклонён POST %s с Origin %s (host %s)",
+                        request.url.path, origin, host)
+            return PlainTextResponse("cross-origin request rejected", status_code=403)
+    return await call_next(request)
+
+
+# Метрика — единственный внешний источник скриптов, картинок и фреймов.
+_METRIKA = "https://mc.yandex.ru"
+
+
+def _csp(nonce: str) -> str:
+    return "; ".join([
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'self'",
+        # Формы уходят только к нам: на оплату клиент попадает нашим редиректом.
+        "form-action 'self'",
+        f"script-src 'self' 'nonce-{nonce}' {_METRIKA}",
+        # Инлайн-стили: в шаблонах десятки атрибутов style="…", и nonce на
+        # атрибуты не действует в принципе. Риск от них несопоставим со
+        # скриптами, а вычищать их — отдельная работа по вёрстке.
+        "style-src 'self' 'unsafe-inline'",
+        f"img-src 'self' data: {_METRIKA}",
+        "font-src 'self'",
+        f"connect-src 'self' {_METRIKA}",
+        f"frame-src {_METRIKA}",
+    ])
+
+
+async def _content_security_policy(request: Request, call_next):
+    """CSP с одноразовым nonce на запрос.
+
+    Отчёт показывает данные с чужих страниц: адрес сайта, цитаты находок, тексты
+    форм и cookie-баннеров. Сейчас всё это экранирует Jinja, и дыры нет — CSP
+    здесь второй рубеж на случай, когда однажды кто-то напишет `|safe`.
+
+    Nonce, а не 'unsafe-inline': инлайн-скриптов в шаблонах полтора десятка,
+    включая JSON-LD (его браузер тоже блокирует без разрешения, и разметка
+    молча пропадает из поиска). Каждому проставлен `nonce="{{ csp_nonce(...) }}"`,
+    а тест `test_csp.py` следит, чтобы новый тег не забыли.
+    """
+    nonce = secrets.token_urlsafe(16)
+    request.state.csp_nonce = nonce
+    response = await call_next(request)
+    response.headers.setdefault("Content-Security-Policy", _csp(nonce))
+    return response
+
+
+async def _load_session_user(request: Request, call_next):
+    """Подтянуть пользователя сессии один раз за запрос (см. web/deps)."""
+    from lawcheck.web import deps
+    await deps.load_user(request)
+    return await call_next(request)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="LawCheck API",
@@ -38,6 +120,12 @@ def create_app() -> FastAPI:
         secret = secrets.token_hex(32)
         log.warning("SESSION_SECRET не задан — использую эфемерный секрет "
                     "(сессии сбросятся при рестарте). В проде задайте SESSION_SECRET в .env.")
+    # Порядок важен: последний добавленный оборачивает остальные, то есть
+    # выполняется первым. Нужно session → csrf → csp → загрузка пользователя,
+    # поэтому добавляем в обратном порядке.
+    app.add_middleware(BaseHTTPMiddleware, dispatch=_load_session_user)
+    app.add_middleware(BaseHTTPMiddleware, dispatch=_content_security_policy)
+    app.add_middleware(BaseHTTPMiddleware, dispatch=_reject_cross_origin)
     app.add_middleware(
         SessionMiddleware,
         secret_key=secret,

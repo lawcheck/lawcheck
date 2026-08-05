@@ -1,0 +1,73 @@
+"""Content-Security-Policy: заголовок и nonce на каждом инлайн-скрипте.
+
+Главное здесь — не заголовок, а сторож: под CSP с nonce скрипт без nonce
+просто не выполнится, и сломается это молча. Отдельно важен JSON-LD: браузер
+блокирует и его, а значит разметка пропадёт из выдачи.
+"""
+import re
+import tempfile
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+
+from lawcheck.config import settings
+from lawcheck.db import repo, session
+from lawcheck.db.session import init_db
+
+# <script …> без атрибутов src (внешние скрипты nonce не требуют).
+_INLINE_SCRIPT = re.compile(r"<script\b(?![^>]*\ssrc=)[^>]*>", re.I)
+
+
+@pytest.fixture()
+def client(monkeypatch):
+    tmp = Path(tempfile.mkdtemp()) / "csp.db"
+    session.get_engine.cache_clear()
+    session.get_sessionmaker.cache_clear()
+    monkeypatch.setattr(settings, "database_url", f"sqlite:///{tmp}")
+    monkeypatch.setattr(settings, "session_secret", "test-secret")
+    # С включённой Метрикой рендерится самый большой инлайн-скрипт.
+    monkeypatch.setattr(settings, "metrika_id", "12345")
+    init_db()
+    from lawcheck.api.main import create_app
+    with TestClient(create_app(), follow_redirects=False) as c:
+        yield c
+    session.get_engine.cache_clear()
+    session.get_sessionmaker.cache_clear()
+
+
+def _pages(client) -> list[tuple[str, str]]:
+    repo.create_scan("scan1", "https://example.com/", 10)
+    repo.mark_done("scan1", pages_crawled=1, findings=[])
+    paths = ["/", "/pricing", "/privacy", "/oferta", "/login", "/register",
+             "/uvedomlenie-rkn", "/reestr-rkn", "/report/scan1"]
+    return [(p, client.get(p).text) for p in paths]
+
+
+def test_zagolovok_stoit_i_nesyot_nonce(client):
+    r = client.get("/")
+    csp = r.headers["content-security-policy"]
+    assert "'nonce-" in csp
+    assert "object-src 'none'" in csp
+    assert "'unsafe-inline'" not in csp.split("script-src")[1].split(";")[0]
+
+
+def test_nonce_raznyy_na_kazhdyy_zapros(client):
+    first = client.get("/").headers["content-security-policy"]
+    second = client.get("/").headers["content-security-policy"]
+    assert first != second
+
+
+def test_u_vseh_inlayn_skriptov_est_nonce(client):
+    for path, html in _pages(client):
+        nonce = re.search(r"'nonce-([\w-]+)'",
+                          client.get(path).headers["content-security-policy"])
+        for tag in _INLINE_SCRIPT.findall(html):
+            assert "nonce=" in tag, f"{path}: скрипт без nonce → {tag[:80]}"
+        assert nonce is not None
+
+
+def test_json_ld_tozhe_s_nonce(client):
+    html = client.get("/pricing").text
+    for tag in re.findall(r'<script[^>]*application/ld\+json[^>]*>', html, re.I):
+        assert "nonce=" in tag

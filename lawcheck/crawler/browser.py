@@ -2,7 +2,7 @@ import asyncio
 import logging
 from urllib.parse import urljoin, urlparse
 
-from playwright.async_api import Browser as PWBrowser, async_playwright
+from playwright.async_api import Browser as PWBrowser, Playwright, async_playwright
 
 from lawcheck.config import settings
 from lawcheck.crawler.snapshot import (
@@ -89,12 +89,13 @@ class Browser:
     """Тонкая обёртка над Playwright Chromium для краулинга одной страницы."""
 
     def __init__(self) -> None:
-        self._pw = None
+        self._pw: Playwright | None = None
         self._browser: PWBrowser | None = None
 
     async def __aenter__(self) -> "Browser":
-        self._pw = await async_playwright().start()
-        self._browser = await self._pw.chromium.launch(headless=True)
+        pw = await async_playwright().start()
+        self._pw = pw
+        self._browser = await pw.chromium.launch(headless=True)
         return self
 
     async def __aexit__(self, *exc) -> None:
@@ -168,7 +169,9 @@ class Browser:
                 links.append(Link(url=urljoin(url, href), text=a.get("text") or ""))
 
             text = await page.evaluate("() => document.body ? document.body.innerText : ''")
-            cookies = await ctx.cookies()
+            # dict(), а не как есть: Playwright отдаёт свой TypedDict, а в
+            # снапшоте лежат обычные словари (он же уезжает в JSON).
+            cookies = [dict(c) for c in await ctx.cookies()]
 
             raw_banner = await page.evaluate(_BANNER_JS)
             cookie_banner: CookieBanner | None = None

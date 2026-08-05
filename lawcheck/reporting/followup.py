@@ -20,6 +20,7 @@ from lawcheck.db import repo
 from lawcheck.db.models import Lead, Scan
 from lawcheck.notify import mailer
 from lawcheck.reporting import fines
+from lawcheck.utils.contact import mask_contact
 
 log = logging.getLogger(__name__)
 
@@ -142,11 +143,11 @@ def render(ctx: dict) -> tuple[str, str, str]:
         # цена под задачу, поэтому CTA у неё «ответьте на письмо».
         "Как закрыть найденное — три варианта.",
         "",
-        f"Pro, 990 ₽/мес — до 5 сайтов, готовые тексты исправлений под {site},",
+        f"Pro, 990 ₽/мес — готовые тексты исправлений под {site},",
         "шаблоны Политики, согласий и уведомления в РКН, еженедельный мониторинг",
         "и PDF-заключение с подписью юриста.",
         "",
-        "Business, от 9 900 ₽/мес — если сайтов больше пяти: безлимит страниц,",
+        "Business, от 9 900 ₽/мес — если сайтов несколько: безлимит страниц,",
         "выделенный юрист в Telegram и правила проверки под ваш бизнес.",
         "",
         "Персональное сопровождение от основателя — беру проект: разбираю,",
@@ -192,10 +193,10 @@ def render(ctx: dict) -> tuple[str, str, str]:
         "<p><b>Как закрыть найденное — три варианта.</b></p>"
         '<div style="border-left:3px solid #d0d0d0;padding:2px 0 2px 14px;'
         'margin:20px 0">'
-        f"<p><b>Pro, 990 ₽/мес</b> — до 5 сайтов, готовые тексты исправлений "
+        f"<p><b>Pro, 990 ₽/мес</b> — готовые тексты исправлений "
         f"под {e(site)}, шаблоны Политики, согласий и уведомления в РКН, "
         "еженедельный мониторинг и PDF-заключение с подписью юриста.</p>"
-        "<p><b>Business, от 9 900 ₽/мес</b> — если сайтов больше пяти: "
+        "<p><b>Business, от 9 900 ₽/мес</b> — если сайтов несколько: "
         "безлимит страниц, выделенный юрист в Telegram и правила проверки "
         "под ваш бизнес.</p>"
         "<p><b>Персональное сопровождение от основателя</b> — беру проект: "
@@ -220,7 +221,8 @@ def send_one(lead: Lead, scan: Scan) -> bool:
     if ok:
         repo.mark_lead_mailed(lead.id)
     else:
-        log.warning("followup: письмо лиду %s не ушло — mailed_at не ставим", lead.email)
+        log.warning("followup: письмо лиду %s не ушло — mailed_at не ставим",
+                    mask_contact(lead.email))
     return ok
 
 
@@ -237,7 +239,7 @@ def run(limit: int = 50, delay_hours: int = 24, max_age_days: int = 14,
             continue
         if dry_run:
             subject, _, _ = render(build_context(lead, scan))
-            log.info("followup[dry] → %s | %s", lead.email, subject)
+            log.info("followup[dry] → %s | %s", mask_contact(lead.email), subject)
             continue
         if send_one(lead, scan):
             sent += 1

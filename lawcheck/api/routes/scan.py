@@ -58,7 +58,7 @@ async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
 
 @router.post("/scan", response_model=ScanCreated, status_code=202)
 async def create_scan(req: ScanRequest, request: Request, bg: BackgroundTasks) -> ScanCreated:
-    ratelimit.enforce(request, "scan", limit=20, window_sec=3600,
+    ratelimit.enforce(request, "scan", ratelimit.SCAN,
                       message="Слишком много проверок. Попробуйте через час.")
     try:
         check_url(str(req.url))

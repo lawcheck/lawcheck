@@ -97,7 +97,11 @@ def run(limit: int = 20, dry_run: bool = False) -> dict:
             if status != "OK" or not raw or not raw[0]:
                 skipped += 1
                 continue
-            head = email.message_from_bytes(raw[0][1])
+            body = raw[0][1]
+            if not isinstance(body, (bytes, bytearray)):
+                skipped += 1
+                continue
+            head = email.message_from_bytes(bytes(body))
             sender = _decode(head.get("From", ""))
             subject = _decode(head.get("Subject", "(без темы)"))
             date = _decode(head.get("Date", ""))

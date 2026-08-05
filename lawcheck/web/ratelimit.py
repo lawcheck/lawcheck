@@ -18,12 +18,30 @@ Redis, если он есть (тот же, что под очередью RQ), 
 import logging
 import time
 from threading import Lock
+from typing import NamedTuple
 
 from fastapi import HTTPException, Request
 
 from lawcheck.workers.queue import get_queue
 
 log = logging.getLogger(__name__)
+
+
+class Limit(NamedTuple):
+    """Сколько запросов и за какое окно.
+
+    Именованная пара, а не словарь с распаковкой `**_RL_SCAN`: словарь нечем
+    типизировать, и опечатка в ключе всплыла бы уже в проде — молча снятым
+    лимитом, а не ошибкой.
+    """
+    limit: int
+    window_sec: int
+
+
+# Запуск скана: поднимает Chromium и краулит ЧУЖОЙ сайт с нашего IP. Лимит
+# общий для веб-формы и публичного API — иначе тот же скрипт просто ходит
+# в /api/scan вместо формы.
+SCAN = Limit(limit=20, window_sec=3600)
 
 # Счётчик в памяти: ключ → (когда окно истекает, сколько запросов было).
 _local: dict[str, tuple[float, int]] = {}
@@ -102,8 +120,7 @@ def hit(bucket: str, identity: str, *, limit: int, window_sec: int) -> bool:
     return count > limit
 
 
-def exceeded(request: Request, bucket: str, *, limit: int, window_sec: int,
-             extra: str = "") -> bool:
+def exceeded(request: Request, bucket: str, rule: Limit, *, extra: str = "") -> bool:
     """Учесть запрос и сказать, исчерпан ли лимит. Для мест, где нужен свой
     ответ вместо 429 (например, отрисовать ошибку прямо в форме).
 
@@ -113,18 +130,18 @@ def exceeded(request: Request, bucket: str, *, limit: int, window_sec: int,
     identity = client_ip(request)
     if extra:
         identity = f"{identity}|{extra.strip().lower()}"
-    if hit(bucket, identity, limit=limit, window_sec=window_sec):
+    if hit(bucket, identity, limit=rule.limit, window_sec=rule.window_sec):
         log.info("ratelimit: %s исчерпан для %s", bucket, identity)
         return True
     return False
 
 
-def enforce(request: Request, bucket: str, *, limit: int, window_sec: int,
+def enforce(request: Request, bucket: str, rule: Limit, *,
             extra: str = "", message: str = "") -> None:
     """Бросает 429, если лимит исчерпан."""
-    if exceeded(request, bucket, limit=limit, window_sec=window_sec, extra=extra):
+    if exceeded(request, bucket, rule, extra=extra):
         raise HTTPException(
             status_code=429,
             detail=message or "Слишком много попыток. Попробуйте позже.",
-            headers={"Retry-After": str(window_sec)},
+            headers={"Retry-After": str(rule.window_sec)},
         )

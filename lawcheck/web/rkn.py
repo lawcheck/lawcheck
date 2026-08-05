@@ -9,12 +9,13 @@ import re
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 from lawcheck.external.rkn_operators import lookup_by_inn
 from lawcheck.utils.inn_ogrn import is_valid_inn
 
 router = APIRouter()
-templates = None  # задаётся из routes.py при подключении
+templates: Jinja2Templates = None  # type: ignore[assignment]  # задаётся из routes.py
 
 
 @router.get("/uvedomlenie-rkn", response_class=HTMLResponse)

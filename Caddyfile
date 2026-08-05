@@ -13,6 +13,10 @@ lawchek.ru {
 		# вида /account/{order_id} routes.py отдаёт no-referrer: сам URL там
 		# является пропуском, и он не должен утечь в Referer.
 		?Referrer-Policy "strict-origin-when-cross-origin"
+		# Ничего из этого сайту не нужно — отключаем, чтобы чужой скрипт не смог
+		# попросить доступ от нашего имени. Content-Security-Policy ставит само
+		# приложение: там nonce, свой на каждый запрос.
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()"
 	}
 
 	# Шрифты не меняются — их можно кэшировать на год.
@@ -36,20 +40,22 @@ lawchek.ru {
 		}
 	}
 
-	# Отчёт GoAccess — под basic auth (логин maxim).
+	# Логин и пароль для /stats и /inbox лежат в /etc/caddy/auth.conf — файле,
+	# который есть только на сервере (монтируется из ./caddy-auth.conf, образец
+	# рядом в caddy-auth.conf.example). В репозитории их больше нет: хеш в git
+	# означает, что смена пароля требует коммита и деплоя, поэтому его никогда
+	# и не меняли. За этой парой лежат контакты всех лидов, то есть ПДн.
+
+	# Отчёт GoAccess.
 	handle_path /stats* {
-		basic_auth {
-			maxim $2a$14$O0CaflJ9VbOnzyrqTifz6.W1e1r6bCQ9YYJE.CXVHfUaNrqzeN6uW
-		}
+		import /etc/caddy/auth.conf
 		root * /srv/goaccess
 		file_server
 	}
 
-	# Входящие (заявки + лиды) — тот же basic auth (логин maxim), но рендерит API.
+	# Входящие (заявки + лиды) — та же защита, но рендерит API.
 	handle /inbox* {
-		basic_auth {
-			maxim $2a$14$O0CaflJ9VbOnzyrqTifz6.W1e1r6bCQ9YYJE.CXVHfUaNrqzeN6uW
-		}
+		import /etc/caddy/auth.conf
 		reverse_proxy api:8000
 	}
 

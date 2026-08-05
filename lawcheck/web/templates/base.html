@@ -561,7 +561,7 @@
     .magnet-upsell { margin: 16px 0 0; font-size: var(--t-s); color: var(--muted); }
   </style>
   {% if metrika_id and not no_analytics %}
-  <script>
+  <script nonce="{{ csp_nonce(request) }}">
     // Яндекс.Метрика грузится ТОЛЬКО после «Принять» в cookie-баннере —
     // иначе сайт не пройдёт собственную проверку D2 (трекеры до согласия).
     (function () {
@@ -615,10 +615,10 @@
     })();
   </script>
   {% else %}
-  <script>window.lcGoal = function () {};</script>
+  <script nonce="{{ csp_nonce(request) }}">window.lcGoal = function () {};</script>
   {% endif %}
   {# JSON-LD: Organization + WebSite — глобально на всех страницах #}
-  <script type="application/ld+json">
+  <script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
   {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -635,7 +635,7 @@
     }
   }
   </script>
-  <script type="application/ld+json">
+  <script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -665,7 +665,7 @@
       </div>
       <div class="spacer"></div>
       <button class="nav-toggle" aria-label="Меню" aria-expanded="false"
-              onclick="var l=document.getElementById('navlinks');var o=l.classList.toggle('open');this.setAttribute('aria-expanded',o)">Меню</button>
+              id="nav-toggle">Меню</button>
       <a href="/" class="cta">Проверить сайт</a>
     </div>
   </nav>
@@ -771,7 +771,17 @@
       </div>
     </div>
   </div>
-  <script>
+  <script nonce="{{ csp_nonce(request) }}">
+    (function () {
+      var navToggle = document.getElementById("nav-toggle");
+      if (navToggle) {
+        navToggle.addEventListener("click", function () {
+          var links = document.getElementById("navlinks");
+          var open = links.classList.toggle("open");
+          navToggle.setAttribute("aria-expanded", open);
+        });
+      }
+    })();
     (function () {
       var toggle = document.getElementById("lc-chat-toggle");
       var panel = document.getElementById("lc-chat-panel");

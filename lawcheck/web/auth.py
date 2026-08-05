@@ -13,13 +13,17 @@ from fastapi.templating import Jinja2Templates
 from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.notify import mailer
+from lawcheck.utils.contact import mask_contact
 from lawcheck.utils.email import valid_email
 from lawcheck.web import deps, ratelimit, security
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
-templates: Jinja2Templates = None  # проставляется в web/routes.py
+# Проставляется из web/routes.py при подключении роутера — там же живёт
+# единый экземпляр с общими globals. Аннотация с None: до подключения
+# значения нет, но все обращения идут уже после него.
+templates: Jinja2Templates = None  # type: ignore[assignment]
 
 _VERIFY_TTL_H = 48
 _RESET_TTL_H = 1
@@ -27,9 +31,9 @@ _RESET_TTL_H = 1
 # Лимиты подобраны так, чтобы живой человек их не заметил: он регистрируется
 # один раз, ошибается паролем несколько раз подряд и просит сброс раз в день.
 _HOUR = 3600
-_RL_REGISTER = {"limit": 5, "window_sec": _HOUR}
-_RL_LOGIN = {"limit": 10, "window_sec": 15 * 60}
-_RL_RESET = {"limit": 3, "window_sec": _HOUR}
+_RL_REGISTER = ratelimit.Limit(limit=5, window_sec=_HOUR)
+_RL_LOGIN = ratelimit.Limit(limit=10, window_sec=15 * 60)
+_RL_RESET = ratelimit.Limit(limit=3, window_sec=_HOUR)
 
 
 
@@ -83,7 +87,7 @@ async def register_form(request: Request):
 async def register(request: Request, email: str = Form(...), password: str = Form(...)):
     # Регистрация шлёт письмо на любой введённый адрес — без лимита это рассылка
     # с нашего домена по чужим ящикам.
-    ratelimit.enforce(request, "register", **_RL_REGISTER,
+    ratelimit.enforce(request, "register", _RL_REGISTER,
                       message="Слишком много регистраций с этого адреса. "
                               "Попробуйте через час.")
     email = email.strip().lower()
@@ -101,7 +105,7 @@ async def register(request: Request, email: str = Form(...), password: str = For
                                           {"error": "На этот email уже есть аккаунт — войдите.",
                                            "email": email}, status_code=409)
     deps.login_user(request, user)
-    log.info("account: зарегистрирован %s (#%s)", email, user.id)
+    log.info("account: зарегистрирован %s (#%s)", mask_contact(email), user.id)
     await asyncio.to_thread(_send_verification, user)
     return RedirectResponse(url="/", status_code=303)
 
@@ -116,7 +120,7 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     email = email.strip().lower()
     # Ключ включает email: перебор одного аккаунта с разных адресов и перебор
     # разных аккаунтов с одного — оба упираются в лимит.
-    ratelimit.enforce(request, "login", **_RL_LOGIN, extra=email,
+    ratelimit.enforce(request, "login", _RL_LOGIN, extra=email,
                       message="Слишком много попыток входа. Попробуйте через 15 минут.")
     user = await asyncio.to_thread(repo.get_user_by_email, email)
     if user is None:
@@ -163,8 +167,8 @@ async def verify_email(request: Request, token: str = ""):
                         "Войдите и запросите письмо заново.",
                         cta_href="/login", cta_label="Войти", status=400)
     await asyncio.to_thread(repo.set_email_verified, uid)
-    if deps.session_uid(request) == uid:
-        deps.mark_session_verified(request)
+    # Статус подтверждения в сессии не дублируем — он читается из БД
+    # (см. web/deps), поэтому отдельно «пометить сессию» больше нечего.
     # Email подтверждён — безопасно подцепить прошлые заказы/сканы этого email.
     user = await asyncio.to_thread(repo.get_user_by_id, uid)
     if user:
@@ -176,7 +180,7 @@ async def verify_email(request: Request, token: str = ""):
 
 @router.post("/resend-verification")
 async def resend_verification(request: Request):
-    ratelimit.enforce(request, "resend", **_RL_RESET,
+    ratelimit.enforce(request, "resend", _RL_RESET,
                       message="Письмо уже отправлено. Проверьте почту и попробуйте позже.")
     uid = deps.session_uid(request)
     if uid:
@@ -196,7 +200,7 @@ async def forgot_form(request: Request):
 @router.post("/forgot-password", response_class=HTMLResponse)
 async def forgot(request: Request, email: str = Form(...)):
     email = email.strip().lower()
-    ratelimit.enforce(request, "reset", **_RL_RESET, extra=email,
+    ratelimit.enforce(request, "reset", _RL_RESET, extra=email,
                       message="Письмо со сбросом уже отправлено. Попробуйте через час.")
     # Не раскрываем, есть ли аккаунт (защита от перебора email) — ответ всегда один.
     if valid_email(email):

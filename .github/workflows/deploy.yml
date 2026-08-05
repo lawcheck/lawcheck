@@ -38,6 +38,14 @@ concurrency:
 
 env:
   DEPLOY_HOST: 5.129.200.118
+  # TODO(безопасность): выкат идёт под root, то есть компрометация Actions или
+  # секрета DEPLOY_SSH_KEY = root на проде. Переезд на отдельного пользователя
+  # (делается на сервере, поэтому не в этом коммите):
+  #   adduser --disabled-password --gecos "" deploy
+  #   usermod -aG docker deploy
+  #   rsync -a /root/lawcheck/ /home/deploy/lawcheck/ && chown -R deploy: /home/deploy/lawcheck
+  #   переложить ключ CI в /home/deploy/.ssh/authorized_keys и убрать из /root
+  # После этого здесь: DEPLOY_USER: deploy, DEPLOY_PATH: /home/deploy/lawcheck.
   DEPLOY_USER: root
   DEPLOY_PATH: /root/lawcheck
 
@@ -54,6 +62,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Линтер
         run: ruff check lawcheck tests
+      - name: Типы
+        run: mypy
       - name: Тесты
         # METRIKA_ID пуст специально: настройки на раннере не должны отличаться
         # от чистой машины, иначе тест снова начнёт зависеть от чужого .env.

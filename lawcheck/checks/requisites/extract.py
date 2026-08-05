@@ -73,14 +73,16 @@ def extract(snapshot: SiteSnapshot) -> ExtractedRequisites:
 
 def filter_valid_inns(hits: list[RequisiteHit]) -> tuple[list[str], list[str]]:
     """Разделяет ИНН на валидные и невалидные по контрольной сумме."""
-    valid, invalid = set(), set()
+    valid: set[str] = set()
+    invalid: set[str] = set()
     for h in hits:
         (valid if is_valid_inn(h.value) else invalid).add(h.value)
     return sorted(valid), sorted(invalid)
 
 
 def filter_valid_ogrns(hits: list[RequisiteHit]) -> tuple[list[str], list[str]]:
-    valid, invalid = set(), set()
+    valid: set[str] = set()
+    invalid: set[str] = set()
     for h in hits:
         (valid if is_valid_ogrn(h.value) else invalid).add(h.value)
     return sorted(valid), sorted(invalid)

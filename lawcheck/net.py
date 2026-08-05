@@ -33,7 +33,7 @@ def _pick_telegram_ip() -> str | None:
     _tg_ip_cache = None
     candidates: list[str] = []
     try:
-        candidates += [r[4][0] for r in _orig_getaddrinfo(_TELEGRAM_HOST, 443, socket.AF_INET)]
+        candidates += [str(r[4][0]) for r in _orig_getaddrinfo(_TELEGRAM_HOST, 443, socket.AF_INET)]
     except Exception:
         pass
     candidates += [ip for ip in _TELEGRAM_FALLBACK_IPS if ip not in candidates]
