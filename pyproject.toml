@@ -51,6 +51,12 @@ dev = [
     "mypy>=1.13",
 ]
 
+# Пакет один — lawcheck. Без явного указания setuptools пытается угадать и
+# спотыкается о каталог `alembic` рядом: «Multiple top-level packages discovered
+# in a flat-layout». Миграции — не библиотека, в дистрибутив им не надо.
+[tool.setuptools.packages.find]
+include = ["lawcheck*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
