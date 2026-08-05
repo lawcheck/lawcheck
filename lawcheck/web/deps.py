@@ -3,6 +3,12 @@
 Сессия живёт в request.scope["session"] (ставит Starlette SessionMiddleware).
 Если SessionMiddleware не подключён (session_secret пуст — аккаунты выключены),
 обращения безопасно возвращают «не залогинен», сайт работает как раньше.
+
+В самой cookie лежит минимум: id пользователя и версия сессий. Starlette
+подписывает cookie, но не шифрует — всё, что туда положено, читается base64
+в браузере и в любом логе, куда cookie попадает. Email и статус подтверждения
+поэтому берём из БД: их читает `load_user` один раз за запрос и кладёт в
+`request.state`, откуда их и берут шаблоны.
 """
 import asyncio
 
@@ -21,51 +27,87 @@ def session_uid(request: Request) -> int | None:
     return sess.get("uid") if sess else None
 
 
-def session_email(request: Request) -> str | None:
-    """Email залогиненного — для навигации без похода в БД (шаблоны)."""
+# Купленные заказы, предъявленные в этой cookie-сессии. Нужны, чтобы отчёт
+# открывался и без ?order= в ссылке — например, когда клиент вернулся из истории
+# браузера или пришёл по ссылке из ленты на свой же оплаченный отчёт.
+_ORDERS_KEY = "orders"
+
+
+def remember_order(request: Request, order_id: str) -> None:
     sess = _session(request)
-    return sess.get("email") if sess else None
+    if sess is None or not order_id:
+        return
+    known = [o for o in sess.get(_ORDERS_KEY, []) if isinstance(o, str)]
+    if order_id not in known:
+        # Ограничиваем длину: сессия едет в cookie, она не резиновая.
+        sess[_ORDERS_KEY] = (known + [order_id])[-20:]
+
+
+def session_order_ids(request: Request) -> list[str]:
+    sess = _session(request) or {}
+    return [o for o in sess.get(_ORDERS_KEY, []) if isinstance(o, str)]
+
+
+def csp_nonce(request: Request) -> str:
+    """Nonce для инлайн-скрипта. Ставит middleware, читают шаблоны."""
+    return getattr(request.state, "csp_nonce", "")
+
+
+def _loaded_user(request: Request) -> User | None:
+    return getattr(request.state, "user", None)
+
+
+def session_email(request: Request) -> str | None:
+    """Email залогиненного — для навигации в шаблонах."""
+    user = _loaded_user(request)
+    return user.email if user else None
 
 
 def session_unverified(request: Request) -> bool:
     """Залогинен, но email ещё не подтверждён — для баннера в шаблонах."""
-    sess = _session(request)
-    return bool(sess and sess.get("uid") and not sess.get("verified"))
+    user = _loaded_user(request)
+    return bool(user and user.email_verified_at is None)
 
 
 def login_user(request: Request, user: User) -> None:
     sess = _session(request)
     if sess is not None:
         sess["uid"] = user.id
-        sess["email"] = user.email
-        sess["verified"] = user.email_verified_at is not None
         sess["epoch"] = user.session_epoch or 0
-
-
-def mark_session_verified(request: Request) -> None:
-    sess = _session(request)
-    if sess is not None:
-        sess["verified"] = True
+    # Дальше в этом же запросе шаблоны спрашивают email и статус подтверждения —
+    # отдаём уже загруженного пользователя, второй раз в БД не идём.
+    request.state.user = user
 
 
 def logout_user(request: Request) -> None:
     sess = _session(request)
     if sess is not None:
         sess.clear()
+    request.state.user = None
+
+
+async def load_user(request: Request) -> User | None:
+    """Пользователь сессии, ровно один поход в БД за запрос.
+
+    Вызывается из middleware до обработчика, поэтому шаблоны и обработчики
+    берут результат из `request.state` бесплатно.
+    """
+    cached = getattr(request.state, "user", "missing")
+    if cached != "missing":
+        return cached  # type: ignore[return-value]
+    user = None
+    uid = session_uid(request)
+    if uid:
+        user = await asyncio.to_thread(repo.get_user_by_id, uid)
+        # Смена пароля увеличивает epoch — старые cookie перестают пускать.
+        # Сессии, выданные до появления поля, несут 0 и совпадают с дефолтом,
+        # поэтому уже вошедшие пользователи не разлогиниваются при выкате.
+        if user is None or (_session(request) or {}).get("epoch", 0) != (user.session_epoch or 0):
+            logout_user(request)
+            user = None
+    request.state.user = user
+    return user
 
 
 async def current_user(request: Request) -> User | None:
-    uid = session_uid(request)
-    if not uid:
-        return None
-    user = await asyncio.to_thread(repo.get_user_by_id, uid)
-    if user is None:
-        return None
-    # Смена пароля увеличивает epoch — старые cookie перестают пускать.
-    # Сессии, выданные до появления поля, несут 0 и совпадают с дефолтом,
-    # поэтому уже вошедшие пользователи не разлогиниваются при выкате.
-    sess = _session(request)
-    if (sess or {}).get("epoch", 0) != (user.session_epoch or 0):
-        logout_user(request)
-        return None
-    return user
+    return await load_user(request)

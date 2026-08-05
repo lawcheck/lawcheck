@@ -17,6 +17,9 @@ env/
 .env
 .env.local
 
+# Креды basic auth для /stats и /inbox — только на сервере (образец .example)
+caddy-auth.conf
+
 # IDE
 .vscode/
 .idea/

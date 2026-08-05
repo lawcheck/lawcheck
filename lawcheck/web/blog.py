@@ -14,6 +14,7 @@ import markdown as md
 import yaml
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ _CONTENT_DIR = Path(__file__).parent.parent / "content" / "blog"
 
 # templates задаётся из routes.py при подключении, чтобы переиспользовать
 # единый экземпляр Jinja2Templates с общими globals (operator, metrika_id).
-templates = None
+templates: Jinja2Templates = None  # type: ignore[assignment]
 
 
 @dataclass(frozen=True)

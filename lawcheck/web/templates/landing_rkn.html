@@ -3,7 +3,7 @@
 {% block meta_description %}Кто обязан подавать уведомление в Роскомнадзор об обработке персональных данных, штраф до 300 000 ₽ за неподачу и как подготовить уведомление: черновик с данными вашего сайта за 60 секунд.{% endblock %}
 
 {% block head_extra %}
-<script type="application/ld+json">
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",

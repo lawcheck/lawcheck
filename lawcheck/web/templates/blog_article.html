@@ -6,7 +6,7 @@
 {% block og_type %}article{% endblock %}
 {% block nav_blog %}active{% endblock %}
 {% block head_extra %}
-<script type="application/ld+json">
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
 {
   "@context": "https://schema.org",
   "@type": "Article",

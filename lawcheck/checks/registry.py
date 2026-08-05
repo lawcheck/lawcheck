@@ -14,6 +14,7 @@ from lawcheck.checks.advertising.category_disclaimers import CategoryDisclaimers
 from lawcheck.checks.advertising.ord_marking import OrdMarkingCheck
 from lawcheck.checks.advertising.superlatives import SuperlativesCheck
 from lawcheck.checks.media.age_marking import AgeMarkingCheck
+from lawcheck.checks.security.tls import TlsCheck
 from lawcheck.checks.zozpp.delivery import DeliveryCheck
 from lawcheck.checks.zozpp.oferta import OfertaCheck
 from lawcheck.checks.zozpp.returns import ReturnsCheck
@@ -36,4 +37,5 @@ CHECKS: list[Check] = [
     CategoryDisclaimersCheck(),
     OrdMarkingCheck(),
     AgeMarkingCheck(),
+    TlsCheck(),
 ]

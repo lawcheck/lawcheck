@@ -4,7 +4,7 @@
 {% block nav_pricing %}active{% endblock %}
 
 {% block head_extra %}
-<script type="application/ld+json">
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -13,13 +13,13 @@
   "operatingSystem": "Web",
   "description": "Проверка сайта на нарушения 152-ФЗ, ЗОЗПП, рекламе и защите детей: цитаты со страниц, ссылки на нормы, оценка штрафа, еженедельный мониторинг.",
   "offers": [
-    {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "RUB", "description": "1 сайт до 25 страниц, веб-отчёт, 5 проверок в сутки"},
-    {"@type": "Offer", "name": "Pro", "price": "990", "priceCurrency": "RUB", "description": "до 5 сайтов, PDF-заключение юриста, шаблоны, еженедельный мониторинг"},
+    {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "RUB", "description": "1 сайт до 10 страниц, веб-отчёт, 20 проверок в час"},
+    {"@type": "Offer", "name": "Pro", "price": "990", "priceCurrency": "RUB", "description": "1 сайт до 25 страниц, PDF-заключение юриста, шаблоны, еженедельный мониторинг"},
     {"@type": "Offer", "name": "Business", "price": "9900", "priceCurrency": "RUB", "description": "безлимит сайтов, API + webhook, white-label, SLA 99.9%"}
   ]
 }
 </script>
-<script type="application/ld+json">
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -59,10 +59,10 @@
     <div class="price">0 ₽</div>
     <div class="price-note">навсегда</div>
     <ul>
-      <li>1 сайт до 25 страниц</li>
+      <li>1 сайт до 10 страниц</li>
       <li>веб-отчёт по ссылке</li>
       <li>выгрузка результатов через API</li>
-      <li>5 проверок в сутки</li>
+      <li>20 проверок в час</li>
     </ul>
     <a href="/" class="plan-cta ghost">Запустить проверку</a>
   </div>
@@ -73,7 +73,7 @@
     <div class="price">990 ₽ <small>/ мес</small></div>
     <div class="price-note">или 9 900 ₽ в год</div>
     <ul>
-      <li>до 5 сайтов / 200 страниц</li>
+      <li>1 сайт, до 25 страниц в проверке</li>
       <li>PDF-заключение с подписью юриста</li>
       <li>шаблоны: Политика, Согласие, уведомление в РКН</li>
       <li>еженедельный мониторинг</li>

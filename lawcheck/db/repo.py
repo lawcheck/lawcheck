@@ -2,8 +2,12 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from collections.abc import Sequence
+from typing import Any, cast
+
 from sqlalchemy import select, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.orm import load_only, raiseload, selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
 from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, Order, Scan, User, utcnow
@@ -90,10 +94,21 @@ def get_scan(scan_id: str) -> Scan | None:
 
 
 def list_recent_scans(limit: int = 50) -> list[Scan]:
+    """Последние сканы: лента на главной и «пример отчёта» на /pricing.
+
+    Находки намеренно не подгружаем. Обоим потребителям нужны только id, url,
+    статус и дата, а findings — это 30–60 строк с Text-полями на каждый скан:
+    на ленте из 80 сканов получалось несколько тысяч лишних строк на каждый
+    заход на самую частую страницу сайта.
+
+    `raiseload` вместо тихой ленивой загрузки: если находки здесь однажды
+    понадобятся, пусть это упадёт сразу и явно, а не превратится в N+1.
+    """
     with session_scope() as sess:
         rows = sess.execute(
             select(Scan)
-            .options(selectinload(Scan.findings))
+            .options(load_only(Scan.id, Scan.url, Scan.status, Scan.created_at),
+                     raiseload(Scan.findings))
             .order_by(Scan.created_at.desc())
             .limit(limit)
         ).scalars().all()
@@ -109,20 +124,25 @@ def create_order(order_id: str, plan: str, amount: int, email: str = "",
                        scan_id=scan_id))
 
 
-def paid_order_id_for_scan(scan_id: str, order_id: str) -> str | None:
-    """id заказа, если ИМЕННО ЭТОТ заказ оплачен и оформлен с отчёта ЭТОГО скана.
+def paid_order_id_for_scan(scan_id: str, order_ids: Sequence[str]) -> str | None:
+    """id заказа, если среди предъявленных есть оплаченный и оформленный
+    с отчёта ЭТОГО скана.
 
     Доступ к платному отчёту — свойство пары «покупатель + отчёт», а не самого
     отчёта. Раньше здесь возвращался любой оплаченный заказ по скану, поэтому
     оплата одного клиента открывала отчёт всем, кто знает ссылку — а ссылки на
     последние сканы публикуются в ленте на главной.
+
+    Предъявленных заказов бывает несколько: тот, что в ссылке, плюс накопленные
+    в cookie-сессии. Спрашиваем БД один раз списком, а не по разу на кандидата.
     """
-    if not scan_id or not order_id:
+    ids = [oid for oid in order_ids if oid]
+    if not scan_id or not ids:
         return None
     with session_scope() as sess:
         return sess.execute(
             select(Order.id).where(
-                Order.id == order_id,
+                Order.id.in_(ids),
                 Order.scan_id == scan_id,
                 Order.status == "paid",
             )
@@ -148,12 +168,12 @@ def mark_order_paid(order_id: str) -> bool:
         # оба видят статус «не оплачен» и оба возвращают True — владелец получает
         # два одинаковых уведомления об одной оплате.
         now = utcnow()
-        result = sess.execute(
+        result = cast(CursorResult[Any], sess.execute(
             update(Order)
             .where(Order.id == order_id, Order.status != "paid")
             .values(status="paid", paid_at=now,
                     paid_until=now + timedelta(days=PRO_PERIOD_DAYS))
-        )
+        ))
         return result.rowcount == 1
 
 

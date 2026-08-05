@@ -36,3 +36,20 @@ def waste_time_like_verify(raw: str) -> None:
 def new_token() -> str:
     """Криптостойкий одноразовый токен для ссылок verify/reset."""
     return secrets.token_urlsafe(32)
+
+
+def secret_matches(given: str, expected: str) -> bool:
+    """Совпал ли секрет из заголовка с настроенным. Время сравнения постоянно.
+
+    Незаданный секрет не совпадает ни с чем. Это важнее, чем кажется: проверка
+    вида `if expected and given != expected` при пустой настройке пропускает
+    кого угодно, то есть забытая переменная окружения открывает эндпойнт.
+
+    Сравниваем байты, а не строки. Starlette декодирует заголовки как latin-1,
+    и `compare_digest` на символе >127 бросает TypeError — вместо честного 403
+    получаем 500.
+    """
+    if not expected:
+        return False
+    return secrets.compare_digest(given.encode("latin-1", "replace"),
+                                  expected.encode("utf-8"))

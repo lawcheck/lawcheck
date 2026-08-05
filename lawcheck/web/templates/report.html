@@ -50,7 +50,7 @@
   </div>
 
   {% if not is_active and scan.status == 'done' %}
-  <script>lcGoal('report_view');</script>
+  <script nonce="{{ csp_nonce(request) }}">lcGoal('report_view');</script>
   {% set zone = 'ok' if compliance >= 70 else ('warn' if compliance >= 40 else 'crit') %}
   <div class="progress-wrap">
     <div class="progress-label">
@@ -94,9 +94,9 @@
       <span>Персональный разбор отчёта: что закрывать в первую очередь, какие документы
         подготовить, как снять риск. Готовит юрист-партнёр — 4 900 ₽.</span>
     </div>
-    <button type="button" class="consult-cta" onclick="lcConsult()">Заказать разбор</button>
+    <button type="button" class="consult-cta" id="lc-consult-cta">Заказать разбор</button>
   </div>
-  <script>
+  <script nonce="{{ csp_nonce(request) }}">
     function lcConsult() {
       var t = document.getElementById('lc-chat-toggle');
       var p = document.getElementById('lc-chat-panel');
@@ -105,6 +105,7 @@
       if (m) { m.value = 'Хочу заказать персональный разбор отчёта с юристом (4 900 ₽). Сайт: ' + {{ scan.url|tojson }}; m.focus(); }
       if (window.lcGoal) lcGoal('consult_click');
     }
+    document.getElementById('lc-consult-cta').addEventListener('click', lcConsult);
   </script>
   {% endif %}
 
@@ -116,7 +117,7 @@
     <span class="spinner"></span>
     {% if scan.status == 'pending' %}Скан в очереди…{% else %}Идёт сканирование<span id="pages-live">{% if scan.pages_crawled %} · обработано страниц: {{ scan.pages_crawled }}{% endif %}</span>. Страница обновится автоматически.{% endif %}
   </div>
-  <script>
+  <script nonce="{{ csp_nonce(request) }}">
     (function () {
       function poll() {
         fetch('/api/scan/' + {{ scan.id|tojson }})

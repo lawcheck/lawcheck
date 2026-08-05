@@ -18,7 +18,7 @@
     <button type="submit" id="scan-submit">Проверить за 60 секунд</button>
   </form>
   <div class="note">Не храним содержимое страниц после проверки.</div>
-  <script>
+  <script nonce="{{ csp_nonce(request) }}">
     (function () {
       var form = document.getElementById('scan-form');
       var input = document.getElementById('scan-url');

@@ -6,9 +6,10 @@
 """
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
 router = APIRouter()
-templates = None  # задаётся из routes.py при подключении
+templates: Jinja2Templates = None  # type: ignore[assignment]  # задаётся из routes.py
 
 # Каждая ниша: meta_title/meta_description — для <title> и SEO; h1/lead — герой;
 # intro — абзац о специфике риска; points — что проверяем именно у этой ниши;

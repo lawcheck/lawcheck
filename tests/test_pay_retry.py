@@ -35,14 +35,14 @@ def _add_order(oid: str = "o1", *, status: str = "pending", amount: int = 990) -
 
 
 def _stub_tochka(monkeypatch, seen: dict):
-    from lawcheck.web import routes
+    from lawcheck.web import payments
 
     def fake_create(*, amount_rub: int, purpose: str, order_id: str, email: str) -> PaymentLink:
         seen.update(amount=amount_rub, purpose=purpose, order_id=order_id, email=email)
         return PaymentLink(operation_id="op-new", url="https://bank/new")
 
-    monkeypatch.setattr(routes.tochka, "is_configured", lambda: True)
-    monkeypatch.setattr(routes.tochka, "create_payment", fake_create)
+    monkeypatch.setattr(payments.tochka, "is_configured", lambda: True)
+    monkeypatch.setattr(payments.tochka, "create_payment", fake_create)
 
 
 def test_unknown_order_404(client):
@@ -84,22 +84,42 @@ def test_price_taken_from_order_not_pricelist(client, monkeypatch):
 
 def test_acquiring_down_shows_fallback(client, monkeypatch):
     _add_order()
-    from lawcheck.web import routes
-    monkeypatch.setattr(routes.tochka, "is_configured", lambda: False)
+    from lawcheck.web import payments
+    monkeypatch.setattr(payments.tochka, "is_configured", lambda: False)
     r = client.get("/pay/retry/o1")
     assert r.status_code == 200
     assert "op-old" not in r.text
 
 
+def test_perevypusk_ogranichen_po_chastote(client, monkeypatch):
+    """Каждый GET создаёт операцию в кассе банка, а order_id знает любой,
+    кому пришло письмо-напоминание."""
+    _add_order()
+    calls: list[str] = []
+    from lawcheck.web import payments
+
+    def fake_create(*, amount_rub, purpose, order_id, email):
+        calls.append(order_id)
+        return PaymentLink(operation_id="op-new", url="https://bank/new")
+
+    monkeypatch.setattr(payments.tochka, "is_configured", lambda: True)
+    monkeypatch.setattr(payments.tochka, "create_payment", fake_create)
+
+    codes = [client.get("/pay/retry/o1").status_code for _ in range(12)]
+    assert codes.count(303) == 10
+    assert codes[-1] == 429
+    assert len(calls) == 10
+
+
 def test_bank_error_does_not_break_order(client, monkeypatch):
     _add_order()
-    from lawcheck.web import routes
+    from lawcheck.web import payments
 
     def boom(**kwargs):
         raise RuntimeError("bank down")
 
-    monkeypatch.setattr(routes.tochka, "is_configured", lambda: True)
-    monkeypatch.setattr(routes.tochka, "create_payment", boom)
+    monkeypatch.setattr(payments.tochka, "is_configured", lambda: True)
+    monkeypatch.setattr(payments.tochka, "create_payment", boom)
     r = client.get("/pay/retry/o1")
     assert r.status_code == 200
     order = repo.get_order("o1")

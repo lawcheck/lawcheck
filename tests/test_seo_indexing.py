@@ -78,23 +78,23 @@ def test_chuzhoy_otchet_zakryt_ot_poiska(client):
 
 def test_vitrina_otchetov_ostaetsya_otkrytoy(client, monkeypatch):
     """Фиксированный набор — единственное исключение, у него noindex нет."""
-    from lawcheck.web import routes
+    from lawcheck.web import report as report_mod
     from lawcheck.db import repo
     scan_id = uuid.uuid4().hex
     repo.create_scan(scan_id, "https://example.ru", max_pages=5)
-    monkeypatch.setattr(routes, "_INDEXABLE_REPORTS", frozenset({scan_id}))
+    monkeypatch.setattr(report_mod, "INDEXABLE_REPORTS", frozenset({scan_id}))
     r = client.get(f"/report/{scan_id}")
     assert r.status_code == 200
     assert "x-robots-tag" not in r.headers
 
 
 def test_v_sitemap_tolko_vitrina_otchetov(client, monkeypatch):
-    from lawcheck.web import routes
+    from lawcheck.web import report as report_mod
     r = client.get("/sitemap.xml")
-    for scan_id in routes._INDEXABLE_REPORTS:
+    for scan_id in report_mod.INDEXABLE_REPORTS:
         assert f"<loc>http://testserver/report/{scan_id}</loc>" in r.text
     # Ровно столько, сколько в наборе — случайные отчёты в карту не попадают.
-    assert r.text.count("/report/") == len(routes._INDEXABLE_REPORTS)
+    assert r.text.count("/report/") == len(report_mod.INDEXABLE_REPORTS)
 
 
 def test_sitemap_datiruet_listing_bloga_svezhei_statei(client, monkeypatch):

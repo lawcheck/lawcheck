@@ -26,7 +26,7 @@ def env(monkeypatch):
                         lambda to, subject, html_body, text_body=None: sent.append(
                             {"subject": subject, "html": html_body}) or True)
     # не запускать реальный краул при POST /scan
-    monkeypatch.setattr("lawcheck.web.routes._run_scan", lambda *a, **k: None)
+    monkeypatch.setattr("lawcheck.web.scanning._run_scan", lambda *a, **k: None)
     with TestClient(create_app(), follow_redirects=False) as c:
         yield c, sent
     session.get_engine.cache_clear()

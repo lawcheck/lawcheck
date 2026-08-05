@@ -12,6 +12,24 @@ _TG_NICK = re.compile(r"(?:@|(?:https?://)?t\.me/)([A-Za-z0-9_]{4,32})")
 _PHONE = re.compile(r"\+?[\d][\d\s()\-]{9,}")
 
 
+def mask_contact(contact: str) -> str:
+    """Контакт для лога: вид и домен видно, самого адреса нет.
+
+    Логи контейнера читает не только владелец (docker logs, выгрузки, будущий
+    сбор логов), а email и телефон из заявки — это персональные данные. Сервису,
+    который проверяет чужие сайты на 152-ФЗ, держать их в открытом виде в
+    собственных логах странно вдвойне. Полный контакт лежит в БД и виден в
+    /inbox — там он и нужен.
+    """
+    contact = (contact or "").strip()
+    if not contact:
+        return "—"
+    if "@" in contact:
+        local, _, domain = contact.partition("@")
+        return f"{local[:1]}***@{domain}"
+    return f"{contact[:2]}***"
+
+
 def contact_url(contact: str) -> str | None:
     """Ссылка для ответа на контакт или None, если вид строки не распознан."""
     contact = (contact or "").strip()
