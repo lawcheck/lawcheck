@@ -196,6 +196,12 @@ def orders_to_remind(delay_hours: int = 6, max_age_days: int = 14,
     возраст в окне [delay_hours; max_age_days], и с этого email НЕ оплачен
     никакой другой заказ. Возвращает detached-объекты.
 
+    На один email приходится РОВНО ОДНО письмо: берём самый свежий заказ и
+    пропускаем адрес целиком, если ему уже писали. Иначе человек получает
+    столько писем, сколько раз он жал «Оплатить»: один сломанный переход на
+    кассу 05.08.2026 наплодил по 14 заказов на адрес, и без этого правила
+    каждому ушла бы пачка одинаковых напоминаний.
+
     Верхняя граница возраста тут не косметика: напоминать про заказ трёхнедельной
     давности поздно и выглядит навязчиво, а платёжная ссылка к тому моменту
     всё равно мертва (её перевыпускает /pay/retry).
@@ -204,8 +210,11 @@ def orders_to_remind(delay_hours: int = 6, max_age_days: int = 14,
     lo = now - timedelta(days=max_age_days)
     hi = now - timedelta(hours=delay_hours)
     with session_scope() as sess:
-        paid_emails = set(sess.execute(
+        skip_emails = set(sess.execute(
             select(Order.email).where(Order.status == "paid", Order.email != "")
+        ).scalars())
+        skip_emails |= set(sess.execute(
+            select(Order.email).where(Order.reminded_at.is_not(None), Order.email != "")
         ).scalars())
         rows = sess.execute(
             select(Order).where(
@@ -216,7 +225,14 @@ def orders_to_remind(delay_hours: int = 6, max_age_days: int = 14,
                 Order.created_at <= hi,
             ).order_by(Order.created_at)
         ).scalars().all()
-        return [o for o in rows if o.email not in paid_emails][:limit]
+        # rows отсортированы по created_at, поэтому запись в словарь оставляет
+        # самый свежий заказ адреса — у него и ссылка самая живая.
+        latest: dict[str, Order] = {}
+        for o in rows:
+            if o.email in skip_emails:
+                continue
+            latest[o.email] = o
+        return list(latest.values())[:limit]
 
 
 def mark_order_reminded(order_id: str) -> None:
