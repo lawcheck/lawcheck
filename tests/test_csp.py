@@ -52,6 +52,16 @@ def test_zagolovok_stoit_i_nesyot_nonce(client):
     assert "'unsafe-inline'" not in csp.split("script-src")[1].split(";")[0]
 
 
+def test_form_action_puskaet_na_kassu_banka(client):
+    """form-action действует на всю цепочку редиректов после сабмита формы.
+    Без кассы в списке браузер молча гасит переход на оплату по 303 с
+    /buy/pro, и кнопка «Перейти к оплате» перестаёт работать — сервер при
+    этом отвечает 303, в логах всё выглядит исправным."""
+    csp = client.get("/pricing").headers["content-security-policy"]
+    form_action = [d for d in csp.split(";") if d.strip().startswith("form-action")][0]
+    assert "https://merch.tochka.com" in form_action
+
+
 def test_nonce_raznyy_na_kazhdyy_zapros(client):
     first = client.get("/").headers["content-security-policy"]
     second = client.get("/").headers["content-security-policy"]
