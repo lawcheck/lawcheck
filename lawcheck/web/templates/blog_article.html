@@ -23,9 +23,12 @@
 {% block content %}
 <article class="policy">
   <h1>{{ article.title }}</h1>
-  {% if article.date and article.date.year > 1 %}
-  <p class="article-meta">{{ article.date.strftime('%d.%m.%Y') }}</p>
-  {% endif %}
+  {# «16+» — возрастная маркировка информационной продукции, ст. 11, 13 ФЗ № 436-ФЗ.
+     Стоит у каждого материала, а не только на индексе блога. Кладём в готовый
+     .article-meta: свой класс потребовал бы правки base.html. #}
+  <p class="article-meta">
+    {% if article.date and article.date.year > 1 %}{{ article.date.strftime('%d.%m.%Y') }} · {% endif %}16+
+  </p>
 
   {{ article.html|safe }}
 
