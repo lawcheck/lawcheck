@@ -25,6 +25,7 @@ from lawcheck.db import repo
 from lawcheck.notify import mailer, telegram
 from lawcheck.reporting import fines
 from lawcheck.utils.contact import contact_url, mask_contact
+from lawcheck.utils.domain import is_own_site
 from lawcheck.utils.email import valid_email
 from lawcheck.web import (
     account, auth, blog, deps, internal, landings, magnets, payments, ratelimit,
@@ -132,6 +133,10 @@ _RL_INQUIRY = ratelimit.Limit(limit=10, window_sec=3600)
 
 
 def _feed_domain_blocked(domain: str) -> bool:
+    # Свой домен в витрине не место: сами себя не проверяем, а сканы, снятые до
+    # появления этого правила, в БД остались и всплыли бы в ленте.
+    if is_own_site(domain):
+        return True
     if any(bad in domain for bad in _FEED_BLOCK_SUBSTRINGS):
         return True
     words = {w for w in re.split(r"[^a-z0-9]+", domain) if w}
@@ -376,6 +381,17 @@ async def create_scan_form(request: Request, bg: BackgroundTasks, url: str = For
             status_code=429)
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
+    # Свой сайт не сканируем — см. utils/domain.py. Проверяем до check_url,
+    # чтобы не ходить в DNS ради адреса, который всё равно не поедет в очередь.
+    if is_own_site(url):
+        return templates.TemplateResponse(request, "message.html", {
+            "title": "Это наш собственный сайт",
+            "message": "Сами себя не проверяем: оценка соответствия, выданная сервисом, "
+                       "который эту оценку продаёт, ничего не стоит. Проверьте свой сайт – "
+                       "а нас прогоните через любой независимый сканер.",
+            "cta_href": "/",
+            "cta_label": "Проверить свой сайт",
+        })
     try:
         await asyncio.to_thread(check_url, url)
     except UnsafeUrl as e:
