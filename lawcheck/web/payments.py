@@ -15,6 +15,7 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.notify import telegram
 from lawcheck.payments import tochka
+from lawcheck.utils import consent
 from lawcheck.utils.email import valid_email
 from lawcheck.web import deps, ratelimit
 from lawcheck.web.operator import OPERATOR
@@ -37,10 +38,16 @@ _PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
 
 @router.post("/buy/{plan}", response_class=HTMLResponse)
 async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = Form(...),
-              scan_id: str = Form("")):
+              scan_id: str = Form(""), pd_consent: str = Form("")):
     if plan not in _PLANS:
         raise HTTPException(status_code=404, detail="unknown plan")
     purpose, amount = _PLANS[plan]
+
+    # Согласие проверяем на сервере, а не только атрибутом `required` в форме:
+    # POST приходит и в обход браузера, а без согласия email хранить нельзя
+    # (ст. 9 152-ФЗ) — заказ же начинается именно с записи email в orders.
+    if not consent.checked(pd_consent):
+        raise HTTPException(status_code=422, detail="no pd consent")
 
     # Email — единственная связь с покупателем: без него оплаченный заказ
     # анонимен, а клиент, потерявший ссылку на кабинет, теряет доступ.

@@ -823,10 +823,12 @@
       font-family: inherit; margin-bottom: 8px; resize: vertical; }
     #lc-chat-form textarea:focus, #lc-chat-form input[type=text]:focus {
       outline: 2px solid var(--brand); outline-offset: 1px; }
-    .lc-chat-consent { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;
-      font-size: var(--t-xs); line-height: 1.35; color: var(--muted); cursor: pointer; }
-    .lc-chat-consent input { margin: 2px 0 0; flex: 0 0 auto; }
-    .lc-chat-consent a { color: var(--brand); }
+    /* Согласие на обработку ПДн. Один класс на все формы сбора ПДн — чат,
+       оплата, проверка по реестру: контрол везде одинаковый по смыслу. */
+    .pd-consent { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;
+      font-size: var(--t-xs); line-height: 1.35; color: var(--muted); cursor: pointer; text-align: left; }
+    .pd-consent input { margin: 2px 0 0; flex: 0 0 auto; }
+    .pd-consent a { color: var(--brand); }
     #lc-chat-send { width: 100%; background: var(--brand); color: #fff; border: 0;
       border-radius: var(--r-m); padding: 11px; font-size: var(--t-m); font-weight: 600; cursor: pointer; }
     #lc-chat-send:hover { background: var(--brand-hover); }
@@ -1252,12 +1254,12 @@
           {# Два согласия, оба без checked: обработка ПДн обязательна (ст. 9 152-ФЗ),
              рекламные письма — добровольно (ст. 18 ФЗ «О рекламе»). Своя же проверка
              формы считает предустановленную галочку отсутствием согласия. #}
-          <label class="lc-chat-consent">
+          <label class="pd-consent">
             <input type="checkbox" name="pd_consent" id="lc-chat-pd" value="1" required>
             <span>Даю согласие на обработку персональных данных по
               <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
           </label>
-          <label class="lc-chat-consent">
+          <label class="pd-consent">
             <input type="checkbox" name="ad_consent" id="lc-chat-ad" value="1">
             <span>Согласен на получение рекламных писем о проверках сайта и штрафах
               по 152-ФЗ. Отписка – по ссылке в любом письме</span>

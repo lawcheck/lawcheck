@@ -35,7 +35,16 @@
   {% include "_rkn_check_form.html" %}
 </section>
 
-{% if state == "invalid" %}
+{% if state == "no_consent" %}
+<section class="section">
+  <div class="rkn-result warn">
+    <h3>Нужно согласие на обработку данных</h3>
+    <p>ИНН предпринимателя — персональные данные, поэтому без вашего согласия мы его
+      не обрабатываем. Отметьте галочку под полем и попробуйте ещё раз.
+      Что именно мы делаем с данными — в <a href="/privacy">Политике</a>.</p>
+  </div>
+</section>
+{% elif state == "invalid" %}
 <section class="section">
   <div class="rkn-result warn">
     <h3>Это не похоже на ИНН</h3>

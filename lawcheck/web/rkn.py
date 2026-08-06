@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from lawcheck.external.rkn_operators import lookup_by_inn
+from lawcheck.utils import consent
 from lawcheck.utils.inn_ogrn import is_valid_inn
 
 router = APIRouter()
@@ -30,12 +31,21 @@ async def rkn_check_page(request: Request):
 
 
 @router.post("/reestr-rkn", response_class=HTMLResponse)
-async def rkn_check(request: Request, inn: str = Form("")):
+async def rkn_check(request: Request, inn: str = Form(""), pd_consent: str = Form("")):
     """Проверка ИНН по реестру операторов pd.rkn.gov.ru.
 
-    Состояния: invalid (не ИНН) / found / not_found / error (реестр недоступен —
-    он часто отвечает только из РФ; на проде это редкий случай).
+    Состояния: no_consent (не отмечено согласие) / invalid (не ИНН) / found /
+    not_found / error (реестр недоступен — он часто отвечает только из РФ;
+    на проде это редкий случай).
+
+    ИНН предпринимателя — персональные данные, поэтому без согласия запрос не
+    выполняем. Форма идёт с `novalidate` (ошибки показываем своим текстом, а не
+    браузерным), значит `required` на чекбоксе клиент не удержит — решает сервер.
     """
+    if not consent.checked(pd_consent):
+        return templates.TemplateResponse(
+            request, "rkn_check.html",
+            {"state": "no_consent", "inn": inn.strip(), "op": None})
     inn_digits = re.sub(r"\D", "", inn)
     if not is_valid_inn(inn_digits):
         return templates.TemplateResponse(

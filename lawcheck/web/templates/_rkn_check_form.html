@@ -10,6 +10,13 @@
              aria-label="ИНН для проверки по реестру операторов РКН"
              pattern="[0-9\s]*" maxlength="14">
     </div>
+    {# ИНН предпринимателя — персональные данные, поэтому согласие нужно и здесь.
+       Без checked: ст. 9 152-ФЗ требует активного действия. #}
+    <label class="pd-consent">
+      <input type="checkbox" name="pd_consent" value="1" required>
+      <span>Даю согласие на обработку персональных данных по
+        <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
+    </label>
     <button type="submit">Проверить по реестру РКН</button>
   </form>
   <div class="note">Официальный реестр Роскомнадзора (pd.rkn.gov.ru). Бесплатно, без регистрации.</div>

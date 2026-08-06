@@ -45,7 +45,7 @@ def test_check_page_renders(client):
 
 
 def test_check_invalid_inn(client):
-    r = client.post("/reestr-rkn", data={"inn": "12345"})
+    r = client.post("/reestr-rkn", data={"inn": "12345", "pd_consent": "1"})
     assert r.status_code == 200
     assert "не похоже на ИНН" in r.text
 
@@ -55,7 +55,7 @@ def test_check_found(client, monkeypatch):
                      name="ООО «Фисташки»", detail_url="https://pd.rkn.gov.ru/x")
     monkeypatch.setattr(rkn_web, "lookup_by_inn",
                         lambda inn: RknLookupResult(operator=op))
-    r = client.post("/reestr-rkn", data={"inn": f" {VALID_INN} "})
+    r = client.post("/reestr-rkn", data={"inn": f" {VALID_INN} ", "pd_consent": "1"})
     assert r.status_code == 200
     assert "Запись в реестре найдена" in r.text
     assert "ООО «Фисташки»" in r.text and "77-12-345678" in r.text
@@ -64,7 +64,7 @@ def test_check_found(client, monkeypatch):
 def test_check_not_found_shows_risk_and_cta(client, monkeypatch):
     monkeypatch.setattr(rkn_web, "lookup_by_inn",
                         lambda inn: RknLookupResult(operator=None, not_found=True))
-    r = client.post("/reestr-rkn", data={"inn": VALID_INN})
+    r = client.post("/reestr-rkn", data={"inn": VALID_INN, "pd_consent": "1"})
     assert r.status_code == 200
     assert "в реестре операторов не найден" in r.text
     assert "300 000" in r.text
@@ -74,7 +74,7 @@ def test_check_not_found_shows_risk_and_cta(client, monkeypatch):
 def test_check_registry_error(client, monkeypatch):
     monkeypatch.setattr(rkn_web, "lookup_by_inn",
                         lambda inn: RknLookupResult(operator=None, error="timeout"))
-    r = client.post("/reestr-rkn", data={"inn": VALID_INN})
+    r = client.post("/reestr-rkn", data={"inn": VALID_INN, "pd_consent": "1"})
     assert r.status_code == 200
     assert "не отвечает" in r.text
 
