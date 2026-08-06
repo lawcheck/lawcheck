@@ -619,6 +619,11 @@
     .finding.warning  { border-color: var(--warn); }
     .finding.info     { border-color: var(--info); }
     .finding.ok       { border-color: var(--ok); }
+    /* Демо-находка на лендинге: та же вёрстка, что в отчёте, но без сигнального
+       красного — на витрине он читается как украшение. В самом отчёте severity
+       остаётся цветным, там он отличает критичное от предупреждения. */
+    .finding.demo.critical { border-color: var(--risk); }
+    .finding.demo .pill.critical { background: var(--line2); color: var(--ink-soft); }
     .finding .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
     .finding .head .check-id { font-family: ui-monospace, "SF Mono", monospace; font-size: var(--t-xs); color: var(--muted); }
     .finding .head .title { font-weight: 600; flex: 1 1 240px; min-width: 0; }
