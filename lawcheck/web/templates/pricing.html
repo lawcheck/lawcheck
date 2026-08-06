@@ -92,6 +92,13 @@
         Дальше откроется страница оплаты картой.</div>
       <input type="email" name="email" required autocomplete="email"
              placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
+      {# Согласие обязательно и не предустановлено: ст. 9 152-ФЗ требует активного
+         действия. Наша же проверка B2 считает галочку с checked отсутствием согласия. #}
+      <label class="pd-consent">
+        <input type="checkbox" name="pd_consent" value="1" required>
+        <span>Даю согласие на обработку персональных данных по
+          <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
+      </label>
       <button type="submit" class="plan-cta primary">Перейти к оплате – 990 ₽/мес</button>
       <div class="buy-email-note">Платёж принимает банк Точка · Оплачивая, принимаете <a href="/oferta">оферту</a></div>
     </form>

@@ -24,6 +24,7 @@ from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.notify import mailer, telegram
 from lawcheck.reporting import fines
+from lawcheck.utils import consent
 from lawcheck.utils.contact import contact_url, mask_contact
 from lawcheck.utils.domain import is_own_site
 from lawcheck.utils.email import valid_email
@@ -169,13 +170,6 @@ async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
-def _checked(value: str) -> bool:
-    """Отмечен ли чекбокс. Пустая строка приходит от снятого поля, но `bool()`
-    здесь мало: строку `0` или `false` (скрытое поле-спутник, чужая интеграция)
-    truthiness превратила бы в согласие, которого человек не давал."""
-    return value.strip().lower() in {"1", "on", "true", "yes", "да"}
-
-
 @router.post("/inquiry")
 async def inquiry(request: Request, bg: BackgroundTasks,
                   message: str = Form(...), contact: str = Form(""),
@@ -199,9 +193,9 @@ async def inquiry(request: Request, bg: BackgroundTasks,
     # а вопрос из виджета — единственный канал, где человек пишет сам.
     if len(contact) < 3:
         raise HTTPException(status_code=422, detail="empty contact")
-    if not _checked(pd_consent):
+    if not consent.checked(pd_consent):
         raise HTTPException(status_code=422, detail="no pd consent")
-    ads = _checked(ad_consent)
+    ads = consent.checked(ad_consent)
     inq_id = await asyncio.to_thread(repo.create_inquiry, message, contact, page, ads)
     # Текст обращения в лог не пишем: человек оставляет там и ФИО, и адрес сайта,
     # и обстоятельства дела. Он целиком уходит владельцу в Telegram и лежит в БД.
