@@ -11,10 +11,12 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from lawcheck.api.schemas import FindingOut, ScanCreated, ScanRequest, ScanResult
 from lawcheck.checks.registry import CHECKS
+from lawcheck.config import settings
 from lawcheck.crawler.browser import Browser
 from lawcheck.crawler.crawler import Crawler
 from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
+from lawcheck.utils.domain import is_own_site, registrable_domain
 from lawcheck.web import ratelimit
 from lawcheck.workers.queue import get_queue
 
@@ -60,6 +62,14 @@ async def _run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
 async def create_scan(req: ScanRequest, request: Request, bg: BackgroundTasks) -> ScanCreated:
     ratelimit.enforce(request, "scan", ratelimit.SCAN,
                       message="Слишком много проверок. Попробуйте через час.")
+    # Свой сайт не сканируем — см. utils/domain.py. Через API отказ такой же,
+    # как через форму: иначе исключение обходится одним curl.
+    if is_own_site(str(req.url)):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{registrable_domain(settings.site_base_url)} — собственный сайт сервиса, "
+                   f"сами себя не проверяем",
+        )
     try:
         check_url(str(req.url))
     except UnsafeUrl as e:
