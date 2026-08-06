@@ -73,8 +73,13 @@ jobs:
 
   deploy:
     needs: test
-    # На pull_request джоб не запускается: PR проверяем, но не выкатываем.
-    if: github.event_name != 'pull_request'
+    # Выкатываем ТОЛЬКО main, и условие смотрит на ветку, а не на событие.
+    # Через `event_name != 'pull_request'` джоб запускался и на
+    # workflow_dispatch с любой ветки — то есть ручной прогон на фиче
+    # выкатывал эту фичу на прод. На pull_request ref имеет вид
+    # refs/pull/N/merge и под условие не подходит, так что PR по-прежнему
+    # только проверяются.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
