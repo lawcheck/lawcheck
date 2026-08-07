@@ -198,7 +198,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
     <p style="margin:0 0 8px">Это зона {e(laws)} — по ней Роскомнадзор штрафует бизнес. Проверка сама по себе штраф не убирает — нарушения надо закрыть.</p>"""
         if risk_line:
             html_body += f"""\
-    <p style="margin:0"><span style="display:inline-block;background:#FEF3C7;color:#B45309;padding:6px 12px;border-radius:6px;font-weight:600;font-size:13px">⚠ {e(risk_line)}</span></p>"""
+    <p style="margin:0;font-size:14px;font-weight:600;color:#1E293B">⚠ {e(risk_line)}</p>"""
         html_body += """\
   </td></tr>"""
 
