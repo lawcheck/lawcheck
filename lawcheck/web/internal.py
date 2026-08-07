@@ -60,6 +60,6 @@ async def followups_run(request: Request, limit: int = 20, dry_run: bool = False
     """
     if not _internal_key_ok(request):
         raise HTTPException(status_code=403, detail="forbidden")
-    summary = await asyncio.to_thread(followup.run, limit, 24, 14, dry_run)
+    summary = await asyncio.to_thread(followup.run, limit, 20, 14, dry_run)
     log.info("followups: %s", summary)
     return summary

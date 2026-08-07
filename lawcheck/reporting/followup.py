@@ -220,7 +220,7 @@ def send_one(lead: Lead, scan: Scan) -> bool:
     return ok
 
 
-def run(limit: int = 50, delay_hours: int = 24, max_age_days: int = 14,
+def run(limit: int = 50, delay_hours: int = 20, max_age_days: int = 14,
         dry_run: bool = False) -> dict:
     """Батч: разослать письма-догонялки подходящим лидам. dry_run — только
     показать, кому и что, не отправляя и не отмечая. Возвращает сводку."""
