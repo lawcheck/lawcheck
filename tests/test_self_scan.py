@@ -112,3 +112,19 @@ def test_svoy_domen_ne_popadaet_v_lentu():
     """Сканы, снятые до появления правила, в БД остались — фильтруем на выдаче."""
     assert _feed_domain_blocked("lawchek.ru") is True
     assert _feed_domain_blocked("example.ru") is False
+
+
+def test_razbor_domena_ne_hodit_v_set():
+    """`_feed_domain_blocked` вызывается при рендере главной — до 160 раз на
+    запрос. У `tldextract.extract` по умолчанию включён public suffix list из
+    сети: на пустом кеше (а он пуст после каждой пересборки контейнера) первый
+    вызов уходит на publicsuffix.org, и ждёт его первый посетитель после выката.
+
+    Тест сторожит именно это: экстрактор должен работать на снапшоте из пакета.
+    """
+    from lawcheck.utils.domain import _extract
+
+    assert _extract.suffix_list_urls == (), (
+        "экстрактор снова тянет public suffix list по сети — "
+        "в пути веб-запроса этого быть не должно"
+    )
