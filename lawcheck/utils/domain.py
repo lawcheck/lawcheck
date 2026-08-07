@@ -18,13 +18,25 @@ import tldextract
 
 from lawcheck.config import settings
 
+# Свой экстрактор, а не `tldextract.extract`. У готового по умолчанию включён
+# public suffix list ИЗ СЕТИ: на пустом кеше первый вызов уходит на
+# publicsuffix.org (~0,4 с при живой сети, таймаут при мёртвой) и только потом
+# откатывается на снапшот из пакета. В контейнере кеш пустой после каждой
+# пересборки, а вызывается это теперь при рендере главной — то есть цену
+# платил бы первый посетитель после выката.
+#
+# `suffix_list_urls=()` выключает сеть: работаем на снапшоте, который приехал
+# вместе с пакетом. Для «наш это домен или чужой» его достаточно с запасом —
+# у зон, которыми пользуются наши посетители, суффиксы не меняются годами.
+_extract = tldextract.TLDExtract(suffix_list_urls=())
+
 
 def registrable_domain(value: str) -> str:
     """`https://www.lawchek.ru/pricing` → `lawchek.ru`. Принимает и голый хост."""
     # Без схемы urlparse кладёт хост в path и отдаёт hostname=None — поэтому
     # подставляем `//`, а не префикс `https://`: схема здесь не важна.
     host = urlparse(value if "//" in value else f"//{value}").hostname or ""
-    ext = tldextract.extract(host)
+    ext = _extract(host)
     return f"{ext.domain}.{ext.suffix}".lower() if ext.suffix else ext.domain.lower()
 
 
