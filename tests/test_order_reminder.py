@@ -136,7 +136,7 @@ def test_letter_stays_transactional():
     order = repo.orders_to_remind()[0]
     _, html_body, text_body = order_reminder.render(
         order_reminder.build_context(order))
-    for pitch in ("Business", "9 900", "сопровождение"):
+    for pitch in ("Персональный аудит", "35 000", "аудит"):
         assert pitch not in html_body
         assert pitch not in text_body
 

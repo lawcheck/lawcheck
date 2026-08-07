@@ -15,7 +15,7 @@
   "offers": [
     {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "RUB", "description": "1 сайт до 10 страниц, веб-отчёт, 20 проверок в час"},
     {"@type": "Offer", "name": "Pro", "price": "990", "priceCurrency": "RUB", "description": "1 сайт до 25 страниц, PDF-заключение юриста, шаблоны, еженедельный мониторинг"},
-    {"@type": "Offer", "name": "Business", "price": "9900", "priceCurrency": "RUB", "description": "безлимит сайтов, API + webhook, white-label, SLA 99.9%"}
+    {"@type": "Offer", "name": "Персональный аудит", "price": "35000", "priceCurrency": "RUB", "description": "разовый ручной аудит юристом: документы под ваши процессы, уведомление в РКН, консультация 60 минут"}
   ]
 }
 </script>
@@ -103,19 +103,19 @@
   </div>
 
   <div class="plan">
-    <div class="name">Business</div>
-    <div class="price">от 9 900 ₽ <small>/ мес</small></div>
-    <div class="price-note">по объёму и SLA</div>
+    <span class="rec-badge vip">под ключ</span>
+    <div class="name">Персональный аудит</div>
+    <div class="price">35 000 ₽ <small>/ разово</small></div>
+    <div class="price-note">юрист разбирает сайт руками</div>
     <ul>
-      <li>безлимит сайтов и страниц</li>
-      <li>API без лимитов + webhook</li>
-      <li>white-label отчёты</li>
-      <li>SLA 99.9%</li>
-      <li>выделенный юрист в Telegram</li>
-      <li>custom-правила под ваш бизнес</li>
+      <li>ручной разбор форм, метрик и сторонних скриптов</li>
+      <li>Политика и согласия под ваши процессы, не шаблон</li>
+      <li>уведомление в РКН: подготовка и помощь с подачей</li>
+      <li>консультация 60 минут с юристом</li>
+      <li>сопровождение, если придёт запрос от РКН</li>
     </ul>
-    <a href="mailto:{{ operator.email }}?subject=LawCheck%20Business" class="plan-cta ghost"
-       data-lc-chat="Интересует Business. Сайтов: … Страниц: … Что нужно: ">Связаться</a>
+    <a href="mailto:{{ operator.email }}?subject=LawCheck%20—%20персональный%20аудит" class="plan-cta ghost dark"
+       data-lc-chat="Интересует персональный аудит за 35 000 ₽. Мой сайт: ">Заказать аудит</a>
   </div>
 </section>
 
@@ -124,19 +124,20 @@
   <div class="cmp-wrap">
     <table class="cmp">
       <thead>
-        <tr><th>Возможность</th><th>Free</th><th>Pro</th><th>Business</th></tr>
+        <tr><th>Возможность</th><th>Free</th><th>Pro</th><th>Аудит</th></tr>
       </thead>
       <tbody>
-        <tr><td>Сайтов</td><td class="val">1</td><td class="val">5</td><td class="val">∞</td></tr>
-        <tr><td>Страниц на проверку</td><td class="val">25</td><td class="val">200</td><td class="val">∞</td></tr>
-        <tr><td>Проверок в сутки</td><td class="val">5</td><td class="val">∞</td><td class="val">∞</td></tr>
+        <tr><td>Сайтов</td><td class="val">1</td><td class="val">5</td><td class="val">1</td></tr>
+        <tr><td>Страниц на проверку</td><td class="val">25</td><td class="val">200</td><td class="val">весь сайт</td></tr>
+        <tr><td>Проверок в сутки</td><td class="val">5</td><td class="val">∞</td><td class="no">—</td></tr>
         <tr><td>Веб-отчёт по ссылке</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-        <tr><td>JSON API</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ + webhook</td></tr>
+        <tr><td>JSON API</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
         <tr><td>PDF-заключение с подписью юриста</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-        <tr><td>Шаблоны документов</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-        <tr><td>Еженедельный мониторинг и diff</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-        <tr><td>White-label и SLA</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
-        <tr><td>Custom-правила</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Шаблоны документов</td><td class="no">—</td><td class="yes">✓</td><td class="yes">индивидуальные</td></tr>
+        <tr><td>Еженедельный мониторинг и diff</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>Ручной разбор форм, метрик и скриптов</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Уведомление в РКН под ключ</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Консультация 60 минут с юристом</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
       </tbody>
     </table>
   </div>
