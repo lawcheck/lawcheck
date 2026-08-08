@@ -112,6 +112,35 @@ async def _load_session_user(request: Request, call_next):
     return await call_next(request)
 
 
+async def _handle_head(request: Request, call_next):
+    """HEAD → GET без тела.
+
+    Uvicorn не обрабатывает HEAD автоматически для FastAPI-маршрутов:
+    GET-эндпойнт отвечает 200, а HEAD на тот же URL — 405 Method Not Allowed.
+    Googlebot иногда проверяет страницы через HEAD, и 405 означает «страница
+    недоступна». Middleware ловит HEAD до всех остальных, дёргает GET и
+    возвращает его заголовки без тела — ровно то, что RFC 7231 требует от HEAD.
+    """
+    if request.method == "HEAD":
+        request.scope["method"] = "GET"
+        response = await call_next(request)
+        # ASGI response body — асинхронный поток; читаем его до конца,
+        # чтобы внутренние middleware (CSP, сжатие) сделали своё дело,
+        # но клиенту ничего не возвращаем.
+        async for _ in response.body_iterator:
+            pass
+        response.body_iterator = _empty_body()
+        response.headers["content-length"] = "0"
+        return response
+    return await call_next(request)
+
+
+async def _empty_body():
+    """Пустой async-генератор для тела ответа."""
+    return
+    yield  # pragma: no cover — yield превращает функцию в генератор
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="LawCheck API",
@@ -128,11 +157,12 @@ def create_app() -> FastAPI:
         log.warning("SESSION_SECRET не задан — использую эфемерный секрет "
                     "(сессии сбросятся при рестарте). В проде задайте SESSION_SECRET в .env.")
     # Порядок важен: последний добавленный оборачивает остальные, то есть
-    # выполняется первым. Нужно session → csrf → csp → загрузка пользователя,
-    # поэтому добавляем в обратном порядке.
+    # выполняется первым. Нужно HEAD → session → csrf → csp → загрузка
+    # пользователя, поэтому добавляем в обратном порядке.
     app.add_middleware(BaseHTTPMiddleware, dispatch=_load_session_user)
     app.add_middleware(BaseHTTPMiddleware, dispatch=_content_security_policy)
     app.add_middleware(BaseHTTPMiddleware, dispatch=_reject_cross_origin)
+    app.add_middleware(BaseHTTPMiddleware, dispatch=_handle_head)
     app.add_middleware(
         SessionMiddleware,
         secret_key=secret,
