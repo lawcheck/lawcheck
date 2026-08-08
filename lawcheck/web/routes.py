@@ -355,9 +355,15 @@ async def pricing(request: Request, scan: str = ""):
             scan_ctx = {"url": s.url,
                         "locked": max(0, locked - report.FREE_RECIPES),
                         "id": s.id}
-    return templates.TemplateResponse(request, "pricing.html",
+    response = templates.TemplateResponse(request, "pricing.html",
                                       {"example": example, "scan_id": scan_id,
                                        "scan_ctx": scan_ctx})
+    # /pricing?scan=... — мост «Откройте исправления» с отчёта.
+    # Google находит эти URL через внутренние ссылки и считает их дубликатами
+    # /pricing (canonical указывает туда же). Закрываем от индексации.
+    if scan_id:
+        response.headers["X-Robots-Tag"] = "noindex"
+    return response
 
 
 # === POST формы — создаёт скан, редиректит на /report/{id} ===
