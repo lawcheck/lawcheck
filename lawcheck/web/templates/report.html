@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Отчёт · {{ scan.url }} · LawCheck{% endblock %}
+{% block title %}Проверка {{ scan.url }} · LawCheck{% endblock %}
+
+{% block meta_description %}Проверка сайта {{ scan.url }} на соответствие 152-ФЗ: найдено {{ counts.critical }} критичных проблем и {{ counts.warning }} предупреждений{% if risk %}, риск штрафа — до {{ risk.max|money }} ₽{% endif %}. Конкретные цитаты со страниц и рекомендации как исправить.{% endblock %}
 
 {% block head_extra %}{% endblock %}
 
