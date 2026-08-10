@@ -59,6 +59,17 @@ def test_yclid_survives_navigation_to_unlabelled_page(client):
     assert "yclid=TESTATTR12345" in _ad_entry(client.get("/pricing"))
 
 
+def test_entry_hranitsya_bez_shemy_i_hosta(client):
+    """За Caddy `request.url` отдаёт внутренний `http`, и сохранённый целиком
+    адрес уехал бы в Метрику как `http://lawchek.ru/…` — та же страница
+    отдельной строкой в отчётах. Схему подставляет браузер, сервер хранит путь.
+    """
+    client.get("/?yclid=TESTATTR12345")
+    entry = _ad_entry(client.get("/pricing"))
+    assert entry.startswith("/?yclid=")
+    assert "://" not in entry
+
+
 @pytest.mark.parametrize("label", ["utm_source=yandex", "gclid=abc", "_openstat=x", "ymclid=y"])
 def test_other_ad_labels_are_remembered_too(client, label):
     client.get(f"/?{label}")
@@ -81,6 +92,8 @@ def test_hit_is_resent_only_right_after_consent(client):
     же визит, и вместо потерянной атрибуции мы получили бы задвоенную.
     """
     body = client.get("/").text
-    assert 'ym(MID, "hit", AD_ENTRY)' in body
+    assert 'ym(MID, "hit", entryUrl)' in body
+    # Схему и хост подставляет браузер: сервер за прокси знает только http.
+    assert "location.origin + AD_ENTRY" in body
     assert "loadMetrika(true)" in body  # ветка «только что согласился»
     assert re.search(r"if \(choice === \"all\"\) \{ loadMetrika\(\); return; \}", body)

@@ -1230,8 +1230,11 @@
         // как прямой заход. Досылаем хит с адресом входа. Только сразу после
         // согласия — у того, кто согласился раньше, счётчик работает с первой
         // страницы и второй хит был бы двойным учётом.
-        if (justConsented && AD_ENTRY && AD_ENTRY.split("#")[0] !== location.href.split("#")[0]) {
-          ym(MID, "hit", AD_ENTRY);
+        // AD_ENTRY — путь без схемы и хоста, их подставляем здесь: сервер за
+        // прокси знает только внутренний http, браузер знает настоящий адрес.
+        if (justConsented && AD_ENTRY) {
+          var entryUrl = location.origin + AD_ENTRY;
+          if (entryUrl.split("#")[0] !== location.href.split("#")[0]) ym(MID, "hit", entryUrl);
         }
         flush();
       }
