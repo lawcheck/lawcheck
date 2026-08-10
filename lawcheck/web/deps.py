@@ -11,6 +11,7 @@
 `request.state`, откуда их и берут шаблоны.
 """
 import asyncio
+import time
 
 from fastapi import Request
 
@@ -51,6 +52,38 @@ def session_order_ids(request: Request) -> list[str]:
 def csp_nonce(request: Request) -> str:
     """Nonce для инлайн-скрипта. Ставит middleware, читают шаблоны."""
     return getattr(request.state, "csp_nonce", "")
+
+
+# Адрес входа с рекламной меткой. Метрика включается только после «Принять»
+# в cookie-баннере, поэтому посетитель, ушедший вглубь сайта раньше, даёт
+# счётчику стартовать уже без yclid — и Метрика записывает рекламный визит как
+# прямой заход (проверено 2026-08-10: первый хит уходил с page-url без метки).
+# Запоминаем адрес входа здесь, шаблон отдаёт его скрипту счётчика.
+_AD_ENTRY_KEY = "ad"
+_AD_ENTRY_TTL = 30 * 60  # столько же длится визит Метрики без активности
+_AD_PARAMS = ("yclid", "ymclid", "gclid", "_openstat", "utm_source")
+_AD_URL_MAX = 500  # сессия едет в cookie, она не резиновая
+
+
+def remember_ad_entry(request: Request) -> None:
+    """Запомнить адрес входа с рекламной меткой (см. комментарий выше)."""
+    sess = _session(request)
+    if sess is None or request.method != "GET":
+        return
+    if not any(p in request.query_params for p in _AD_PARAMS):
+        return
+    # Перезаписываем: последний клик по рекламе важнее предыдущего.
+    sess[_AD_ENTRY_KEY] = {"u": str(request.url)[:_AD_URL_MAX], "t": int(time.time())}
+
+
+def ad_entry(request: Request) -> str:
+    """Адрес входа с меткой, пока жив визит. Пусто — восстанавливать нечего."""
+    entry = (_session(request) or {}).get(_AD_ENTRY_KEY)
+    if not isinstance(entry, dict):
+        return ""
+    if time.time() - int(entry.get("t", 0)) > _AD_ENTRY_TTL:
+        return ""
+    return str(entry.get("u", ""))
 
 
 def _loaded_user(request: Request) -> User | None:

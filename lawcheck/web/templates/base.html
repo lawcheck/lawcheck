@@ -1207,6 +1207,8 @@
       var MID = Number("{{ metrika_id }}");
       var KEY = "lc_cookie_consent"; // "all" | "necessary"
       var queue = [];
+      // Адрес входа с рекламной меткой, если он был (см. web/deps.ad_entry).
+      var AD_ENTRY = {{ ad_entry(request) | tojson }};
 
       function flush() {
         if (!window.ym) return;
@@ -1214,7 +1216,7 @@
       }
       window.lcGoal = function (name) { queue.push(name); flush(); };
 
-      function loadMetrika() {
+      function loadMetrika(justConsented) {
         (function (m, e, t, r, i, k, a) {
           m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
           m[i].l = 1 * new Date();
@@ -1223,6 +1225,14 @@
         })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
         // webvisor выключен сознательно: записи сессий = лишние ПДн
         ym(MID, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false });
+        // Посетитель пришёл по рекламе, а «Принять» нажал уже на другой
+        // странице: init отправил хит без yclid, и Метрика записала бы визит
+        // как прямой заход. Досылаем хит с адресом входа. Только сразу после
+        // согласия — у того, кто согласился раньше, счётчик работает с первой
+        // страницы и второй хит был бы двойным учётом.
+        if (justConsented && AD_ENTRY && AD_ENTRY.split("#")[0] !== location.href.split("#")[0]) {
+          ym(MID, "hit", AD_ENTRY);
+        }
         flush();
       }
 
@@ -1246,7 +1256,7 @@
         function decide(value) {
           try { localStorage.setItem(KEY, value); } catch (e) {}
           bar.hidden = true;
-          if (value === "all") loadMetrika();
+          if (value === "all") loadMetrika(true);
         }
         document.getElementById("cookie-accept").addEventListener("click", function () { decide("all"); });
         document.getElementById("cookie-decline").addEventListener("click", function () { decide("necessary"); });

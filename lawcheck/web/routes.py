@@ -57,6 +57,7 @@ templates.env.globals["site_base_url"] = settings.site_base_url.rstrip("/")
 templates.env.globals["google_site_verification"] = settings.google_site_verification
 templates.env.globals["magnet_for"] = magnets.get  # статья блога → лид-магнит, если он есть
 templates.env.globals["csp_nonce"] = deps.csp_nonce  # nonce для инлайн-скриптов
+templates.env.globals["ad_entry"] = deps.ad_entry  # адрес входа с рекламной меткой
 
 # Блог и нишевые посадочные используют тот же экземпляр templates (общие globals)
 # и подключаются как под-роутеры — только когда SEO-контент готов к публикации.

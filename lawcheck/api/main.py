@@ -112,6 +112,13 @@ async def _load_session_user(request: Request, call_next):
     return await call_next(request)
 
 
+async def _capture_ad_entry(request: Request, call_next):
+    """Запомнить адрес входа с рекламной меткой (см. web/deps.remember_ad_entry)."""
+    from lawcheck.web import deps
+    deps.remember_ad_entry(request)
+    return await call_next(request)
+
+
 async def _handle_head(request: Request, call_next):
     """HEAD → GET без тела.
 
@@ -158,7 +165,8 @@ def create_app() -> FastAPI:
                     "(сессии сбросятся при рестарте). В проде задайте SESSION_SECRET в .env.")
     # Порядок важен: последний добавленный оборачивает остальные, то есть
     # выполняется первым. Нужно HEAD → session → csrf → csp → загрузка
-    # пользователя, поэтому добавляем в обратном порядке.
+    # пользователя → рекламная метка, поэтому добавляем в обратном порядке.
+    app.add_middleware(BaseHTTPMiddleware, dispatch=_capture_ad_entry)
     app.add_middleware(BaseHTTPMiddleware, dispatch=_load_session_user)
     app.add_middleware(BaseHTTPMiddleware, dispatch=_content_security_policy)
     app.add_middleware(BaseHTTPMiddleware, dispatch=_reject_cross_origin)
