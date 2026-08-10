@@ -62,6 +62,19 @@ def test_form_action_puskaet_na_kassu_banka(client):
     assert "https://merch.tochka.com" in form_action
 
 
+def test_metrika_puskaetsya_na_oba_svoih_domena(client):
+    """Загрузчик приходит с mc.yandex.ru, а хиты счётчик шлёт куда сам решит —
+    туда же или на mc.yandex.com, судя по региону посетителя. Пока в списке был
+    один .ru, у получивших .com CSP резал watch, sync_cookie_image_check и
+    callback-скрипт: такой визит не доходил до Метрики вообще, его не было
+    даже среди «прямых заходов» (проверено в браузере 10.08.2026)."""
+    csp = client.get("/").headers["content-security-policy"]
+    for name in ("script-src", "img-src", "connect-src"):
+        directive = [d for d in csp.split(";") if d.strip().startswith(name)][0]
+        assert "https://mc.yandex.ru" in directive, name
+        assert "https://mc.yandex.com" in directive, name
+
+
 def test_nonce_raznyy_na_kazhdyy_zapros(client):
     first = client.get("/").headers["content-security-policy"]
     second = client.get("/").headers["content-security-policy"]
