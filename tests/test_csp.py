@@ -75,6 +75,16 @@ def test_metrika_puskaetsya_na_oba_svoih_domena(client):
         assert "https://mc.yandex.com" in directive, name
 
 
+def test_connect_src_puskaet_vebsoket_schyotchika(client):
+    """Счётчик открывает ещё и `wss://mc.yandex.com/solid.ws`. Источник для
+    WebSocket сравнивается вместе со схемой, поэтому `https://mc.yandex.com`
+    его не покрывает — без `wss://` браузер рвал соединение."""
+    csp = client.get("/").headers["content-security-policy"]
+    connect = [d for d in csp.split(";") if d.strip().startswith("connect-src")][0]
+    assert "wss://mc.yandex.ru" in connect
+    assert "wss://mc.yandex.com" in connect
+
+
 def test_nonce_raznyy_na_kazhdyy_zapros(client):
     first = client.get("/").headers["content-security-policy"]
     second = client.get("/").headers["content-security-policy"]

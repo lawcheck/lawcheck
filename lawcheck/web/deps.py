@@ -66,18 +66,26 @@ _AD_URL_MAX = 500  # сессия едет в cookie, она не резинов
 
 
 def remember_ad_entry(request: Request) -> None:
-    """Запомнить адрес входа с рекламной меткой (см. комментарий выше)."""
+    """Запомнить адрес входа с рекламной меткой (см. комментарий выше).
+
+    Храним путь с запросом, без схемы и хоста: приложение живёт за Caddy и
+    прокси-заголовкам не доверяет, поэтому `request.url` отдаёт внутреннюю
+    схему `http`, и в Метрику уезжал бы `http://lawchek.ru/?yclid=…` — тот же
+    адрес, но отдельной строкой в отчётах по страницам. Схему подставит
+    браузер из `location.origin`, он её знает точно.
+    """
     sess = _session(request)
     if sess is None or request.method != "GET":
         return
     if not any(p in request.query_params for p in _AD_PARAMS):
         return
+    path = request.url.path + (f"?{request.url.query}" if request.url.query else "")
     # Перезаписываем: последний клик по рекламе важнее предыдущего.
-    sess[_AD_ENTRY_KEY] = {"u": str(request.url)[:_AD_URL_MAX], "t": int(time.time())}
+    sess[_AD_ENTRY_KEY] = {"u": path[:_AD_URL_MAX], "t": int(time.time())}
 
 
 def ad_entry(request: Request) -> str:
-    """Адрес входа с меткой, пока жив визит. Пусто — восстанавливать нечего."""
+    """Путь входа с меткой, пока жив визит. Пусто — восстанавливать нечего."""
     entry = (_session(request) or {}).get(_AD_ENTRY_KEY)
     if not isinstance(entry, dict):
         return ""

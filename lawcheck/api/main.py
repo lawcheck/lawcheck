@@ -63,6 +63,10 @@ async def _reject_cross_origin(request: Request, call_next):
 # callback-скрипт (проверено в браузере 10.08.2026). Такой визит Метрика не
 # видит ни в каком источнике — его просто нет.
 _METRIKA = "https://mc.yandex.ru https://mc.yandex.com"
+# Счётчик держит ещё и вебсокет (`wss://mc.yandex.com/solid.ws`). Для WebSocket
+# источник сравнивается вместе со схемой, поэтому `https://…` его не покрывает
+# и домены приходится перечислять второй раз под `wss://`.
+_METRIKA_WS = "wss://mc.yandex.ru wss://mc.yandex.com"
 # Страница оплаты Точки — единственный внешний адресат наших форм.
 _BANK = "https://merch.tochka.com"
 
@@ -87,7 +91,7 @@ def _csp(nonce: str) -> str:
         "style-src 'self' 'unsafe-inline'",
         f"img-src 'self' data: {_METRIKA}",
         "font-src 'self'",
-        f"connect-src 'self' {_METRIKA}",
+        f"connect-src 'self' {_METRIKA} {_METRIKA_WS}",
         f"frame-src {_METRIKA}",
     ])
 
