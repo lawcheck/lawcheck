@@ -709,17 +709,19 @@ def nurture_unsubscribe_by_token(token: str) -> bool:
 
 
 def nurture_remove_paid(email: str) -> int:
-    """Удалить из nurture всех, кто оплатил — чтобы не спамить клиентов."""
+    """Помечаем отписанными всех оплативших — чтобы не спамить клиентов."""
     with session_scope() as sess:
         paid_emails = set(sess.execute(
             select(Order.email).where(Order.status == "paid", Order.email != "")
         ).scalars())
         if email not in paid_emails:
             return 0
-        result = sess.execute(
-            update(NurtureSubscriber)
-            .where(NurtureSubscriber.email == email,
-                   NurtureSubscriber.unsubscribed_at.is_(None))
-            .values(unsubscribed_at=utcnow())
-        )
-        return result.rowcount
+        subs = sess.execute(
+            select(NurtureSubscriber).where(
+                NurtureSubscriber.email == email,
+                NurtureSubscriber.unsubscribed_at.is_(None),
+            )
+        ).scalars().all()
+        for sub in subs:
+            sub.unsubscribed_at = utcnow()
+        return len(subs)
