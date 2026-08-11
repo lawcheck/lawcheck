@@ -243,6 +243,7 @@ async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
     if valid_email(email):
         if await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email):
             log.info("lead: %s (скан %s, %s)", mask_contact(email), scan_id[:8], scan.url)
+            await asyncio.to_thread(repo.nurture_subscribe, email)
             bg.add_task(telegram.notify_owner,
                         f"📩 Новый лид: <b>{telegram.esc(email)}</b>\nсайт: {telegram.esc(scan.url)}\n"
                         f"отчёт: {settings.site_base_url}/report/{scan_id}")

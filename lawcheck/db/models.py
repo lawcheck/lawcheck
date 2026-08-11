@@ -101,6 +101,24 @@ class Lead(Base):
     unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class NurtureSubscriber(Base):
+    """Подписчик nurture-цепочки из 8 писем (educational → оффер).
+
+    Создаётся когда лид оставляет email на странице отчёта.
+    Шаг 1 — сразу, далее шаг 2-8 с интервалом 7 дней.
+    После шага 8 (или оплаты) — не двигаем.
+    """
+    __tablename__ = "nurture_subscribers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    step: Mapped[int] = mapped_column(Integer, default=1)
+    next_send_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    unsub_token: Mapped[str] = mapped_column(String(64), default="")
+    unsubscribed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Inquiry(Base):
     """Вопрос из чат-виджета на сайте: сообщение + контакт для ответа.
     Сохраняется в БД и мгновенно уходит алертом владельцу в Telegram."""

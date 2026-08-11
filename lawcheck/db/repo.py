@@ -10,7 +10,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import load_only, raiseload, selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, Order, Scan, User, utcnow
+from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, NurtureSubscriber, Order, Scan, User, utcnow
 from lawcheck.db.session import session_scope
 from lawcheck.utils.contact import contact_url
 
@@ -640,3 +640,86 @@ def latest_paid_order_id_for_user(user_id: int) -> str | None:
             select(Order.id).where(Order.user_id == user_id, *_active_clauses())
             .order_by(Order.paid_at.desc())
         ).scalars().first()
+
+
+# === Nurture-цепочка ===
+
+NURTURE_STEPS = 8
+NURTURE_INTERVAL_DAYS = 7
+
+
+def nurture_subscribe(email: str) -> bool:
+    """Добавить email в nurture-цепочку (dedupe по email).
+    True — если новая запись. Существующего подписчика не трогаем."""
+    with session_scope() as sess:
+        exists = sess.execute(
+            select(NurtureSubscriber).where(NurtureSubscriber.email == email)
+        ).scalar_one_or_none()
+        if exists:
+            return False
+        sess.add(NurtureSubscriber(
+            email=email,
+            step=1,
+            next_send_at=utcnow(),
+            unsub_token=secrets.token_urlsafe(24),
+        ))
+        return True
+
+
+def nurture_to_send(limit: int = 50) -> list[NurtureSubscriber]:
+    """Подписчики, которым пора отправить текущий шаг."""
+    now = utcnow()
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(NurtureSubscriber).where(
+                NurtureSubscriber.unsubscribed_at.is_(None),
+                NurtureSubscriber.step <= NURTURE_STEPS,
+                NurtureSubscriber.next_send_at <= now,
+            ).order_by(NurtureSubscriber.next_send_at.asc())
+        ).scalars().all()
+        out: list[NurtureSubscriber] = []
+        for sub in rows:
+            sess.expunge(sub)
+            out.append(sub)
+            if len(out) >= limit:
+                break
+        return out
+
+
+def nurture_advance(subscriber_id: int) -> None:
+    """Увеличить шаг и сдвинуть next_send_at на N дней вперёд.
+    Если шаг превышает NURTURE_STEPS — ничего не делаем (цепочка закончена)."""
+    with session_scope() as sess:
+        sub = sess.get(NurtureSubscriber, subscriber_id)
+        if sub and sub.step <= NURTURE_STEPS:
+            sub.step += 1
+            sub.next_send_at = utcnow() + timedelta(days=NURTURE_INTERVAL_DAYS)
+
+
+def nurture_unsubscribe_by_token(token: str) -> bool:
+    """Отписка по токену из письма."""
+    with session_scope() as sess:
+        sub = sess.execute(
+            select(NurtureSubscriber).where(NurtureSubscriber.unsub_token == token)
+        ).scalar_one_or_none()
+        if sub and sub.unsubscribed_at is None:
+            sub.unsubscribed_at = utcnow()
+            return True
+        return False
+
+
+def nurture_remove_paid(email: str) -> int:
+    """Удалить из nurture всех, кто оплатил — чтобы не спамить клиентов."""
+    with session_scope() as sess:
+        paid_emails = set(sess.execute(
+            select(Order.email).where(Order.status == "paid", Order.email != "")
+        ).scalars())
+        if email not in paid_emails:
+            return 0
+        result = sess.execute(
+            update(NurtureSubscriber)
+            .where(NurtureSubscriber.email == email,
+                   NurtureSubscriber.unsubscribed_at.is_(None))
+            .values(unsubscribed_at=utcnow())
+        )
+        return result.rowcount

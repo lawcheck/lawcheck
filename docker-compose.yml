@@ -117,6 +117,7 @@ services:
           if [ "$$(date -u +%H)" = "06" ]; then
             python -m lawcheck.tools.send_followups --limit 20 || true
             python -m lawcheck.tools.send_order_reminders --limit 20 || true
+            python -m lawcheck.tools.send_nurture --limit 20 || true
           fi
           # Спим до верха следующего часа, а не ровно 3600: фиксированный sleep
           # накапливает сдвиг на время прогона и однажды перескочит час 06.

@@ -438,6 +438,7 @@ async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
     bg.add_task(mailer.send_email, email, magnet.doc_title, body)
     if is_new:
         log.info("magnet: %s запросил %s", mask_contact(email), slug)
+        await asyncio.to_thread(repo.nurture_subscribe, email)
         bg.add_task(telegram.notify_owner,
                     f"📄 Запросили образец: <b>{telegram.esc(email)}</b>\n{telegram.esc(slug)}")
     return RedirectResponse(url=f"/blog/{slug}?msent=1#obrazec", status_code=303)
