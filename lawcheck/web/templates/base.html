@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- тема только светлая: без этого браузер в системной тёмной схеме
+       перекрашивает поля ввода, скроллбары и дропдауны -->
+  <meta name="color-scheme" content="light">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/favicon.svg">
   {# Класс js ставится до рендера: только под ним прячется .reveal.
@@ -1079,49 +1082,6 @@
       padding: 12px 24px; border-radius: var(--r-m); text-decoration: none; font-weight: 500;
     }
     .footer-cta .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
-
-    /* --- Dark mode (системный, через prefers-color-scheme) --- */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --page: #18181b;
-        --surface: #232328;
-        --line: #2f2f35;
-        --line2: #38383e;
-        --ink: #f4f4f5;
-        --ink-soft: #d4d4d8;
-        --muted: #a1a1aa;
-        --faint: #a1a1aa;
-        --crit-soft: #2a1715;
-        --warn-soft: #2a2118;
-        --info-soft: #16223a;
-        --ok-soft: #15281e;
-        /* светлые версии: тёмный бордо и чернила на тёмном фоне нечитаемы */
-        --crit: #f3766d;
-        --risk: #dfe3ea;
-      }
-      /* фирменный #1d4ed8 на тёмной подложке даёт ~2:1 — цитату не прочесть */
-      .pull-quote blockquote { color: #7d9bff; }
-      /* фон полосы и фон страницы в тёмной теме различаются на 1.13:1 — глазом
-         это не полоса, а просто продолжение. Держим её границами. */
-      .pull-quote { border-color: var(--line2); }
-      body { background: var(--page); color: var(--ink); }
-      .topnav { background: var(--surface); border-bottom-color: var(--line); }
-      .topnav .cta { background: var(--ink); color: var(--page); }
-      .topnav .cta:hover { background: #fff; }
-      ::selection { background: rgba(29, 78, 216, .32); }
-      .cookie-bar { background: var(--surface); border-color: var(--line); }
-      .finding { background: var(--surface); }
-      .recent .row { border-bottom-color: var(--line); }
-      .quote { background: var(--page) !important; border-color: var(--line) !important; }
-      .cta-inline { background: var(--surface); border: 1px solid var(--line); }
-      .verify-bar { background: var(--info-soft); }
-      #lc-chat-panel { background: var(--surface); }
-      .lc-chat-head { background: var(--surface); border-bottom: 1px solid var(--line); }
-      /* поля ввода: без этого остаются белыми прямоугольниками на тёмных карточках */
-      input, textarea, select { background: var(--page); color: var(--ink); border-color: var(--line); }
-      input::placeholder, textarea::placeholder { color: var(--faint); }
-      .url-field { background: var(--page); }
-    }
 
     /* --- Scroll reveal: IntersectionObserver, без GSAP/Framer --- */
     .js .reveal { opacity: 0; transform: translateY(20px); transition: opacity var(--motion-slow) var(--ease), transform var(--motion-slow) var(--ease); }
