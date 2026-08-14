@@ -75,9 +75,14 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
                     f"Касса в fallback — возможно, придёт заявка на {OPERATOR['email']}.")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
+    scan_id = scan_id.strip()
+    existing = await asyncio.to_thread(repo.recent_pending_order, email, scan_id, plan)
+    if existing is not None:
+        return RedirectResponse(url=existing.payment_link, status_code=303)
+
     order_id = uuid.uuid4().hex
     entry_ref, entry_url = deps.entry_source(request)
-    await asyncio.to_thread(repo.create_order, order_id, plan, amount, email, scan_id.strip(),
+    await asyncio.to_thread(repo.create_order, order_id, plan, amount, email, scan_id,
                             entry_ref, entry_url)
     try:
         link = await asyncio.to_thread(
