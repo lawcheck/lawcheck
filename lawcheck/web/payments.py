@@ -41,7 +41,8 @@ def _paid_alert(order: Order) -> str:
     """Текст алерта владельцу об оплате. Источник визита — в том же сообщении:
     иначе он лежит в БД, и вопрос «реклама это или Инстаграм» опять решается
     руками (первый такой разбор шёл грепом по логам Caddy)."""
-    src = f"{order.entry_ref or 'прямой заход'} → {order.entry_url or '?'}"
+    parts = [p for p in (order.entry_ref, order.entry_url) if p]
+    src = " → ".join(parts) if parts else "прямой заход"
     return (f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
             f"{order.plan.capitalize()} {order.amount} ₽.\n"
             f"Покупатель: <b>{telegram.esc(order.email) or 'email не указан'}</b>\n"

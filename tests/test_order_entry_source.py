@@ -67,14 +67,24 @@ def test_perehod_bez_metki_tozhe_atribuciruetsya(client):
     assert _buy(client).entry_ref == "https://www.instagram.com/lawcheck.ru/"
 
 
-def test_pervoe_kasanie_ne_perezapisyvaetsya(client):
-    """Вопрос «откуда пришёл» — про начало пути, а не про последний переход
-    внутри сайта."""
+def test_perehod_vnutri_sayta_istochnik_ne_trogaet(client):
+    """Хождение по сайту новым источником не является."""
     client.get("/?yclid=ABC123", headers={"referer": "https://yandex.ru/"})
-    client.get("/pricing", headers={"referer": "https://lawchek.ru/report/x"})
+    client.get("/pricing", headers={"referer": "http://testserver/report/x"})
     order = _buy(client)
     assert order.entry_ref == "https://yandex.ru/"
     assert order.entry_url == "/?yclid=ABC123"
+
+
+def test_novyy_zahod_so_storony_perezapisyvaet_istochnik(client):
+    """Сессия живёт 30 дней и переживает визит. Вернулся по письму-напоминанию
+    или по второму клику в рекламе — деньги принесло оно, а не органика
+    месячной давности."""
+    client.get("/", headers={"referer": "https://www.google.com/"})
+    client.get("/pricing?utm_source=email&utm_campaign=order_reminder")
+    order = _buy(client)
+    assert order.entry_ref == ""
+    assert order.entry_url == "/pricing?utm_source=email&utm_campaign=order_reminder"
 
 
 def test_svoy_referer_istochnikom_ne_schitaetsya(client):
@@ -83,14 +93,26 @@ def test_svoy_referer_istochnikom_ne_schitaetsya(client):
     client.get("/pricing", headers={"referer": "http://testserver/report/x"})
     order = _buy(client)
     assert order.entry_ref == ""
-    assert order.entry_url == "/pricing"
+    assert order.entry_url == ""
 
 
-def test_pryamoy_zahod_ostavlyaet_pusto(client):
+def test_pryamoy_zahod_ne_zavodit_sessiyu(client):
+    """Прямой заход в сессию не пишется вовсе: пустой источник и означает
+    «прямой», а cookie каждому посетителю (и каждому боту) заводить не за чем."""
     client.get("/")
+    assert "lc_session" not in client.cookies
     order = _buy(client)
     assert order.entry_ref == ""
-    assert order.entry_url == "/"
+    assert order.entry_url == ""
+
+
+def test_magik_ssylka_v_kabinet_ne_stanovitsya_istochnikom(client):
+    """`/account/{id}` — ссылка-пропуск в кабинет: в источнике другого заказа
+    ей делать нечего."""
+    client.get("/account/deadbeef", headers={"referer": "https://mail.yandex.ru/"})
+    order = _buy(client)
+    assert order.entry_ref == ""
+    assert order.entry_url == ""
 
 
 def test_alert_vladeltsu_nazyvaet_istochnik(client):
@@ -107,7 +129,7 @@ def test_alert_o_pryamom_zahode_govorit_pryamo(client):
     from lawcheck.web.payments import _paid_alert
 
     client.get("/pricing")
-    assert "Источник: прямой заход → /pricing" in _paid_alert(_buy(client))
+    assert "Источник: прямой заход" in _paid_alert(_buy(client))
 
 
 def test_staticheskiy_zapros_ne_stanovitsya_tochkoy_vhoda(client):
