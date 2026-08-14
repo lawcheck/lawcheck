@@ -185,13 +185,18 @@
     .hero-proofs li { display: flex; align-items: center; gap: 8px; font-size: var(--t-m); color: var(--muted); }
     .hero-proofs li::before { content: "✓"; color: var(--ok); font-weight: 700; }
 
-    /* Правая колонка героя: чем продукт отдаёт результат — находка и алерт */
+    /* Правая колонка героя: как работает проверка — четыре шага + ссылка на пример отчёта */
     .hero-visual { display: flex; flex-direction: column; gap: var(--s-4); }
-    .hero-visual .finding { margin: 0; background: var(--surface); box-shadow: var(--sh-md); }
-    .tg-alert { display: flex; gap: 14px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: var(--s-4) var(--s-5); box-shadow: var(--sh-sm); }
-    .tg-alert .ico { flex: none; width: 40px; height: 40px; border-radius: var(--r-m); background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: var(--t-xl); }
-    .tg-alert .t { font-weight: 700; color: var(--navy); font-size: var(--t-m); margin-bottom: 2px; }
-    .tg-alert .d { color: var(--muted); font-size: var(--t-s); line-height: 1.5; }
+    .steps-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: var(--s-5) var(--s-6); box-shadow: var(--sh-md); display: flex; flex-direction: column; }
+    .step { display: flex; gap: 14px; position: relative; padding-bottom: var(--s-5); }
+    .step:last-of-type { padding-bottom: 0; }
+    .step:not(:last-of-type)::before { content: ""; position: absolute; left: 13px; top: 30px; bottom: 2px; width: 2px; background: var(--line); }
+    .step .n { flex: none; width: 28px; height: 28px; border-radius: var(--r-m); background: var(--info-soft); color: var(--brand); font-weight: 700; font-size: var(--t-s); display: flex; align-items: center; justify-content: center; z-index: 1; }
+    .step .t { font-weight: 700; font-size: var(--t-m); color: var(--navy); }
+    .step .d { font-size: var(--t-s); color: var(--muted); margin-top: 2px; line-height: 1.55; }
+    .step .d .mono { font-size: var(--t-xs); color: var(--ink-soft); }
+    .steps-cta { display: block; text-align: center; margin-top: var(--s-5); padding: 12px; border-radius: var(--r-m); background: var(--surface); border: 1px solid var(--line); font-size: var(--t-m); font-weight: 600; color: var(--brand); text-decoration: none; }
+    .steps-cta:hover { border-color: #93c5fd; }
     .form-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-l); padding: var(--s-6); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
     .form-card h3 { margin: 0 0 12px; font-size: var(--t-l); }
     /* Не под .form-card: та же связка «https:// + поле» стоит в кабинете,
@@ -1101,6 +1106,8 @@
       }
       /* фирменный #1d4ed8 на тёмной подложке даёт ~2:1 — цитату не прочесть */
       .pull-quote blockquote { color: #7d9bff; }
+      /* шаги в герое: тот же синий на тёмной карточке — даём светлый вариант */
+      .step .n, .steps-cta { color: #7d9bff; }
       /* фон полосы и фон страницы в тёмной теме различаются на 1.13:1 — глазом
          это не полоса, а просто продолжение. Держим её границами. */
       .pull-quote { border-color: var(--line2); }

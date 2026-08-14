@@ -163,7 +163,16 @@ async def index(request: Request):
             break
     if len(recent) < 5:
         recent = []
-    return templates.TemplateResponse(request, "index.html", {"recent": recent})
+    # Ссылка «Смотреть пример отчёта» в герое: последний завершённый скан,
+    # чей домен можно показывать. Берём из сырого списка — лента выше может
+    # обнулиться из-за порога разнообразия, а пример нужен всегда.
+    example = next(
+        (s for s in raw_recent if s.status == "done"
+         and not _feed_domain_blocked(urlparse(s.url).netloc.lower().removeprefix("www."))),
+        None,
+    )
+    return templates.TemplateResponse(
+        request, "index.html", {"recent": recent, "example": example})
 
 
 @router.get("/privacy", response_class=HTMLResponse)

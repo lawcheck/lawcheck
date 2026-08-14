@@ -55,27 +55,31 @@
     </ul>
   </div>
 
-  {# Справа — то, что человек получит: настоящая находка из отчёта и алерт,
-     который приходит на платном тарифе. #}
+  {# Справа — как работает проверка: четыре шага от адреса до исправления.
+     Прежде тут стояла демо-находка про mystore.ru и «Telegram · алерт»:
+     находка читалась как данные о сайте посетителя, а плашка висела без
+     контекста и не была кликабельной. #}
   <div class="hero-visual">
-    <div class="finding critical demo">
-      <div class="head">
-        <span class="pill critical">критично</span>
-        <span class="title">Форма заявки собирает ПДн без согласия на обработку</span>
+    <div class="steps-card">
+      <div class="step">
+        <div class="n">1</div>
+        <div><div class="t">Вставляете адрес сайта</div><div class="d">например, <span class="mono">mystore.ru</span> — регистрация не нужна</div></div>
       </div>
-      <div class="law">ст. 9 152-ФЗ · B2.consent</div>
-      <div class="fine-line">риск штрафа: <strong>300 000–700 000 ₽</strong> <span class="koap">(ст. 13.11 ч. 2 КоАП РФ)</span></div>
-      <div class="where">где: mystore.ru/contacts</div>
-      <div class="quote">&lt;form&gt; … &lt;input name="phone"&gt; — рядом нет чекбокса согласия и ссылки на Политику</div>
-      <div class="rec"><strong>Как исправить:</strong> добавьте обязательный чекбокс «Согласен на обработку ПДн» со ссылкой на Политику перед кнопкой отправки.</div>
-    </div>
-
-    <div class="tg-alert">
-      <div class="ico" aria-hidden="true">✈</div>
-      <div>
-        <div class="t">LawCheck в Telegram · алерт</div>
-        <div class="d">На mystore.ru/checkout появилась новая форма оплаты без чекбокса согласия. Риск штрафа до 700 000 ₽.</div>
+      <div class="step">
+        <div class="n">2</div>
+        <div><div class="t">Обходим страницы и проверяем по 6 законам</div><div class="d">152-ФЗ, ЗОЗПП, 38-ФЗ, 436-ФЗ и другие — 30 автоматических проверок</div></div>
       </div>
+      <div class="step">
+        <div class="n">3</div>
+        <div><div class="t">Получаете отчёт с цитатами и суммами</div><div class="d">где нашли, какая норма нарушена, риск штрафа и что исправить</div></div>
+      </div>
+      <div class="step">
+        <div class="n">4</div>
+        <div><div class="t">Исправляете по готовым шаблонам</div><div class="d">в платном тарифе — тексты для вставки и проверка юриста</div></div>
+      </div>
+      {% if example %}
+      <a href="/report/{{ example.id }}" class="steps-cta">Смотреть пример отчёта →</a>
+      {% endif %}
     </div>
   </div>
 </section>
