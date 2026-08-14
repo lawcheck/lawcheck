@@ -124,6 +124,30 @@ def create_order(order_id: str, plan: str, amount: int, email: str = "",
                        scan_id=scan_id))
 
 
+def recent_pending_order(email: str, scan_id: str, plan: str,
+                         within_minutes: int = 10) -> Order | None:
+    """Свежий незавершённый заказ с той же почты на тот же тариф и скан, если
+    уже есть выданная ссылка на оплату. Нужен, чтобы повторный клик «Оплатить»
+    (двойной клик, зависший редирект на банк) не плодил дубль заказа и не бил
+    по кассе банка второй операцией — см. аварию 05.08.2026: один сломанный
+    переход на кассу наплодил 14 заказов на один email за 30 секунд."""
+    cutoff = utcnow() - timedelta(minutes=within_minutes)
+    with session_scope() as sess:
+        order = sess.execute(
+            select(Order).where(
+                Order.email == email,
+                Order.scan_id == scan_id,
+                Order.plan == plan,
+                Order.status == "pending",
+                Order.payment_link != "",
+                Order.created_at >= cutoff,
+            ).order_by(Order.created_at.desc())
+        ).scalars().first()
+        if order:
+            sess.expunge(order)
+        return order
+
+
 def paid_order_id_for_scan(scan_id: str, order_ids: Sequence[str]) -> str | None:
     """id заказа, если среди предъявленных есть оплаченный и оформленный
     с отчёта ЭТОГО скана.
