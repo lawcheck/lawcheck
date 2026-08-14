@@ -118,10 +118,10 @@ def list_recent_scans(limit: int = 50) -> list[Scan]:
 # === Заказы (оплата тарифов) ===
 
 def create_order(order_id: str, plan: str, amount: int, email: str = "",
-                 scan_id: str = "") -> None:
+                 scan_id: str = "", entry_ref: str = "", entry_url: str = "") -> None:
     with session_scope() as sess:
         sess.add(Order(id=order_id, plan=plan, amount=amount, email=email,
-                       scan_id=scan_id))
+                       scan_id=scan_id, entry_ref=entry_ref, entry_url=entry_url))
 
 
 def paid_order_id_for_scan(scan_id: str, order_ids: Sequence[str]) -> str | None:

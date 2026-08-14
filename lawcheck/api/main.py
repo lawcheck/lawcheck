@@ -123,9 +123,11 @@ async def _load_session_user(request: Request, call_next):
 
 
 async def _capture_ad_entry(request: Request, call_next):
-    """Запомнить адрес входа с рекламной меткой (см. web/deps.remember_ad_entry)."""
+    """Запомнить адрес входа: рекламную метку для Метрики и первое касание
+    визита для атрибуции заказа (см. web/deps.remember_ad_entry / remember_entry)."""
     from lawcheck.web import deps
     deps.remember_ad_entry(request)
+    deps.remember_entry(request)
     return await call_next(request)
 
 

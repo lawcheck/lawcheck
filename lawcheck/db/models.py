@@ -163,6 +163,14 @@ class Order(Base):
     # и назад не меняется, а доступ ограничен во времени.
     paid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
                                                         nullable=True, index=True)
+    # Откуда пришёл покупатель — первое касание визита, в котором оформлен
+    # заказ (см. web/deps.remember_entry). Без этих двух полей источник
+    # продажи восстанавливается только вручную, грепом по access-логам Caddy.
+    # `entry_ref` — внешний реферер (yandex.ru, инстаграм, телеграм; пусто =
+    # прямой заход или переход без реферера), `entry_url` — путь входа с
+    # метками (utm/yclid). Пусто у заказов, созданных до 2026-08-13.
+    entry_ref: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    entry_url: Mapped[str] = mapped_column(String(300), default="", server_default="")
     operation_id: Mapped[str] = mapped_column(String(64), default="", index=True)
     payment_link: Mapped[str] = mapped_column(String(2048), default="")
     # Сайт, подключённый к еженедельному мониторингу (Pro). Пусто = не подключён.

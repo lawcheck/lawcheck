@@ -94,6 +94,48 @@ def ad_entry(request: Request) -> str:
     return str(entry.get("u", ""))
 
 
+# Первое касание визита: откуда человек пришёл. Отдельно от `_AD_ENTRY_KEY` —
+# у того своя задача (30 минут на восстановление хита Метрики, перезапись при
+# каждом новом клике по рекламе). Здесь наоборот: пишем один раз за сессию и
+# больше не трогаем, потому что вопрос «откуда пришёл тот, кто заплатил»
+# спрашивают про начало пути, а не про последний переход.
+# Внешний реферер важен не меньше метки: без него Инстаграм, Телеграм и
+# органика неотличимы от прямого захода — метки-то в них нет.
+_ENTRY_KEY = "src"
+_ENTRY_MAX = 300  # сессия едет в cookie, она не резиновая
+_ENTRY_SKIP = ("/static", "/api", "/webhooks", "/internal", "/favicon")
+
+
+def remember_entry(request: Request) -> None:
+    """Запомнить первое касание визита: внешний реферер и метки входа."""
+    sess = _session(request)
+    if sess is None or request.method != "GET" or _ENTRY_KEY in sess:
+        return
+    path = request.url.path
+    if path.startswith(_ENTRY_SKIP):
+        return
+    # Свой же реферер источником не считаем: интересен вход на сайт, а не
+    # переход внутри него. Хост берём из заголовка Host (его Caddy сохраняет),
+    # схему не сравниваем — за прокси она всегда внутренний http.
+    ref = request.headers.get("referer", "")
+    if request.url.hostname and f"//{request.url.hostname}" in ref:
+        ref = ""
+    url = path + (f"?{request.url.query}" if request.url.query else "")
+    sess[_ENTRY_KEY] = {"r": ref[:_ENTRY_MAX], "u": url[:_ENTRY_MAX]}
+
+
+def entry_source(request: Request) -> tuple[str, str]:
+    """Первое касание визита: (внешний реферер, адрес входа с метками).
+
+    Адрес — путь с запросом, без схемы и хоста: за Caddy `request.url` отдаёт
+    внутренний `http`, и в БД уезжал бы неверный абсолютный адрес.
+    """
+    entry = (_session(request) or {}).get(_ENTRY_KEY)
+    if not isinstance(entry, dict):
+        return "", ""
+    return str(entry.get("r", "")), str(entry.get("u", ""))
+
+
 def _loaded_user(request: Request) -> User | None:
     return getattr(request.state, "user", None)
 
