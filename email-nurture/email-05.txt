@@ -1,0 +1,7 @@
+Subject: Штраф за нарушение в рекламе: до 4% выручки — как избежать
+
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Пока вы проверяете основной сайт, ваши рекламные кампании могут silently нарушать закон.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Ретаргетинговые пиксели срабатывают до получения согласия? UTM-метки передают данные в запрещённые юрисдикции? Лендинги соответствуют тем же требованиям, что и основной сайт?</p>
+<p style="margin:0;font-size:15px;color:#1E293B;line-height:1.6">LawCheck проверяет не только статичный сайт, но и динамические элементы маркетинга — от таргетинга до email-рассылок.</p>
+
+CTA: Аудит маркетингового стека -> https://lawchek.ru/?utm_source=sendpulse&utm_medium=email&utm_campaign=nurture&utm_content=email5

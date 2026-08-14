@@ -82,12 +82,19 @@ def _is_content_url(url: str) -> bool:
     return True
 
 
-def _score_url(url: str) -> int:
+def _score_url(url: str, text: str = "") -> int:
     """Меньше = выше приоритет."""
     u = unquote(url).lower()  # учитываем кириллицу в percent-encoded путях
     for kw in PRIORITY_KEYWORDS:
         if kw in u:
             return 0
+    # Адрес юридического документа часто ничего о нём не говорит: «Политика
+    # безопасности» лежит на /info/security и по URL неотличима от любой
+    # страницы каталога. Тогда единственная подсказка — текст ссылки.
+    t = (text or "").lower()
+    for kw in PRIORITY_KEYWORDS:
+        if kw in t:
+            return 1
     # Глубина по числу сегментов URL
     depth = len([s for s in urlparse(u).path.split("/") if s])
     return 10 + depth
@@ -146,7 +153,7 @@ class Crawler:
                     continue
                 seq += 1
                 queued.add(link.url)
-                heapq.heappush(queue, (_score_url(link.url), seq, link.url))
+                heapq.heappush(queue, (_score_url(link.url, link.text), seq, link.url))
 
         # Очередь не пуста => вышли по лимиту страниц, часть сайта не смотрели.
         snapshot.budget_reached = bool(queue)

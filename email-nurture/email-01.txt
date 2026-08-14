@@ -1,0 +1,7 @@
+Subject: Ваш чек-лист по 152-ФЗ внутри: что проверять прямо сейчас
+
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Вы только что проверили свой сайт на соответствие 152-ФЗ. Но compliance — это не разовый проект.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Каждую неделю появляются новые трекеры, меняются политики, обновляются требования РКН. То, что сегодня чисто, завтра может стать нарушением.</p>
+<p style="margin:0;font-size:15px;color:#1E293B;line-height:1.6">LawCheck обеспечивает непрерывный мониторинг: еженедельное сканирование и мгновенные алерты о новых рисках.</p>
+
+CTA: Как работает мониторинг -> https://lawchek.ru/?utm_source=sendpulse&utm_medium=email&utm_campaign=nurture&utm_content=email1

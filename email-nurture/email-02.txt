@@ -1,0 +1,7 @@
+Subject: Скрытые трекеры: как они собирают данные даже при отказе
+
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Знаете ли вы, что cookie-плашка может врать? 73% сайтов с баннером согласия всё равно нарушают 152-ФЗ.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Скрытые трекеры обходят согласие через localStorage, fingerprinting и прямые запросы к third-party доменам — и вы об этом не узнаете, пока не придёт штраф.</p>
+<p style="margin:0;font-size:15px;color:#1E293B;line-height:1.6">LawCheck проверяет не наличие плашки, а её реальную работу: блокируются ли скрипты до согласия, не утекают ли данные в обход запрета.</p>
+
+CTA: Как мы находим скрытые трекеры -> https://lawchek.ru/?utm_source=sendpulse&utm_medium=email&utm_campaign=nurture&utm_content=email2

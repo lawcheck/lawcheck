@@ -1,0 +1,7 @@
+Subject: Ваш Google Analytics передаёт данные в США — это нарушает 152-ФЗ?
+
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Вы проверяете сайт, но забываете про маркетинговый стек. Google Analytics, Meta Pixel, ретаргетинговые сервисы — все они могут передавать данные пользователей за пределы РФ.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Даже сервисы с «российскими отделениями» часто хранят данные на зарубежных серверах. РКН штрафует за это независимо от ваших намерений.</p>
+<p style="margin:0;font-size:15px;color:#1E293B;line-height:1.6">LawCheck анализирует весь ваш стек: от IP-адресов получателей данных до гарантий локализации в договорах с третьими лицами.</p>
+
+CTA: Проверить свой стек -> https://lawchek.ru/?utm_source=sendpulse&utm_medium=email&utm_campaign=nurture&utm_content=email4

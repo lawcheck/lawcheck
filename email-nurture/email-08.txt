@@ -1,0 +1,7 @@
+Subject: Первый месяц мониторинга за 1 рубль — только 7 дней
+
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Вы прошли весь путь: узнали о скрытых трекерах, устаревших политиках, рисках передачи данных и проблемах с обновлениями. Вы понимаете — нужен непрерывный мониторинг.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6">Попробуйте первый месяц за 1 рубль вместо 2 990 руб. Еженедельное сканирование 47 точек соответствия, мгновенные алерты, инструкции по устранению. Никаких обязательств — можно отменить в любой момент.</p>
+<p style="margin:0 0 16px;font-size:15px;color:#1E293B;line-height:1.6"><strong style="color:#00053D">Предложение действует 7 дней.</strong></p>
+
+CTA: Активировать за 1 рубль -> https://lawchek.ru/pricing?utm_source=sendpulse&utm_medium=email&utm_campaign=nurture&utm_content=email8
