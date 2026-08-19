@@ -1,5 +1,9 @@
 from lawcheck.checks.base import Check, Finding, Severity
-from lawcheck.checks.pd_152._policy_finder import find_policy_links
+from lawcheck.checks.pd_152._policy_finder import (
+    find_policy_by_body,
+    find_policy_links,
+    pages_linking_to,
+)
 from lawcheck.crawler.snapshot import SiteSnapshot
 
 LAW_REF = "ст. 18.1 ч. 2 152-ФЗ"
@@ -29,6 +33,15 @@ class PolicyPresenceCheck(Check):
             )]
 
         pages_with = find_policy_links(snapshot)
+        if not pages_with:
+            # Ссылку по названию не опознали («Политика безопасности»,
+            # «Правовая информация») — ищем сам документ среди обойдённых
+            # страниц. Только здесь: вопрос A1 — «документ вообще есть?», и
+            # догадка по содержанию на него отвечает. Проверкам содержания
+            # (A2, A3) её не отдаём, см. `find_policy_by_body`.
+            policy_url = find_policy_by_body(snapshot)
+            if policy_url is not None:
+                pages_with = pages_linking_to(snapshot, policy_url)
         pages_with_set = {p for p, _ in pages_with}
         pages_without = [p.url for p in valid_pages if p.url not in pages_with_set]
 
