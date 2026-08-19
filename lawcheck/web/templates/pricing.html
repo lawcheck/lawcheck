@@ -104,11 +104,20 @@
       // Редирект на кассу банка идёт не мгновенно; без этого нетерпеливый
       // клик по кнопке ещё раз плодит второй заказ и вторую операцию в банке
       // (авария 05.08.2026 — 14 заказов с одного email за 30 секунд).
-      document.querySelector(".buy-form").addEventListener("submit", function (e) {
-        var btn = e.target.querySelector("button[type=submit]");
-        if (btn.disabled) { e.preventDefault(); return; }
-        btn.disabled = true;
-        btn.textContent = "Переходим к оплате…";
+      var buyForm = document.querySelector(".buy-form");
+      var buyBtn = buyForm.querySelector("button[type=submit]");
+      var buyLabel = buyBtn.textContent;
+      buyForm.addEventListener("submit", function (e) {
+        if (buyBtn.disabled) { e.preventDefault(); return; }
+        buyBtn.disabled = true;
+        buyBtn.textContent = "Переходим к оплате…";
+      });
+      // Возврат с кассы кнопкой «Назад» отдаёт страницу из bfcache вместе с
+      // выставленным disabled — кнопка так и осталась бы мёртвой, и оплатить
+      // с этой страницы стало бы нельзя без ручной перезагрузки.
+      window.addEventListener("pageshow", function () {
+        buyBtn.disabled = false;
+        buyBtn.textContent = buyLabel;
       });
     </script>
   </div>

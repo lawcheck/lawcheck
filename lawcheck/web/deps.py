@@ -108,8 +108,12 @@ def ad_entry(request: Request) -> str:
 _ENTRY_KEY = "src"
 _ENTRY_MAX = 300  # сессия едет в cookie, она не резиновая
 # `/account/{id}` — ссылка-пропуск в кабинет: в источнике другого заказа ей
-# делать нечего.
-_ENTRY_SKIP = ("/static", "/api", "/webhooks", "/internal", "/favicon", "/account")
+# делать нечего. `/pay/success` — возврат с кассы банка: реферер там чужой,
+# и без этого платёжный шлюз стал бы «источником» следующего заказа в той же
+# сессии, а она живёт 30 дней. Весь `/pay` скрывать нельзя: `/pay/retry`
+# приходит из письма-напоминания с меткой и атрибуцироваться должен.
+_ENTRY_SKIP = ("/static", "/api", "/webhooks", "/internal", "/favicon", "/account",
+               "/pay/success")
 
 
 def remember_entry(request: Request) -> None:

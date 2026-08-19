@@ -124,13 +124,19 @@ def create_order(order_id: str, plan: str, amount: int, email: str = "",
                        scan_id=scan_id, entry_ref=entry_ref, entry_url=entry_url))
 
 
-def recent_pending_order(email: str, scan_id: str, plan: str,
-                         within_minutes: int = 10) -> Order | None:
-    """Свежий незавершённый заказ с той же почты на тот же тариф и скан, если
-    уже есть выданная ссылка на оплату. Нужен, чтобы повторный клик «Оплатить»
-    (двойной клик, зависший редирект на банк) не плодил дубль заказа и не бил
-    по кассе банка второй операцией — см. аварию 05.08.2026: один сломанный
-    переход на кассу наплодил 14 заказов на один email за 30 секунд."""
+def recent_unfinished_order(email: str, scan_id: str, plan: str,
+                            within_minutes: int = 10) -> Order | None:
+    """Свежий неоплаченный заказ с той же почты на тот же тариф и скан. Нужен,
+    чтобы повторный клик «Оплатить» (двойной клик, зависший редирект на банк)
+    не плодил дубль заказа и не бил по кассе банка второй операцией — см.
+    аварию 05.08.2026: один сломанный переход на кассу наплодил 14 заказов на
+    один email за 30 секунд.
+
+    Оба незавершённых статуса, а не только `pending`: заказ получает `pending`
+    и `payment_link` лишь после ответа кассы, а именно там и висел тот сломанный
+    переход. Ограничься мы выданными ссылками — каждый клик по зависшей кассе
+    так и заводил бы новую строку. `failed` не берём: по нему уже решили, что
+    платёж не состоится, и повторный клик должен начать заказ заново."""
     cutoff = utcnow() - timedelta(minutes=within_minutes)
     with session_scope() as sess:
         order = sess.execute(
@@ -138,8 +144,7 @@ def recent_pending_order(email: str, scan_id: str, plan: str,
                 Order.email == email,
                 Order.scan_id == scan_id,
                 Order.plan == plan,
-                Order.status == "pending",
-                Order.payment_link != "",
+                Order.status.in_(("created", "pending")),
                 Order.created_at >= cutoff,
             ).order_by(Order.created_at.desc())
         ).scalars().first()

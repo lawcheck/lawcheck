@@ -2,7 +2,7 @@
 
 Авария 05.08.2026: зависший переход на кассу банка — человек кликнул
 «Оплатить» 14 раз за 30 секунд, получил 14 заказов и 14 операций в Точке.
-Фикс — repo.recent_pending_order в web/payments.py::buy.
+Фикс — repo.recent_unfinished_order в web/payments.py::buy.
 """
 import tempfile
 from pathlib import Path
@@ -51,6 +51,17 @@ def _buy(client, **extra):
     return client.post("/buy/pro", data=data)
 
 
+def _fake_link(client):
+    """Живая касса: считает вызовы в том же счётчике, что и фикстура."""
+    calls = client.tochka_calls
+
+    def fake_create(*, amount_rub: int, purpose: str, order_id: str, email: str) -> PaymentLink:
+        calls["n"] += 1
+        return PaymentLink(operation_id=f"op-{calls['n']}", url=f"https://bank/pay/{order_id}")
+
+    return fake_create
+
+
 def test_povtornyy_klik_ne_plodit_dubl_zakaza(client):
     r1 = _buy(client)
     r2 = _buy(client)
@@ -76,6 +87,31 @@ def test_drugoy_email_zavodit_svoy_zakaz(client):
     _buy(client, email="two@example.com")
     with session_scope() as s:
         assert s.query(Order).count() == 2
+
+
+def test_zavisshaya_kassa_ne_plodit_dubli(client, monkeypatch):
+    """Ровно сценарий аварии: переход на кассу не проходит. Заказ получает
+    `pending` и ссылку только после ответа банка, поэтому дедуп обязан ловить
+    и заказы, застрявшие в статусе `created`."""
+    from lawcheck.web import payments
+
+    def boom(**kw):
+        raise RuntimeError("касса банка не ответила")
+
+    monkeypatch.setattr(payments.tochka, "create_payment", boom)
+    for _ in range(5):
+        _buy(client)
+    with session_scope() as s:
+        assert s.query(Order).count() == 1
+
+    # Касса ожила — ссылка выписывается по тому же заказу, а не по новому.
+    monkeypatch.setattr(payments.tochka, "create_payment", _fake_link(client))
+    r = _buy(client)
+    assert r.status_code == 303
+    with session_scope() as s:
+        [order] = s.query(Order).all()
+        assert order.status == "pending"
+        assert r.headers["location"] == order.payment_link
 
 
 def test_posle_oplaty_povtornyy_klik_zavodit_novyy_zakaz(client):
