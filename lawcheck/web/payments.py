@@ -76,14 +76,20 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
     scan_id = scan_id.strip()
-    existing = await asyncio.to_thread(repo.recent_pending_order, email, scan_id, plan)
-    if existing is not None:
+    existing = await asyncio.to_thread(repo.recent_unfinished_order, email, scan_id, plan)
+    if existing is not None and existing.payment_link:
         return RedirectResponse(url=existing.payment_link, status_code=303)
 
-    order_id = uuid.uuid4().hex
-    entry_ref, entry_url = deps.entry_source(request)
-    await asyncio.to_thread(repo.create_order, order_id, plan, amount, email, scan_id,
-                            entry_ref, entry_url)
+    if existing is not None:
+        # Заказ есть, а ссылки у него нет: предыдущий клик до кассы не дошёл —
+        # банк не ответил или ответил ошибкой. Выписываем ссылку по тому же
+        # заказу, как это делает /pay/retry, а не заводим второй.
+        order_id = existing.id
+    else:
+        order_id = uuid.uuid4().hex
+        entry_ref, entry_url = deps.entry_source(request)
+        await asyncio.to_thread(repo.create_order, order_id, plan, amount, email, scan_id,
+                                entry_ref, entry_url)
     try:
         link = await asyncio.to_thread(
             tochka.create_payment,

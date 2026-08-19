@@ -41,8 +41,15 @@
   {# Без «единственный сервис»: превосходная степень без критерия сравнения и
      источника — риск по ст. 5 ч. 3 ФЗ «О рекламе», а формулировка уходит
      и в объявления Директа. Факт о нас работает без сравнения с рынком. #}
+  {% if scan_ctx %}
+  {# Пришедшему с отчёта «начните с бесплатной проверки» предлагает шаг назад:
+     проверку он уже сделал, за этим и пришёл. #}
+  <p>Проверка уже сделана – осталось решить, что делать с найденным. Pro открывает готовые
+     тексты исправлений, шаблоны документов и PDF-заключение с подписью юриста.</p>
+  {% else %}
   <p>Начните с бесплатной проверки. Платные тарифы добавляют PDF-заключение, шаблоны и мониторинг:
      сайт проверяется каждую неделю, а не один раз.</p>
+  {% endif %}
   <p class="price-math">990 ₽/мес — это <strong>0,14%</strong> от одного штрафа до 700 000 ₽ по ст. 13.11 ч. 2 КоАП РФ.</p>
 </section>
 
@@ -73,8 +80,8 @@
   <div class="plan featured">
     <span class="rec-badge">рекомендуем</span>
     <div class="name">Pro</div>
-    <div class="price">990 ₽ <small>/ мес</small></div>
-    <div class="price-note">или 9 900 ₽ в год</div>
+    <div class="price">990 ₽</div>
+    <div class="price-note">за месяц доступа, без автопродления · или 9 900 ₽ в год</div>
     <ul>
       <li>1 сайт, до 25 страниц в проверке</li>
       <li>PDF-заключение с подписью юриста</li>
@@ -96,7 +103,7 @@
         <span>Даю согласие на обработку персональных данных по
           <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
       </label>
-      <button type="submit" class="plan-cta primary">Перейти к оплате – 990 ₽/мес</button>
+      <button type="submit" class="plan-cta primary">Перейти к оплате – 990 ₽</button>
       <div class="buy-email-note">Платёж принимает банк Точка · Оплачивая, принимаете <a href="/oferta">оферту</a>
         · <a href="/oferta#vozvrat">Условия возврата</a></div>
     </form>
@@ -104,11 +111,20 @@
       // Редирект на кассу банка идёт не мгновенно; без этого нетерпеливый
       // клик по кнопке ещё раз плодит второй заказ и вторую операцию в банке
       // (авария 05.08.2026 — 14 заказов с одного email за 30 секунд).
-      document.querySelector(".buy-form").addEventListener("submit", function (e) {
-        var btn = e.target.querySelector("button[type=submit]");
-        if (btn.disabled) { e.preventDefault(); return; }
-        btn.disabled = true;
-        btn.textContent = "Переходим к оплате…";
+      var buyForm = document.querySelector(".buy-form");
+      var buyBtn = buyForm.querySelector("button[type=submit]");
+      var buyLabel = buyBtn.textContent;
+      buyForm.addEventListener("submit", function (e) {
+        if (buyBtn.disabled) { e.preventDefault(); return; }
+        buyBtn.disabled = true;
+        buyBtn.textContent = "Переходим к оплате…";
+      });
+      // Возврат с кассы кнопкой «Назад» отдаёт страницу из bfcache вместе с
+      // выставленным disabled — кнопка так и осталась бы мёртвой, и оплатить
+      // с этой страницы стало бы нельзя без ручной перезагрузки.
+      window.addEventListener("pageshow", function () {
+        buyBtn.disabled = false;
+        buyBtn.textContent = buyLabel;
       });
     </script>
   </div>

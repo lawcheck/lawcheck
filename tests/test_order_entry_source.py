@@ -115,6 +115,16 @@ def test_magik_ssylka_v_kabinet_ne_stanovitsya_istochnikom(client):
     assert order.entry_url == ""
 
 
+def test_vozvrat_s_kassy_ne_stanovitsya_istochnikom(client):
+    """Сессия живёт 30 дней. Без этого следующий заказ того же человека уехал
+    бы в отчёт с источником «касса банка»."""
+    client.get("/", headers={"referer": "https://www.instagram.com/lawcheck.ru/"})
+    client.get("/pay/success?order=deadbeef",
+               headers={"referer": "https://securepayments.tochka.com/"})
+    order = _buy(client)
+    assert order.entry_ref == "https://www.instagram.com/lawcheck.ru/"
+
+
 def test_alert_vladeltsu_nazyvaet_istochnik(client):
     """Поле, которое никто не читает, вопрос не закрывает: источник едет в том
     же телеграм-алерте, что и сама оплата."""
