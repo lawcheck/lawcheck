@@ -343,6 +343,12 @@
     .plan ul { list-style: none; flex: 1; margin: var(--s-5) 0; padding: 0; }
     .plan ul li { font-size: var(--t-m); color: var(--ink-soft); padding: 6px 0 6px 22px; position: relative; }
     .plan ul li::before { content: "✓"; position: absolute; left: 0; color: var(--ok); font-weight: 600; }
+    /* Пришедшему с отчёта решение продавать уже не надо — он нажал «Закрыть
+       риск – 990 ₽» и хочет заплатить. Форму поднимаем над списком фич, чтобы
+       кнопка не лежала за экраном; список остаётся ниже для тех, кто всё же
+       читает. Порядок в разметке не трогаем: с клавиатуры фичи идут раньше. */
+    .plan.buy-first .buy-form { order: 1; }
+    .plan.buy-first ul { order: 2; margin-top: var(--s-5); }
     .plan .plan-cta { display: block; text-align: center; padding: 13px; border-radius: var(--r-m); text-decoration: none; font-weight: 600; font-size: var(--t-m); }
     .plan .plan-cta.primary { background: var(--brand); color: #fff; }
     .plan .plan-cta.primary:hover { background: var(--brand-hover); }
@@ -1521,7 +1527,11 @@
             io.unobserve(entry.target);
           }
         });
-      }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+      // Порог долей элемента, а не пикселей: у высокой секции (тарифы на
+      // мобиле — три карточки стопкой) 12 % не набираются, даже когда её
+      // верх уже в экране, и блок остаётся невидимым до прокрутки. Порог
+      // нулевой, а отступ появления держит `rootMargin`.
+      }, { threshold: 0, rootMargin: "0px 0px -40px 0px" });
       els.forEach(function (el) { io.observe(el); });
     })();
     })();
