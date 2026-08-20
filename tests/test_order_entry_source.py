@@ -128,18 +128,18 @@ def test_vozvrat_s_kassy_ne_stanovitsya_istochnikom(client):
 def test_alert_vladeltsu_nazyvaet_istochnik(client):
     """Поле, которое никто не читает, вопрос не закрывает: источник едет в том
     же телеграм-алерте, что и сама оплата."""
-    from lawcheck.web.payments import _paid_alert
+    from lawcheck.notify.telegram import paid_alert
 
     client.get("/?utm_source=yandex", headers={"referer": "https://yandex.ru/"})
-    text = _paid_alert(_buy(client))
+    text = paid_alert(_buy(client))
     assert "Источник: https://yandex.ru/ → /?utm_source=yandex" in text
 
 
 def test_alert_o_pryamom_zahode_govorit_pryamo(client):
-    from lawcheck.web.payments import _paid_alert
+    from lawcheck.notify.telegram import paid_alert
 
     client.get("/pricing")
-    assert "Источник: прямой заход" in _paid_alert(_buy(client))
+    assert "Источник: прямой заход" in paid_alert(_buy(client))
 
 
 def test_staticheskiy_zapros_ne_stanovitsya_tochkoy_vhoda(client):
