@@ -13,7 +13,6 @@ from fastapi.templating import Jinja2Templates
 
 from lawcheck.config import settings
 from lawcheck.db import repo
-from lawcheck.db.models import Order
 from lawcheck.notify import telegram
 from lawcheck.payments import tochka
 from lawcheck.utils import consent
