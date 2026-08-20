@@ -982,6 +982,16 @@
     .cookie-bar .cookie-text a { color: var(--brand); }
     .cookie-bar .cookie-actions { display: flex; gap: 8px; }
     .cookie-bar button { padding: 9px 16px; font-size: var(--t-m); border-radius: var(--r-m); }
+    /* На узком экране баннер съедал 161 px первого экрана — пятую часть, и как
+       раз ту, где у пришедшего с отчёта лежит карточка Pro. Текст согласия и
+       обе кнопки остаются, ужимаем только оформление: кегль, отступы, зазоры. */
+    @media (max-width: 480px) {
+      .cookie-bar { padding: 10px 12px; gap: 8px; left: 10px; right: 10px; bottom: 10px; }
+      .cookie-bar .cookie-text { font-size: var(--t-xs); line-height: 1.4; flex-basis: 100%; }
+      .cookie-bar .cookie-actions { width: 100%; gap: 6px; }
+      /* `min-height` не ниже 40px: ужимать кегль можно, площадь под палец — нет. */
+      .cookie-bar button { padding: 8px 10px; font-size: var(--t-s); flex: 1; min-height: 40px; }
+    }
     .cookie-bar button.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
     .cookie-bar button.ghost:hover { background: var(--page); }
 
