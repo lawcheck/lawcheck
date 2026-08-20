@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вариант A — находка + живой пример отчёта</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Golos Text", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         -webkit-font-smoothing: antialiased; color: #1e293b; background: #f8fafc; line-height: 1.55; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace; }
+  .hero { max-width: 1200px; margin: 0 auto; padding: 56px 20px 40px; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 48px; align-items: start; }
+  @media (max-width: 900px) { .hero { grid-template-columns: minmax(0,1fr); } }
+  .badge-pill { display: inline-block; font-size: 13px; font-weight: 700; color: #0b5cff; background: #f0f5ff; border-radius: 999px; padding: 6px 14px; margin-bottom: 16px; }
+  h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; line-height: 1.15; color: #00053d; }
+  h1 .accent { color: #0b5cff; }
+  .sub { font-size: 19px; color: #334155; margin: 14px 0 24px; max-width: 540px; }
+  .form-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .url-field { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+  .url-field .scheme { font-family: "JetBrains Mono", monospace; font-size: 15px; color: #64748b; padding-left: 12px; }
+  .url-field input { flex: 1; min-width: 0; border: 0; padding: 13px 12px; font-size: 18px; font-family: "JetBrains Mono", monospace; outline: none; }
+  .form-card button { width: 100%; margin-top: 12px; background: #0b5cff; color: #fff; border: 0; padding: 16px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .hero-proofs { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 24px; }
+  .hero-proofs li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #64748b; }
+  .hero-proofs li::before { content: "✓"; color: #027a48; font-weight: 700; }
+
+  /* ===== правая колонка — вариант A ===== */
+  .hero-visual { display: flex; flex-direction: column; gap: 14px; }
+  .visual-note { font-size: 12px; color: #64748b; text-align: center; }
+
+  .finding { border: 1px solid #e2e8f0; border-left: 4px solid #2c3440; padding: 18px 22px; background: #fff; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+  .finding .head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 9px; text-transform: uppercase; letter-spacing: .04em; background: #eef2f7; color: #334155; }
+  .finding .head .title { font-weight: 700; font-size: 17px; color: #00053d; flex: 1 1 240px; }
+  .finding .law { color: #64748b; font-size: 13px; font-family: "JetBrains Mono", monospace; margin: 6px 0 2px; }
+  .finding .fine-line { font-size: 14px; color: #334155; }
+  .finding .fine-line strong { font-family: "JetBrains Mono", monospace; color: #2c3440; }
+  .finding .koap { color: #64748b; font-size: 12px; }
+  .finding .where { color: #64748b; font-size: 13px; margin-top: 4px; font-family: "JetBrains Mono", monospace; }
+  .finding .quote { margin-top: 10px; padding: 10px 12px; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 10px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: #475569; }
+  .finding .rec { margin-top: 12px; padding: 12px 14px; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 10px; font-size: 14px; line-height: 1.6; }
+  .finding .rec strong { color: #1e293b; }
+
+  .report-link { display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 18px; font-size: 14.5px; color: #334155; box-shadow: 0 1px 2px rgba(0,0,0,.04); text-decoration: none; transition: border-color .15s; }
+  .report-link:hover { border-color: #93c5fd; }
+  .report-link .arr { color: #0b5cff; font-weight: 700; }
+</style>
+</head>
+<body>
+<section class="hero">
+  <div>
+    <span class="badge-pill">30 проверок · 6 законов</span>
+    <h1>Проверьте сайт на нарушения, за которые штрафуют по <span class="accent">152-ФЗ</span> — за 60 секунд.</h1>
+    <p class="sub">Обходим сайт и находим нарушения по 152-ФЗ, ЗОЗПП, рекламе и защите детей. Не галочки, а конкретные цитаты со страниц, ссылки на нормы и оценка штрафа.</p>
+    <div class="form-card">
+      <div class="url-field"><span class="scheme">https://</span><input placeholder="вашсайт.ru"></div>
+      <button>Проверить за 60 секунд</button>
+    </div>
+    <ul class="hero-proofs">
+      <li>без регистрации</li><li>отчёт публичный по ссылке</li><li>не храним содержимое страниц</li>
+    </ul>
+  </div>
+
+  <div class="hero-visual">
+    <div class="finding">
+      <div class="head">
+        <span class="pill">пример находки</span>
+        <span class="title">Форма заявки собирает ПДн без согласия на обработку</span>
+      </div>
+      <div class="law">ст. 9 152-ФЗ · B2.consent</div>
+      <div class="fine-line">риск штрафа: <strong>300 000–700 000 ₽</strong> <span class="koap">(ст. 13.11 ч. 2 КоАП РФ)</span></div>
+      <div class="where">где: /contacts</div>
+      <div class="quote">&lt;form&gt; … &lt;input name="phone"&gt; — рядом нет чекбокса согласия и ссылки на Политику</div>
+      <div class="rec"><strong>Как исправить:</strong> добавьте обязательный чекбокс «Согласен на обработку ПДн» со ссылкой на Политику перед кнопкой отправки.</div>
+    </div>
+
+    <a class="report-link" href="#">Так выглядит полный отчёт по реальному сайту <span class="arr">→</span></a>
+  </div>
+</section>
+</body>
+</html>
