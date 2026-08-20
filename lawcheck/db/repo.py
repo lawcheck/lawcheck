@@ -187,6 +187,32 @@ def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> No
             order.status = "pending"
 
 
+def orders_awaiting_confirmation(max_age_days: int = 60, limit: int = 50) -> list[Order]:
+    """Заказы, по которым банк выдал операцию, а денег мы так и не увидели.
+
+    Оплату проставляют два пути: вебхук банка и возврат покупателя на
+    /pay/success. Оба могут не сработать — вебхук потеряться, а покупатель не
+    вернуться в браузер вовсе: при оплате через СБП он платит в приложении
+    банка и вкладку больше не открывает. Тогда деньги у нас, а заказ вечно
+    `pending`, и человек сидит без доступа. Этот отбор даёт кандидатов на
+    сверку с банком.
+
+    Только с `operation_id`: без него спрашивать банк не о чем.
+    """
+    cutoff = utcnow() - timedelta(days=max_age_days)
+    with session_scope() as sess:
+        orders = sess.execute(
+            select(Order).where(
+                Order.status == "pending",
+                Order.operation_id != "",
+                Order.created_at >= cutoff,
+            ).order_by(Order.created_at).limit(limit)
+        ).scalars().all()
+        for o in orders:
+            sess.expunge(o)
+        return list(orders)
+
+
 def mark_order_paid(order_id: str) -> bool:
     """Помечает заказ оплаченным и открывает подписку на период тарифа.
     Возвращает True, если это был переход «не оплачен → оплачен»

@@ -37,18 +37,6 @@ _RL_PAY_RETRY = ratelimit.Limit(limit=10, window_sec=3600)
 _PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
 
 
-def _paid_alert(order: Order) -> str:
-    """Текст алерта владельцу об оплате. Источник визита — в том же сообщении:
-    иначе он лежит в БД, и вопрос «реклама это или Инстаграм» опять решается
-    руками (первый такой разбор шёл грепом по логам Caddy)."""
-    parts = [p for p in (order.entry_ref, order.entry_url) if p]
-    src = " → ".join(parts) if parts else "прямой заход"
-    return (f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
-            f"{order.plan.capitalize()} {order.amount} ₽.\n"
-            f"Покупатель: <b>{telegram.esc(order.email) or 'email не указан'}</b>\n"
-            f"Источник: {telegram.esc(src)}")
-
-
 @router.post("/buy/{plan}", response_class=HTMLResponse)
 async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = Form(...),
               scan_id: str = Form(""), pd_consent: str = Form("")):
@@ -155,7 +143,7 @@ async def pay_success(request: Request, bg: BackgroundTasks, order: str = ""):
             # на свой же отчёт как посторонний.
             deps.remember_order(request, o.id)
             if await asyncio.to_thread(repo.mark_order_paid, order):
-                bg.add_task(telegram.notify_owner, _paid_alert(o))
+                bg.add_task(telegram.notify_owner, telegram.paid_alert(o))
     tg_deeplink = ""
     if o and settings.telegram_bot_username:
         tg_deeplink = f"https://t.me/{settings.telegram_bot_username}?start={o.id}"
@@ -202,6 +190,6 @@ async def tochka_webhook(request: Request, bg: BackgroundTasks):
         paid = order is not None and await asyncio.to_thread(tochka.is_paid, operation_id)
         if order is not None and paid:
             if await asyncio.to_thread(repo.mark_order_paid, order.id):
-                bg.add_task(telegram.notify_owner, _paid_alert(order))
+                bg.add_task(telegram.notify_owner, telegram.paid_alert(order))
                 log.info("заказ %s оплачен (операция %s)", order.id, operation_id)
     return {"ok": True}

@@ -45,6 +45,18 @@ def contact_link(contact: str) -> str:
     return f'<a href="{esc(url)}">{esc(contact)}</a>' if url else esc(contact)
 
 
+def paid_alert(order) -> str:
+    """Текст алерта владельцу об оплате. Источник визита — в том же сообщении:
+    иначе он лежит в БД, и вопрос «реклама это или Инстаграм» опять решается
+    руками (первый такой разбор шёл грепом по логам Caddy)."""
+    parts = [p for p in (order.entry_ref, order.entry_url) if p]
+    src = " → ".join(parts) if parts else "прямой заход"
+    return (f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
+            f"{order.plan.capitalize()} {order.amount} ₽.\n"
+            f"Покупатель: <b>{esc(order.email) or 'email не указан'}</b>\n"
+            f"Источник: {esc(src)}")
+
+
 def is_configured() -> bool:
     return bool(settings.telegram_bot_token and settings.telegram_owner_chat_id)
 
