@@ -271,3 +271,84 @@ def test_unsubscribe_route():
         assert c.get("/unsubscribe/rtok").status_code == 200
         assert "недействительна" in c.get("/unsubscribe/nope").text
     assert repo.leads_to_followup() == []  # лид отписан
+
+
+# --- один человек, несколько сайтов: одно письмо на все ---
+
+def _three_sites(email: str = "a@x.ru") -> None:
+    """Реальный случай 20.08: sersit@mail.ru проверил три своих сайта за 12 минут."""
+    for sid, url in [("s1", "https://www.irit.ru"), ("s2", "https://www.aktakom.ru"),
+                     ("s3", "https://www.eliks.ru")]:
+        _add_scan(sid, url=url)
+        _add_lead(email, sid, url=url)
+
+
+def test_neskolko_saytov_odnogo_cheloveka_odno_pismo(monkeypatch):
+    letters = []
+    monkeypatch.setattr(followup.mailer, "send_email",
+                        lambda to, subj, html, text=None: letters.append((to, subj, html, text)) or True)
+    _three_sites()
+
+    summary = followup.run()
+
+    assert summary["candidates"] == 3 and summary["recipients"] == 1
+    assert summary["sent"] == 1 and len(letters) == 1
+    assert repo.leads_to_followup() == []  # отмечены все три, а не один
+
+
+def test_v_pisme_est_kazhdyy_sayt_i_ssylka_na_ego_otchyot(monkeypatch):
+    letters = []
+    monkeypatch.setattr(followup.mailer, "send_email",
+                        lambda to, subj, html, text=None: letters.append((to, subj, html, text)) or True)
+    _three_sites()
+    followup.run()
+    _to, subject, html, text = letters[0]
+
+    assert "3 сайтам" in subject and "12 находок" in subject  # 3 сайта × 4 находки
+    for site in ("irit.ru", "aktakom.ru", "eliks.ru"):
+        assert site in html and site in text
+    for sid in ("s1", "s2", "s3"):
+        assert f"/report/{sid}" in html and f"/report/{sid}" in text
+    assert "Отписаться" in html and "990" in html
+
+
+def test_raznye_adresa_ne_smeshivayutsya(monkeypatch):
+    letters = []
+    monkeypatch.setattr(followup.mailer, "send_email",
+                        lambda to, subj, html, text=None: letters.append((to, subj)) or True)
+    _add_scan("s1", url="https://a.ru")
+    _add_lead("one@x.ru", "s1", url="https://a.ru")
+    _add_scan("s2", url="https://b.ru")
+    _add_lead("two@x.ru", "s2", url="https://b.ru")
+
+    summary = followup.run()
+
+    assert summary["recipients"] == 2 and summary["sent"] == 2
+    assert {to for to, _ in letters} == {"one@x.ru", "two@x.ru"}
+    assert all("Ваш отчёт по" in subj for _, subj in letters)  # у каждого один сайт
+
+
+def test_odin_sayt_pismo_ne_izmenilos(monkeypatch):
+    """Одиночный случай — прежний текст: тема про один сайт, без перечисления."""
+    letters = []
+    monkeypatch.setattr(followup.mailer, "send_email",
+                        lambda to, subj, html, text=None: letters.append((subj, html)) or True)
+    _add_scan("s1")
+    _add_lead("a@x.ru", "s1")
+    followup.run()
+    subject, html = letters[0]
+
+    assert subject == "Ваш отчёт по mysite.ru: 4 находки и как их закрыть"
+    assert "сайтов на LawCheck" not in html
+    assert "Открыть отчёт →" in html  # общая кнопка остаётся
+
+
+def test_neudachnaya_otpravka_ne_metit_ni_odin_lid(monkeypatch):
+    """Иначе часть сайтов человека молча выпадет: письма не было, а отметка есть."""
+    monkeypatch.setattr(followup.mailer, "send_email", lambda *a, **k: False)
+    _three_sites()
+
+    summary = followup.run()
+
+    assert summary["sent"] == 0 and summary["skipped"] == 3
+    assert len(repo.leads_to_followup()) == 3

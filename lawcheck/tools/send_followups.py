@@ -42,7 +42,8 @@ def main() -> None:
                            max_age_days=args.max_age_days, dry_run=args.dry_run)
     mode = "DRY-RUN" if summary["dry_run"] else "ОТПРАВКА"
     print(f"[{mode}] кандидатов: {summary['candidates']}, "
-          f"отправлено: {summary['sent']}, пропущено: {summary['skipped']}")
+          f"адресатов: {summary['recipients']}, "
+          f"отправлено писем: {summary['sent']}, пропущено: {summary['skipped']}")
 
 
 if __name__ == "__main__":
