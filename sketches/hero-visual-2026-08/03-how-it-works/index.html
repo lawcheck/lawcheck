@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вариант C — как работает проверка</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Golos Text", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         -webkit-font-smoothing: antialiased; color: #1e293b; background: #f8fafc; line-height: 1.55; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace; }
+  .hero { max-width: 1200px; margin: 0 auto; padding: 56px 20px 40px; display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 48px; align-items: start; }
+  @media (max-width: 900px) { .hero { grid-template-columns: minmax(0,1fr); } }
+  .badge-pill { display: inline-block; font-size: 13px; font-weight: 700; color: #0b5cff; background: #f0f5ff; border-radius: 999px; padding: 6px 14px; margin-bottom: 16px; }
+  h1 { font-size: 42px; font-weight: 800; letter-spacing: -1px; line-height: 1.15; color: #00053d; }
+  h1 .accent { color: #0b5cff; }
+  .sub { font-size: 19px; color: #334155; margin: 14px 0 24px; max-width: 540px; }
+  .form-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .url-field { display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+  .url-field .scheme { font-family: "JetBrains Mono", monospace; font-size: 15px; color: #64748b; padding-left: 12px; }
+  .url-field input { flex: 1; min-width: 0; border: 0; padding: 13px 12px; font-size: 18px; font-family: "JetBrains Mono", monospace; outline: none; }
+  .form-card button { width: 100%; margin-top: 12px; background: #0b5cff; color: #fff; border: 0; padding: 16px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .hero-proofs { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 24px; }
+  .hero-proofs li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #64748b; }
+  .hero-proofs li::before { content: "✓"; color: #027a48; font-weight: 700; }
+
+  /* ===== правая колонка — вариант C ===== */
+  .steps-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 22px; box-shadow: 0 4px 12px rgba(0,0,0,.06); display: flex; flex-direction: column; gap: 0; }
+  .step { display: flex; gap: 14px; position: relative; padding-bottom: 22px; }
+  .step:last-child { padding-bottom: 0; }
+  .step:not(:last-child)::before { content: ""; position: absolute; left: 13px; top: 30px; bottom: 2px; width: 2px; background: #e2e8f0; }
+  .step .n { flex: none; width: 28px; height: 28px; border-radius: 8px; background: #eff6ff; color: #0b5cff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; z-index: 1; }
+  .step .t { font-weight: 700; font-size: 15px; color: #00053d; }
+  .step .d { font-size: 13.5px; color: #64748b; margin-top: 2px; line-height: 1.55; }
+  .step .d .mono { font-size: 12px; color: #475569; }
+  .steps-cta { display: block; text-align: center; margin-top: 18px; padding: 12px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; font-size: 14px; font-weight: 600; color: #0b5cff; text-decoration: none; }
+  .steps-cta:hover { border-color: #93c5fd; }
+</style>
+</head>
+<body>
+<section class="hero">
+  <div>
+    <span class="badge-pill">30 проверок · 6 законов</span>
+    <h1>Проверьте сайт на нарушения, за которые штрафуют по <span class="accent">152-ФЗ</span> — за 60 секунд.</h1>
+    <p class="sub">Обходим сайт и находим нарушения по 152-ФЗ, ЗОЗПП, рекламе и защите детей. Не галочки, а конкретные цитаты со страниц, ссылки на нормы и оценка штрафа.</p>
+    <div class="form-card">
+      <div class="url-field"><span class="scheme">https://</span><input placeholder="вашсайт.ru"></div>
+      <button>Проверить за 60 секунд</button>
+    </div>
+    <ul class="hero-proofs">
+      <li>без регистрации</li><li>отчёт публичный по ссылке</li><li>не храним содержимое страниц</li>
+    </ul>
+  </div>
+
+  <div class="hero-visual">
+    <div class="steps-card">
+      <div class="step">
+        <div class="n">1</div>
+        <div><div class="t">Вставляете адрес сайта</div><div class="d">например, <span class="mono">mystore.ru</span> — регистрация не нужна</div></div>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <div><div class="t">Обходим страницы и проверяем по 6 законам</div><div class="d">152-ФЗ, ЗОЗПП, 38-ФЗ, 436-ФЗ и другие — 30 автоматических проверок</div></div>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <div><div class="t">Получаете отчёт с цитатами и суммами</div><div class="d">где нашли, какая норма нарушена, риск штрафа и что исправить</div></div>
+      </div>
+      <div class="step">
+        <div class="n">4</div>
+        <div><div class="t">Исправляете по готовым шаблонам</div><div class="d">в платном тарифе — тексты для вставки и проверка юриста</div></div>
+      </div>
+      <a class="steps-cta" href="#">Смотреть пример отчёта →</a>
+    </div>
+  </div>
+</section>
+</body>
+</html>
