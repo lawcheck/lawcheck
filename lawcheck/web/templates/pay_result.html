@@ -4,6 +4,11 @@
 {% block content %}
 <div class="pay-card">
   {% if ok %}
+    {# Цель Метрики «Оплата прошла»: страница рендерится только после
+       подтверждения статуса запросом к API банка (см. payments.pay_success).
+       lcGoal определён в base.html при включённой Метрике и как no-op иначе;
+       очередь дотерпит событие до инициализации счётчика за cookie-баннером. #}
+    <script nonce="{{ csp_nonce(request) }}">if (window.lcGoal) lcGoal("pay_success");</script>
     <h1>✅ Оплата прошла</h1>
     <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен —
       тариф активирован.</p>
