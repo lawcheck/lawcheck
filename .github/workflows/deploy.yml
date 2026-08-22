@@ -38,16 +38,15 @@ concurrency:
 
 env:
   DEPLOY_HOST: 5.129.200.118
-  # TODO(безопасность): выкат идёт под root, то есть компрометация Actions или
-  # секрета DEPLOY_SSH_KEY = root на проде. Переезд на отдельного пользователя
-  # (делается на сервере, поэтому не в этом коммите):
-  #   adduser --disabled-password --gecos "" deploy
-  #   usermod -aG docker deploy
-  #   rsync -a /root/lawcheck/ /home/deploy/lawcheck/ && chown -R deploy: /home/deploy/lawcheck
-  #   переложить ключ CI в /home/deploy/.ssh/authorized_keys и убрать из /root
-  # После этого здесь: DEPLOY_USER: deploy, DEPLOY_PATH: /home/deploy/lawcheck.
-  DEPLOY_USER: root
-  DEPLOY_PATH: /root/lawcheck
+  # Выкат идёт под непривилегированным пользователем deploy (группа docker),
+  # код живёт в /home/deploy/lawcheck. Приватный ключ DEPLOY_SSH_KEY на
+  # сервере ограничен force-command через /usr/local/bin/lawcheck-deploy-shell:
+  # ключ умеет ТОЛЬКО rsync в каталог деплоя и фиксированный набор команд
+  # `docker compose -f /home/deploy/lawcheck/docker-compose.yml …`.
+  # Компрометация Actions больше не даёт шелл на проде.
+  # Команды ниже должны дословно совпадать с белым списком обёртки.
+  DEPLOY_USER: deploy
+  DEPLOY_PATH: /home/deploy/lawcheck
 
 jobs:
   test:
@@ -107,7 +106,16 @@ jobs:
       - name: Сборка и перезапуск сервисов
         run: |
           ssh "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "cd ${DEPLOY_PATH} && docker compose build && docker compose up -d --remove-orphans"
+            "docker compose -f ${DEPLOY_PATH}/docker-compose.yml build"
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "docker compose -f ${DEPLOY_PATH}/docker-compose.yml up -d --remove-orphans"
+
+      # Caddyfile смонтирован bind-mount'ом, rsync меняет иноду — работающий
+      # контейнер продолжает держать старый файл. Перезапуск подхватывает новый.
+      - name: Рестарт Caddy (bind-mount не видит новую иноду Caddyfile)
+        run: |
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "docker compose -f ${DEPLOY_PATH}/docker-compose.yml restart caddy"
 
       - name: Проверка живости
         run: |
