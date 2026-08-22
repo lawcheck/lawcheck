@@ -84,6 +84,32 @@ def mark_error(scan_id: str, error: str) -> None:
             scan.finished_at = utcnow()
 
 
+# Скан дольше этого в статусе running считается зависшим. Обычный скан
+# укладывается в job_timeout=600 сек; час — запас на очередь при загрузке.
+STALE_RUNNING_HOURS = 1
+
+
+def reap_stale_scans(max_age_hours: int = STALE_RUNNING_HOURS) -> list[Scan]:
+    """Зависшие «running» перевести в error.
+
+    RQ убивает воркер по job_timeout сигналом, и хвост run_scan (mark_error)
+    не успевает выполниться — скан остаётся «running» навсегда, клиент смотрит
+    на вечный спиннер. Чиним задним числом: кто висит дольше max_age_hours,
+    получает честный error. Возвращает исправленные сканы для уведомления.
+    """
+    cutoff = utcnow() - timedelta(hours=max_age_hours)
+    with session_scope() as sess:
+        stale = list(sess.execute(
+            select(Scan).where(Scan.status == "running", Scan.created_at < cutoff)
+        ).scalars().all())
+        for scan in stale:
+            scan.status = "error"
+            scan.error = ("сканирование не уложилось в лимит времени "
+                          "и было остановлено")
+            scan.finished_at = utcnow()
+        return stale
+
+
 def get_scan(scan_id: str) -> Scan | None:
     with session_scope() as sess:
         scan = sess.get(Scan, scan_id)
@@ -178,13 +204,23 @@ def paid_order_id_for_scan(scan_id: str, order_ids: Sequence[str]) -> str | None
         ).scalars().first()
 
 
-def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> None:
+def set_order_payment(order_id: str, operation_id: str, payment_link: str) -> bool:
+    """Привязать операцию банка и ссылку к заказу.
+
+    Одним UPDATE с условием `status != 'paid'`: гонка между /pay/retry и
+    подтверждением оплаты (вебхук, /pay/success, сверка) иначе затирала бы
+    operation_id уже оплаченного заказа ссылкой новой операции — деньги по
+    старой ссылке переставали быть видны (reconcile спрашивал бы банк про
+    новую, неоплаченную). False = заказ уже оплачен, ничего не трогаем.
+    """
     with session_scope() as sess:
-        order = sess.get(Order, order_id)
-        if order:
-            order.operation_id = operation_id
-            order.payment_link = payment_link
-            order.status = "pending"
+        result = cast(CursorResult[Any], sess.execute(
+            update(Order)
+            .where(Order.id == order_id, Order.status != "paid")
+            .values(operation_id=operation_id, payment_link=payment_link,
+                    status="pending")
+        ))
+        return result.rowcount == 1
 
 
 def orders_awaiting_confirmation(max_age_days: int = 60, limit: int = 50) -> list[Order]:
@@ -730,14 +766,12 @@ def nurture_to_send(limit: int = 50) -> list[NurtureSubscriber]:
                 NurtureSubscriber.unsubscribed_at.is_(None),
                 NurtureSubscriber.step <= NURTURE_STEPS,
                 NurtureSubscriber.next_send_at <= now,
-            ).order_by(NurtureSubscriber.next_send_at.asc())
+            ).order_by(NurtureSubscriber.next_send_at.asc()).limit(limit)
         ).scalars().all()
         out: list[NurtureSubscriber] = []
         for sub in rows:
             sess.expunge(sub)
             out.append(sub)
-            if len(out) >= limit:
-                break
         return out
 
 

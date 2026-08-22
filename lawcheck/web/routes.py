@@ -312,6 +312,9 @@ async def telegram_webhook(request: Request):
     given = request.headers.get("X-Telegram-Bot-Api-Secret-Token") or ""
     if not security.secret_matches(given, settings.telegram_webhook_secret):
         raise HTTPException(status_code=403, detail="forbidden")
+    # Секрет знает только Telegram, но лимит всё равно ставим: на случай утечки
+    # секрета и для симметрии с вебхуком Точки.
+    ratelimit.enforce(request, "tg_webhook", ratelimit.Limit(limit=120, window_sec=60))
     try:
         upd = await request.json()
     except Exception:

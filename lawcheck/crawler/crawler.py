@@ -2,6 +2,7 @@ import asyncio
 import heapq
 import logging
 import re
+import time
 from urllib.parse import unquote, urlparse
 
 import tldextract
@@ -119,12 +120,16 @@ def _score_url(url: str, text: str = "") -> int:
 
 
 class Crawler:
-    def __init__(self, browser: Browser, max_pages: int | None = None) -> None:
+    def __init__(self, browser: Browser, max_pages: int | None = None,
+                 deadline_sec: int | None = None) -> None:
         self.browser = browser
         self.max_pages = max_pages or settings.crawler_max_pages
+        # Запас до job_timeout=600: свой выход по времени вместо убийства процесса.
+        self.deadline_sec = deadline_sec or 540
 
     async def crawl(self, start_url: str) -> SiteSnapshot:
         snapshot = SiteSnapshot(start_url=start_url)
+        deadline = time.monotonic() + self.deadline_sec
         # Стартовый адрес приходит от посетителя. Веб-форма и API проверяют его
         # заранее, чтобы показать понятную ошибку; здесь проверка повторяется,
         # потому что краулер вызывается и из воркера очереди.
@@ -139,6 +144,14 @@ class Crawler:
         seq = 0  # тай-брейкер, чтобы куча не сравнивала строки при равном score
 
         while queue and len(snapshot.pages) < self.max_pages:
+            # Мягкий дедлайн по времени: медленный сайт (страница за 29 сек)
+            # иначе упирается в жёсткий job_timeout=600, где RQ убивает процесс
+            # сигналом и mark_error не выполняется. Здесь выходим сами — со
+            # статусом done по уже собранным страницам.
+            if time.monotonic() > deadline:
+                log.warning("дедлайн обхода (%d сек), в очереди осталось %d",
+                            self.deadline_sec, len(queue))
+                break
             _, _, url = heapq.heappop(queue)
             if url in visited:
                 continue
