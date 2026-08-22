@@ -71,7 +71,7 @@ def test_pro_owner_sees_own_report_unlocked(client):
     _scan_with_problems(sid, user_id=user.id)  # скан принадлежит владельцу
     html = client.get(f"/report/{sid}").text
     assert _locks(html) == 0
-    assert "Доступ Pro активен" in html
+    assert "Оплата прошла" in html
     # связка «находка → готовый текст»: у A1/B2 есть ссылка на раздел шаблонов
     assert "Готовый текст" in html
     assert "/templates#tpl-" in html
@@ -83,7 +83,7 @@ def test_logged_in_without_paid_order_stays_locked(client):
     _scan_with_problems(sid, user_id=user.id)  # его скан, но заказа нет
     html = client.get(f"/report/{sid}").text
     assert _locks(html) >= 1
-    assert "Доступ Pro активен" not in html
+    assert "Оплата прошла" not in html
 
 
 def test_pro_user_does_not_unlock_foreign_scan(client):

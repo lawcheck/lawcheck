@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Тарифы LawCheck: бесплатная проверка сайта и Pro за 990 ₽{% endblock %}
-{% block meta_description %}Сколько стоит проверка сайта на 152-ФЗ: бесплатный отчёт с найденными нарушениями и оценкой штрафа, Pro за 990 ₽ в месяц — готовые шаблоны политики, согласия и уведомления в РКН под ваш сайт.{% endblock %}
+{% block title %}Тарифы LawCheck: проверка сайта, документы под сайт и аудит юриста{% endblock %}
+{% block meta_description %}Бесплатная проверка сайта на нарушения 152-ФЗ с оценкой штрафа. Пакет «Документы под сайт» за 8 000 ₽ — отчёт, PDF-заключение и готовые документы с проверкой юриста, разово. Персональный аудит за 35 000 ₽ и Pro за 990 ₽.{% endblock %}
 {% block nav_pricing %}active{% endblock %}
 
 {% block head_extra %}
@@ -14,6 +14,7 @@
   "description": "Проверка сайта на нарушения 152-ФЗ, ЗОЗПП, рекламе и защите детей: цитаты со страниц, ссылки на нормы, оценка штрафа, еженедельный мониторинг.",
   "offers": [
     {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "RUB", "description": "1 сайт до 10 страниц, веб-отчёт, 20 проверок в час"},
+    {"@type": "Offer", "name": "Документы под сайт", "price": "8000", "priceCurrency": "RUB", "description": "разовый пакет: проверка, PDF-заключение юриста и готовые документы под ваш сайт с ручной проверкой"},
     {"@type": "Offer", "name": "Pro", "price": "990", "priceCurrency": "RUB", "description": "1 сайт до 25 страниц, PDF-заключение юриста, шаблоны, еженедельный мониторинг"},
     {"@type": "Offer", "name": "Персональный аудит", "price": "35000", "priceCurrency": "RUB", "description": "разовый ручной аудит юристом: документы под ваши процессы, уведомление в РКН, консультация 60 минут"}
   ]
@@ -47,9 +48,8 @@
      блок ниже говорит с его же URL и числом находок — здесь молчим и не
      отодвигаем карточку Pro за сгиб. #}
   {% if not scan_ctx %}
-  <p>Начните с бесплатной проверки. Платные тарифы добавляют PDF-заключение, шаблоны и мониторинг:
-     сайт проверяется каждую неделю, а не один раз.</p>
-  <p class="price-math">990 ₽/мес — это <strong>0,14%</strong> от одного штрафа до 700 000 ₽ по ст. 13.11 ч. 2 КоАП РФ.</p>
+  <p>Начните с бесплатной проверки. Дальше два пути: пакет «Документы под сайт» — юрист сам разбирает отчёт и готовит документы под ваш сайт, или Pro — если чинить своими руками по шаблонам.</p>
+  <p class="price-math">8 000 ₽ за готовые документы — это <strong>1,1%</strong> от одного штрафа до 700 000 ₽ по ст. 13.11 ч. 2 КоАП РФ.</p>
   {% endif %}
 </section>
 
@@ -57,7 +57,7 @@
 <div class="upsell" style="margin-bottom: 20px;">
   <div class="upsell-text">
     <strong>Ваш отчёт по {{ scan_ctx.url }}</strong>
-    <span>{% if scan_ctx.locked %}{{ scan_ctx.locked }} исправлени{{ 'е' if scan_ctx.locked == 1 else ('я' if scan_ctx.locked in (2,3,4) else 'й' ) }} ждут открытия — {% endif %}Pro откроет все рекомендации «Как исправить», PDF-заключение и мониторинг именно для этого отчёта.</span>
+    <span>{% if scan_ctx.locked %}{{ scan_ctx.locked }} исправлени{{ 'е' if scan_ctx.locked == 1 else ('я' if scan_ctx.locked in (2,3,4) else 'й' ) }} ждут открытия — {% endif %}закажите «Документы под сайт» — юрист подготовит их под этот отчёт. Или откройте Pro: рецепты, PDF и мониторинг.</span>
   </div>
   <a href="/report/{{ scan_ctx.id }}" class="upsell-cta" style="background: transparent; border: 1px solid #ffffff55;">← к отчёту</a>
 </div>
@@ -77,20 +77,23 @@
     <a href="/" class="plan-cta ghost">Запустить проверку</a>
   </div>
 
+  {# Лестница офферов после развилки 2026-08-20 ([[lawcheck-direct-launch]]):
+     чек 990 ₽ не окупает платный трафик (CAC 11 607 ₽), средним продуктом стал
+     разовый пакет «Документы под сайт» за 8 000 ₽ — при нём окупаемость требует
+     конверсии ~2,7%, а не недостижимых 22%. Он же главный CTA отчёта. #}
   <div class="plan featured{% if scan_ctx %} buy-first{% endif %}">
     <span class="rec-badge">рекомендуем</span>
-    <div class="name">Pro</div>
-    <div class="price">990 ₽</div>
-    <div class="price-note">за месяц доступа, без автопродления · или 9 900 ₽ в год</div>
+    <div class="name">Документы под сайт</div>
+    <div class="price">8 000 ₽</div>
+    <div class="price-note">разово, без подписки</div>
     <ul>
-      <li>1 сайт, до 25 страниц в проверке</li>
-      <li>PDF-заключение с подписью юриста</li>
-      <li>шаблоны: Политика, Согласие, уведомление в РКН</li>
-      <li>еженедельный мониторинг</li>
-      <li>что изменилось между проверками</li>
-      <li>поддержка в Telegram</li>
+      <li>проверка вашего сайта и PDF-заключение юриста</li>
+      <li>готовые документы под ваш сайт: Политика, согласия, уведомление в РКН</li>
+      <li>юрист проверяет документы лично перед отправкой</li>
+      <li>список правок на вашем сайте: что и где поправить</li>
+      <li>срок — 5 рабочих дней с оплаты</li>
     </ul>
-    <form class="buy-form" action="/buy/pro" method="post" data-goal="pay_click">
+    <form class="buy-form" action="/buy/docs" method="post" data-goal="pay_click">
       {% if scan_id %}<input type="hidden" name="scan_id" value="{{ scan_id }}">{% endif %}
       <div class="buy-steps">Сначала email – на него придут доступ в кабинет и чек.
         Дальше откроется страница оплаты картой.</div>
@@ -103,7 +106,7 @@
         <span>Даю согласие на обработку персональных данных по
           <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
       </label>
-      <button type="submit" class="plan-cta primary">Перейти к оплате – 990 ₽</button>
+      <button type="submit" class="plan-cta primary">Заказать за 8 000 ₽</button>
       <div class="buy-email-note">Платёж принимает банк Точка · Оплачивая, принимаете <a href="/oferta">оферту</a>
         · <a href="/oferta#vozvrat">Условия возврата</a></div>
     </form>
@@ -130,19 +133,60 @@
   </div>
 
   <div class="plan">
-    <span class="rec-badge vip">под ключ</span>
-    <div class="name">Персональный аудит</div>
-    <div class="price">35 000 ₽ <small>/ разово</small></div>
-    <div class="price-note">юрист разбирает сайт руками</div>
+    <div class="name">Pro</div>
+    <div class="price">990 ₽</div>
+    <div class="price-note">за месяц доступа, без автопродления · или 9 900 ₽ в год</div>
     <ul>
-      <li>ручной разбор форм, метрик и сторонних скриптов</li>
-      <li>Политика и согласия под ваши процессы, не шаблон</li>
-      <li>уведомление в РКН: подготовка и помощь с подачей</li>
-      <li>консультация 60 минут с юристом</li>
-      <li>сопровождение, если придёт запрос от РКН</li>
+      <li>самостоятельная работа по шаблонам</li>
+      <li>1 сайт, до 25 страниц в проверке</li>
+      <li>открывает все рекомендации «Как исправить»</li>
+      <li>шаблоны: Политика, Согласие, уведомление в РКН</li>
+      <li>еженедельный мониторинг сайта</li>
+      <li>поддержка в Telegram</li>
     </ul>
-    <a href="mailto:{{ operator.email }}?subject=LawCheck%20—%20персональный%20аудит" class="plan-cta ghost dark"
-       data-lc-chat="Интересует персональный аудит за 35 000 ₽. Мой сайт: ">Заказать аудит</a>
+    <form class="buy-form" action="/buy/pro" method="post" data-goal="pay_click">
+      {% if scan_id %}<input type="hidden" name="scan_id" value="{{ scan_id }}">{% endif %}
+      <div class="buy-steps">Сначала email – на него придут доступ в кабинет и чек.
+        Дальше откроется страница оплаты картой.</div>
+      <input type="email" name="email" required autocomplete="email"
+             placeholder="Email для доступа и чека" aria-label="Email для доступа и чека">
+      <label class="pd-consent">
+        <input type="checkbox" name="pd_consent" value="1" required>
+        <span>Даю согласие на обработку персональных данных по
+          <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
+      </label>
+      <button type="submit" class="plan-cta ghost dark">Оплатить 990 ₽</button>
+      <div class="buy-email-note">Платёж принимает банк Точка · Оплачивая, принимаете <a href="/oferta">оферту</a>
+        · <a href="/oferta#vozvrat">Условия возврата</a></div>
+    </form>
+  </div>
+</section>
+
+{# Аудит — не самобслуживание, а услуга: отдельная полоса вместо карточки в сетке.
+   Якорь штрафа и мост от среднего пакета (развилка 1 из разбора экономики:
+   реклама ведёт на скан, скан продаёт сначала пакет, затем аудит). #}
+<section class="section reveal">
+  <div class="plan audit-band">
+    <span class="rec-badge vip">под ключ</span>
+    <div class="audit-body">
+      <div class="name">Персональный аудит юриста</div>
+      <div class="price">35 000 ₽ <small>/ разово</small></div>
+      <p class="audit-anchor">Штраф по ст. 13.11 ч. 2 КоАП РФ — до 700 000 ₽ за сайт без политики ПДн.
+        Аудит стоит 5% от этого риска.</p>
+      <ul>
+        <li>ручной разбор форм, метрик и сторонних скриптов</li>
+        <li>Политика и согласия под ваши процессы, не шаблон</li>
+        <li>уведомление в РКН: подготовка и помощь с подачей</li>
+        <li>консультация 60 минут с юристом</li>
+        <li>сопровождение, если придёт запрос от РКН</li>
+      </ul>
+      <p class="audit-bridge">Купили «Документы под сайт» и хотите глубже — доплата за аудит 27 000 ₽,
+        пакет полностью засчитывается.</p>
+    </div>
+    <div class="audit-cta-wrap">
+      <a href="mailto:{{ operator.email }}?subject=LawCheck%20—%20персональный%20аудит" class="plan-cta ghost dark"
+         data-lc-chat="Интересует персональный аудит за 35 000 ₽. Мой сайт: ">Обсудить аудит</a>
+    </div>
   </div>
 </section>
 
@@ -151,20 +195,21 @@
   <div class="cmp-wrap">
     <table class="cmp">
       <thead>
-        <tr><th>Возможность</th><th>Free</th><th>Pro</th><th>Аудит</th></tr>
+        <tr><th>Возможность</th><th>Free</th><th>Пакет «Документы»</th><th>Pro</th><th>Аудит</th></tr>
       </thead>
       <tbody>
-        <tr><td>Сайтов</td><td class="val">1</td><td class="val">5</td><td class="val">1</td></tr>
-        <tr><td>Страниц на проверку</td><td class="val">25</td><td class="val">200</td><td class="val">весь сайт</td></tr>
-        <tr><td>Проверок в сутки</td><td class="val">5</td><td class="val">∞</td><td class="no">—</td></tr>
-        <tr><td>Веб-отчёт по ссылке</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-        <tr><td>JSON API</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
-        <tr><td>PDF-заключение с подписью юриста</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-        <tr><td>Шаблоны документов</td><td class="no">—</td><td class="yes">✓</td><td class="yes">индивидуальные</td></tr>
-        <tr><td>Еженедельный мониторинг и diff</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
-        <tr><td>Ручной разбор форм, метрик и скриптов</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
-        <tr><td>Уведомление в РКН под ключ</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
-        <tr><td>Консультация 60 минут с юристом</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Цена</td><td class="val">0 ₽</td><td class="val">8 000 ₽ разово</td><td class="val">990 ₽/мес</td><td class="val">35 000 ₽ разово</td></tr>
+        <tr><td>Проверка сайта</td><td class="val">до 10 стр.</td><td class="yes">✓</td><td class="val">до 25 стр.</td><td class="val">весь сайт, руками</td></tr>
+        <tr><td>Веб-отчёт по ссылке</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Открытые рекомендации «Как исправить»</td><td class="val">2 бесплатно</td><td class="yes">все ✓</td><td class="yes">все ✓</td><td class="yes">все ✓</td></tr>
+        <tr><td>PDF-заключение с подписью юриста</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Документы проверены юристом лично</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Шаблоны документов</td><td class="no">—</td><td class="yes">готовые под сайт</td><td class="yes">✓</td><td class="yes">индивидуальные</td></tr>
+        <tr><td>Черновик уведомления в РКН</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">под ключ, с подачей</td></tr>
+        <tr><td>Еженедельный мониторинг и diff</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>JSON API и выгрузка результатов</td><td class="yes">✓</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+        <tr><td>Ручной разбор форм, метрик и скриптов</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+        <tr><td>Консультация юриста</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">60 минут</td></tr>
       </tbody>
     </table>
   </div>
@@ -181,7 +226,7 @@
   <div class="faq-grid">
     <div class="faq-item">
       <h3>Это юридическая консультация?</h3>
-      <p>Нет. Отчёт — автоматическая проверка и оценка рисков. Суммы штрафов ориентировочные. PDF-заключение на тарифе Pro готовит юрист-партнёр.</p>
+      <p>Отчёт бесплатной проверки — автоматический анализ и оценка рисков, суммы штрафов ориентировочные. В пакете «Документы под сайт» и на аудите документы готовит и проверяет юрист лично.</p>
     </div>
     <div class="faq-item">
       <h3>Нужно ли подтверждать владение сайтом?</h3>
@@ -204,7 +249,7 @@
 
 <div class="footer-cta reveal">
   <h2>Начните с бесплатной проверки</h2>
-  <p>Посмотрите, что найдёт проверка на вашем сайте, и решите, нужен ли платный тариф.</p>
+  <p>Посмотрите, что найдёт проверка на вашем сайте. Понравится — соберём документы за вас, захотите сами — откроете Pro.</p>
   <div class="row">
     <a href="/" class="btn-dark">Проверить сайт</a>
     {% if example %}<a href="/report/{{ example.id }}" class="btn-ghost">Пример отчёта</a>{% endif %}

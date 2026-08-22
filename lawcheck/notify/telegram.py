@@ -49,10 +49,12 @@ def paid_alert(order) -> str:
     """Текст алерта владельцу об оплате. Источник визита — в том же сообщении:
     иначе он лежит в БД, и вопрос «реклама это или Инстаграм» опять решается
     руками (первый такой разбор шёл грепом по логам Caddy)."""
+    # Название тарифа для человека: capitalize() превращает «docs» в «Docs».
+    _titles = {"pro": "Pro", "docs": "Документы под сайт"}
     parts = [p for p in (order.entry_ref, order.entry_url) if p]
     src = " → ".join(parts) if parts else "прямой заход"
     return (f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
-            f"{order.plan.capitalize()} {order.amount} ₽.\n"
+            f"{_titles.get(order.plan, order.plan.capitalize())} {order.amount} ₽.\n"
             f"Покупатель: <b>{esc(order.email) or 'email не указан'}</b>\n"
             f"Источник: {esc(src)}")
 

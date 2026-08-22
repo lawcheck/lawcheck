@@ -33,7 +33,22 @@ _RL_WEBHOOK = ratelimit.Limit(limit=60, window_sec=60)
 _RL_PAY_RETRY = ratelimit.Limit(limit=10, window_sec=3600)
 
 
-_PLANS = {"pro": ("LawCheck Pro, 1 месяц", 990)}
+_PLANS = {
+    # (назначение платежа в банке, сумма). «docs» — средний продукт лестницы:
+    # проверка + готовые документы под сайт с ручной проверкой юриста.
+    # Разблокировка отчёта у paid_order_id_for_scan не смотрит план — оплаченный
+    # заказ любого тарифа с этим scan_id открывает рецепты и драфты одинаково.
+    "pro": ("LawCheck Pro, 1 месяц", 990),
+    "docs": ("LawCheck: документы под сайт, разово", 8000),
+}
+
+# Человекочитательные названия для алертов и писем: capitalize() превращает
+# «docs» в «Docs», а владелец должен сразу понять, ЧТО оплатили.
+PLAN_TITLES = {"pro": "Pro", "docs": "Документы под сайт"}
+
+
+def plan_title(plan: str) -> str:
+    return PLAN_TITLES.get(plan, plan.capitalize())
 
 
 @router.post("/buy/{plan}", response_class=HTMLResponse)
@@ -58,7 +73,7 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
     if not tochka.is_configured():
         # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
         bg.add_task(telegram.notify_owner,
-                    f"🔔 Клик «Оплатить {plan.capitalize()}» ({amount} ₽) от <b>{telegram.esc(email)}</b>. "
+                    f"🔔 Клик «Оплатить {plan_title(plan)}» ({amount} ₽) от <b>{telegram.esc(email)}</b>. "
                     f"Касса в fallback — возможно, придёт заявка на {OPERATOR['email']}.")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 

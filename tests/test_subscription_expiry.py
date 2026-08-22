@@ -116,7 +116,7 @@ def test_kabinet_pokazyvaet_srok_i_predlagaet_prodlit(client):
 
     body = client.get(f"/account/{expired_id}").text
     assert "Доступ по этому заказу закончился" in body
-    assert "Продлить Pro" in body
+    assert "продлить Pro" in body
     # Платные функции скрыты, но страница жива.
     assert "Еженедельный мониторинг" not in body
 

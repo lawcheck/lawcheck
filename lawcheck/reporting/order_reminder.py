@@ -38,7 +38,8 @@ def build_context(order: Order) -> dict:
     base = settings.site_base_url.rstrip("/")
     return {
         "plan": order.plan,
-        "plan_title": "Pro" if order.plan == "pro" else order.plan.capitalize(),
+        # «docs» — разовый пакет, а не подписка Pro: capitalize() дал бы «Docs».
+        "plan_title": "Pro" if order.plan == "pro" else "Документы под сайт",
         "amount": order.amount,
         "created": order.created_at.strftime("%d.%m") if order.created_at else "",
         # Ссылка ведёт на перевыпуск: сохранённая в заказе ссылка банка к этому

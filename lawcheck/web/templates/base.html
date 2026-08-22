@@ -376,6 +376,18 @@
     .plan .plan-cta.ghost.dark { border-color: var(--navy); color: var(--navy); }
     .plan .plan-cta.ghost.dark:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
 
+    /* Полоса «Персональный аудит» на /pricing: не карточка в сетке самообслуживания,
+       а услуга руками юриста — широкая горизонтальная плашка под сеткой тарифов. */
+    .audit-band { display: grid; grid-template-columns: 1fr auto; gap: var(--s-7); align-items: center; }
+    .audit-band .name { margin-top: var(--s-4); }
+    .audit-band ul { flex: initial; margin: var(--s-3) 0 0; }
+    .audit-anchor { color: var(--ink-soft); font-size: var(--t-m); margin: 6px 0 0; }
+    .audit-bridge { font-size: var(--t-s); color: var(--faint); margin: var(--s-4) 0 0; }
+    @media (max-width: 880px) {
+      .audit-band { grid-template-columns: minmax(0, 1fr); }
+      .audit-cta-wrap .plan-cta { display: block; }
+    }
+
     .cmp { width: 100%; border-collapse: collapse; font-size: var(--t-m); margin-top: 8px; }
     .cmp th, .cmp td { text-align: left; padding: 14px 14px; }
     .cmp thead th { font-size: var(--t-s); color: var(--faint); text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid var(--line); }

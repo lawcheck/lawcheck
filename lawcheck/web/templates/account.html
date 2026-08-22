@@ -20,7 +20,8 @@
   {% if not active and order.status == 'paid' %}
   <div class="status-banner error" style="margin-top: 12px;">
     Доступ по этому заказу закончился. Мониторинг остановлен, шаблоны и PDF закрыты.
-    <a href="/pricing">Продлить Pro</a> — 990 ₽ за месяц.
+    <a href="/pricing">Заказать документы под сайт</a> — 8 000 ₽ разово, или
+    <a href="/pricing#pro">продлить Pro</a> — 990 ₽ за месяц.
   </div>
   {% elif order.status != 'paid' %}
   <div class="status-banner error" style="margin-top: 12px;">
