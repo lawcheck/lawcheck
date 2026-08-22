@@ -18,6 +18,8 @@ Markdown из них убран – редактор Дзена его не по
 | №1 | `01-385-saitov.txt` | `covers/01-385-saitov.png` | пт 14.08.2026 |
 | №2 | `02-shest-servisov.txt` | `covers/02-shest-servisov.png` | вт 18.08.2026 |
 | №3 | `03-otkuda-milliony.txt` | `covers/03-otkuda-milliony.png` | пт 21.08.2026 |
+| №4 | `04-platnye-tarify.txt` | `covers/04-platnye-tarify.png` | вт 25.08.2026 |
+| №5 | `05-slepye-zony.txt` | `covers/05-slepye-zony.png` | пт 28.08.2026 |
 
 Первая строка каждого файла – заголовок, дальше пустая строка и тело.
 

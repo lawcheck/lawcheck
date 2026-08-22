@@ -80,6 +80,36 @@ COVERS = {
 </div>
 <div class="site">lawchek.ru</div>
 """,
+    "04-platnye-tarify.png": BASE + f"""
+<style>
+  .row {{ display:flex; gap:18px; margin:38px 0 0; align-items:flex-end; }}
+  .card {{ flex:1; background:#fff; border:2px solid #e2e8f0; border-radius:18px;
+           padding:26px 0; text-align:center; }}
+  .card .n {{ font-size:56px; font-weight:800; color:{NAVY}; line-height:1; white-space:nowrap; }}
+  .card .n.free {{ color:{BRAND}; }}
+  .card .l {{ font-size:19px; color:{MUTED}; margin-top:10px; font-weight:600; }}
+</style>
+<div class="pad">
+  <div class="kicker">Проверка сайта на 152-ФЗ: цены 2026</div>
+  <div class="sub" style="font-size:52px; margin-top:10px">Отчёт стоит<br><span class="accent">от 0 до 4 900 ₽</span></div>
+  <div class="row">
+    <div class="card"><div class="n free">0 ₽</div><div class="l">vlip, LawCheck</div></div>
+    <div class="card"><div class="n">300 ₽</div><div class="l">saitscan</div></div>
+    <div class="card"><div class="n">599 ₽</div><div class="l">quickaudit</div></div>
+    <div class="card"><div class="n">4 900 ₽</div><div class="l">help152</div></div>
+  </div>
+</div>
+<div class="site">lawchek.ru</div>
+""",
+    "05-slepye-zony.png": BASE + f"""
+<div class="pad">
+  <div class="kicker">Проверка сайта на 152-ФЗ</div>
+  <div class="huge" style="font-size:170px">50<span style="color:{BRAND}">/</span>50</div>
+  <div class="rule"></div>
+  <div class="sub">Половину требований закона<br>робот <span class="crit">не видит никогда</span></div>
+</div>
+<div class="site">lawchek.ru</div>
+""",
 }
 
 AVATAR = f"""
