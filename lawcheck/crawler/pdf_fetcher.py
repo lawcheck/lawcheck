@@ -50,24 +50,39 @@ def fetch_pdf(url: str) -> PageSnapshot:
             # на внутренний адрес до того, как мы его увидим.
             follow_redirects=False,
         ) as client:
-            r = client.get(url)
+            r = client.send(client.build_request("GET", url), stream=True)
             for _ in range(_MAX_REDIRECTS):
                 if not r.is_redirect:
                     break
                 nxt = str(r.next_request.url) if r.next_request else ""
+                r.close()
                 try:
                     check_url(nxt)
                 except UnsafeUrl as e:
                     log.warning("pdf: редирект на непубличный адрес %s (%s)", nxt, e)
                     return PageSnapshot(url=url, status=0, error="unsafe_redirect")
-                r = client.get(nxt)
+                r = client.send(client.build_request("GET", nxt), stream=True)
             if r.is_redirect:
+                r.close()
                 return PageSnapshot(url=url, status=0, error="too_many_redirects")
             if r.status_code >= 400:
+                r.close()
                 return PageSnapshot(url=url, status=r.status_code, error=f"http {r.status_code}")
-            if len(r.content) > _MAX_PDF_BYTES:
-                return PageSnapshot(url=url, status=r.status_code, error="pdf too large")
-            text = _extract_text(r.content)
+            # Читаем тело порциями с потолком: проверка после client.get()
+            # означала, что 2 ГБ уже лежат в памяти, когда мы смотрим на лимит.
+            chunks: list[bytes] = []
+            received = 0
+            try:
+                for chunk in r.iter_bytes(chunk_size=64 * 1024):
+                    received += len(chunk)
+                    if received > _MAX_PDF_BYTES:
+                        return PageSnapshot(url=url, status=r.status_code,
+                                            error="pdf too large")
+                    chunks.append(chunk)
+            finally:
+                r.close()
+            data = b"".join(chunks)
+            text = _extract_text(data)
             return PageSnapshot(
                 url=url,
                 status=r.status_code,

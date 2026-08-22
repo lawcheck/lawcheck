@@ -24,13 +24,13 @@ lawchek.ru {
 	header @fonts Cache-Control "public, max-age=31536000, immutable"
 
 	# Остальная статика (favicon, картинки) имён с хэшем не имеет: обновление
-	# файла не меняет URL. Месяц — потолок, после которого правку уже не
-	# доставить вернувшемуся посетителю.
+	# файла не меняет URL. Сутки с must-revalidate — компромисс: правки дизайна
+	# доезжают за день, при этом повторные заходы в течение суток не бьют по api.
 	@static {
 		path /static/*
 		not path /static/fonts/*
 	}
-	header @static Cache-Control "public, max-age=2592000"
+	header @static Cache-Control "public, max-age=86400, must-revalidate"
 
 	# Access-лог для серверной аналитики (GoAccess читает его из общего тома).
 	log {

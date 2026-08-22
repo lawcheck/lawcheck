@@ -12,6 +12,17 @@ from lawcheck.crawler.url_guard import is_safe
 
 log = logging.getLogger(__name__)
 
+# Потолок на html/text одной страницы в снапшоте. Playwright отдаёт тело
+# целиком: страница-монстр (сгенерированный контент, data:-блобы) без потолка
+# раздувает память воркера и БД. Для юридических эвристик 5 МБ за глаза.
+_PAGE_TEXT_LIMIT = 5 * 1024 * 1024
+
+
+def _truncate(value: str | None) -> str:
+    if value and len(value) > _PAGE_TEXT_LIMIT:
+        return value[:_PAGE_TEXT_LIMIT]
+    return value or ""
+
 _BANNER_JS = """
 () => {
   const COOKIE_RE = /cookie|куки|кук[аи]\\b|cookies/i;
@@ -155,7 +166,7 @@ class Browser:
 
             status = response.status if response else 0
             title = await page.title()
-            html = await page.content()
+            html = _truncate(await page.content())
 
             anchors = await page.eval_on_selector_all(
                 "a[href]",
@@ -168,7 +179,7 @@ class Browser:
                     continue
                 links.append(Link(url=urljoin(url, href), text=a.get("text") or ""))
 
-            text = await page.evaluate("() => document.body ? document.body.innerText : ''")
+            text = _truncate(await page.evaluate("() => document.body ? document.body.innerText : ''"))
             # dict(), а не как есть: Playwright отдаёт свой TypedDict, а в
             # снапшоте лежат обычные словари (он же уезжает в JSON).
             cookies = [dict(c) for c in await ctx.cookies()]
@@ -218,4 +229,9 @@ class Browser:
         except Exception as e:
             return PageSnapshot(url=url, status=0, error=str(e), network=network)
         finally:
-            await ctx.close()
+            # Тирдаун контекста может сам бросить исключение — глотаем, чтобы
+            # не затереть исходную ошибку скана из блока try выше.
+            try:
+                await ctx.close()
+            except Exception:
+                log.debug("ctx close failed", exc_info=True)

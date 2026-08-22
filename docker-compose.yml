@@ -97,11 +97,21 @@ services:
   followups:
     build: .
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
+    # Явный список вместо env_file: контейнеру-рассыльщику не нужны ключ
+    # эквайринга, секрет сессий и INTERNAL_KEY — меньше секретов в процессе,
+    # который крутит чужие скрипты с cron-командами.
     environment:
       DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
+      SITE_BASE_URL: ${SITE_BASE_URL:-https://lawchek.ru}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-LawCheck <noreply@lawchek.ru>}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      REPLY_TO: ${REPLY_TO:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -131,9 +141,17 @@ services:
   inbox:
     build: .
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
+    # Явный список вместо env_file: поллеру почты нужны только креды ящика и
+    # бот для алертов — без ключа эквайринга, секретов сессий и INTERNAL_KEY.
+    environment:
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID:-}
     networks: [data_job]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]

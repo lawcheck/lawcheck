@@ -15,6 +15,7 @@ from lawcheck.crawler.crawler import Crawler
 from lawcheck.db import repo
 from lawcheck.net import force_ipv4
 from lawcheck.notify.monitoring import notify_monitoring
+from lawcheck.notify.telegram import esc, notify_owner
 
 # Контейнер IPv4-only — нужно и воркеру (рассылка клиентских diff в Telegram).
 force_ipv4()
@@ -30,6 +31,27 @@ def run_scan(scan_id: str, url: str, max_pages: int | None) -> None:
     except Exception as e:
         log.exception("scan %s failed", scan_id)
         repo.mark_error(scan_id, str(e))
+    finally:
+        _reap_stale()
+
+
+def _reap_stale() -> None:
+    """Зависшие «running» закрыть задним числом и доложить владельцу.
+
+    Каждый прогон воркера подметает чужие зависшие сканы: RQ убивает процесс
+    по job_timeout сигналом, и хвост run_scan (mark_error) не успевает
+    выполниться — без этого скан висит «running» вечно. Алерт только про
+    реально исправленные, чтобы не спамить при каждом запуске.
+    """
+    try:
+        for scan in repo.reap_stale_scans():
+            log.warning("скан %s (%s) завис в running — помечен как error",
+                        scan.id[:8], scan.url)
+            notify_owner(
+                f"⚠️ Скан <b>{esc(scan.url)}</b> не уложился в лимит времени "
+                f"и остановлен (заказу он был виден как вечная загрузка).")
+    except Exception:
+        log.exception("reap stale scans failed")
 
 
 async def _crawl_and_check(scan_id: str, url: str, max_pages: int | None) -> None:

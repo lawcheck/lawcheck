@@ -100,6 +100,24 @@ def test_u_vseh_inlayn_skriptov_est_nonce(client):
         assert nonce is not None
 
 
+def test_vse_shablony_na_diske_s_nonce():
+    """Статический сторож по всем шаблонам, а не только публичным URL.
+
+    Живой тест выше ходит по девяти адресам и не видит страницы за сессией
+    (dashboard, кабинет заказа, сброс пароля) — новый шаблон с инлайн-скриптом
+    без nonce уехал бы на прод незамеченным. Здесь проверяется каждый *.html
+    в каталоге шаблонов, рендерится он или нет.
+    """
+    import lawcheck
+    templates_dir = Path(lawcheck.__file__).parent / "web" / "templates"
+    offenders = []
+    for tpl in sorted(templates_dir.glob("*.html")):
+        for match in _INLINE_SCRIPT.finditer(tpl.read_text(encoding="utf-8")):
+            if "nonce=" not in match.group(0):
+                offenders.append(f"{tpl.name}: {match.group(0)[:80]}")
+    assert not offenders, "скрипты без nonce:\n" + "\n".join(offenders)
+
+
 def test_json_ld_tozhe_s_nonce(client):
     html = client.get("/pricing").text
     for tag in re.findall(r'<script[^>]*application/ld\+json[^>]*>', html, re.I):

@@ -32,7 +32,7 @@ BASE = f"""
 """
 
 COVERS = {
-    "01-385-saitov.png": BASE + f"""
+    "01-385-saitov.png": BASE + """
 <div class="pad">
   <div class="kicker">Проверил сайты малого бизнеса на 152-ФЗ</div>
   <div class="huge">385</div>

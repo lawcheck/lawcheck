@@ -77,10 +77,38 @@ def send_email(to: str, subject: str, html_body: str, text_body: str | None = No
                 if settings.smtp_starttls:
                     s.starttls(context=ssl.create_default_context())
                 _login_and_send(s, msg)
+        global _smtp_failures
+        _smtp_failures = 0
         return True
     except Exception as e:
         log.warning("mailer: письмо на %s не отправлено: %s", to, e)
+        _smtp_failure_alert(e)
         return False
+
+
+# Подряд неуспешные отправки через реальный SMTP. Падение одного письма — шум
+# (получатель в отпуске у mailer'а не бывает), а молчаливый отказ всего канала
+# теряет подтверждения регистрации и сбросы пароля незаметно.
+_SMTP_FAILURES_THRESHOLD = 5
+_smtp_failures = 0
+
+
+def _smtp_failure_alert(err: Exception) -> None:
+    global _smtp_failures
+    from lawcheck.config import settings as s
+    if not s.telegram_bot_token or not s.telegram_owner_chat_id:
+        return
+    _smtp_failures += 1
+    if _smtp_failures < _SMTP_FAILURES_THRESHOLD:
+        return
+    if _smtp_failures == _SMTP_FAILURES_THRESHOLD:
+        try:
+            from lawcheck.notify import telegram
+            telegram.notify_owner(
+                f"🔴 SMTP недоступен: {type(err).__name__}: {err}. "
+                f"Письма ({_smtp_failures} подряд) не уходят.")
+        except Exception:
+            log.exception("не удалось отправить алерт о недоступности SMTP")
 
 
 def _login_and_send(s: smtplib.SMTP, msg: EmailMessage) -> None:
