@@ -173,12 +173,13 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # Логин и пароль basic auth для /stats и /inbox. Файл лежит ТОЛЬКО на
-      # сервере и в git не попадает (см. .gitignore и caddy-auth.conf.example):
-      # хеш в репозитории означает, что пароль нельзя сменить, не сделав коммит,
-      # поэтому его и не меняли. ВАЖНО: файл должен существовать до `up`,
-      # иначе Docker создаст на его месте каталог и Caddy не стартует.
+      # Логин и пароль basic auth для /inbox и /stats — раздельные файлы,
+      # оба лежат ТОЛЬКО на сервере и в git не попадают (см. .gitignore и
+      # caddy-auth.conf.example): хеш в репозитории означает, что пароль
+      # нельзя сменить, не сделав коммит. ВАЖНО: оба файла должны существовать
+      # до `up`, иначе Docker создаст на их месте каталоги, Caddy не стартует.
       - ./caddy-auth.conf:/etc/caddy/auth.conf:ro
+      - ./caddy-auth-stats.conf:/etc/caddy/auth-stats.conf:ro
       - caddy_data:/data
       - caddy_config:/config
       - caddy_logs:/var/log/caddy

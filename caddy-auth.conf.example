@@ -1,14 +1,17 @@
-# Образец файла с кредами basic auth для /stats и /inbox.
+# Образец файлов с кредами basic auth. Их ДВА: у /inbox (заявки и лиды) и
+# /stats (аналитика GoAccess) пароли разные — компрометация одного раздела
+# не должна открывать второй.
 #
 # На сервере (рядом с docker-compose.yml):
 #     cp caddy-auth.conf.example caddy-auth.conf
+#     cp caddy-auth.conf.example caddy-auth-stats.conf
 #     docker run --rm caddy:2-alpine caddy hash-password --plaintext 'НОВЫЙ_ПАРОЛЬ'
-#     # вставить полученный хеш ниже, затем:
-#     docker compose up -d caddy
+#     # вставить полученные хеши в каждый файл, затем:
+#     docker compose up -d caddy   (или restart caddy после правки готового)
 #
-# Сам caddy-auth.conf в git не попадает (см. .gitignore). Файл ОБЯЗАН
-# существовать до `docker compose up`: иначе Docker создаст на его месте
-# каталог, и Caddy не стартует — сайт ляжет целиком.
+# Оба файла в git не попадают (см. .gitignore). Каждый ОБЯЗАН существовать
+# до `docker compose up`: иначе Docker создаст на его месте каталог,
+# и Caddy не стартует — сайт ляжет целиком.
 
 basic_auth {
 	maxim ЗАМЕНИТЬ_НА_ХЕШ_ИЗ_caddy_hash-password
