@@ -60,3 +60,6 @@ handoff/
 .claude/
 skills-lock.json
 
+
+# impeccable detector (CLI ставится через npx, вейверы живут инлайном в шаблонах)
+.impeccable/
