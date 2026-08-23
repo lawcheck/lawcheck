@@ -51,7 +51,8 @@ class RknOperatorCheck(Check):
                 evidence=f"Не удалось получить ответ от реестра операторов РКН для ИНН {inn} "
                          f"(причина: {result.error}). Сверку выполнить не удалось.",
                 location=snapshot.start_url, law_reference=LAW_REF,
-                recommendation=f"Проверьте вручную: https://pd.rkn.gov.ru/operators-registry/operators-list/?OrgInn={inn}",
+                recommendation=f"Проверьте вручную: https://pd.rkn.gov.ru/operators-registry/operators-list/?OrgInn={inn} "
+                               f"или через наш сервис: https://lawchek.ru/reestr-rkn",
             )]
 
         if result.operator is not None:
@@ -74,7 +75,8 @@ class RknOperatorCheck(Check):
                              f"осуществляется. Регистрация обязательна.",
                     location=snapshot.start_url, law_reference=LAW_REF,
                     recommendation="Подайте уведомление о намерении осуществлять обработку ПДн через "
-                                   "pd.rkn.gov.ru (раздел «Электронные сервисы»).",
+                                   "pd.rkn.gov.ru (раздел «Электронные сервисы»). Проверить, есть ли "
+                                   "организация в реестре, можно по ИНН: https://lawchek.ru/reestr-rkn",
                 )]
             return [Finding(
                 check_id=self.id, severity=Severity.INFO, title=self.title,
