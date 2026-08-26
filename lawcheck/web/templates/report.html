@@ -74,6 +74,26 @@
   </div>
   {% endif %}
 
+  {% if not unlocked %}
+    {% if subscribed %}
+    <div class="subscribe-box done" style="margin-top: 14px;">
+      ✅ Отчёт отправлен на почту. Мы сохранили результаты и сообщим, если на сайте появятся новые риски.
+    </div>
+    {% else %}
+    <form class="subscribe-box lead-hero" action="/report/{{ scan.id }}/subscribe" method="post" data-goal="email_subscribe">
+      <div class="sub-text">
+        <strong>Сохранить отчёт и отправить PDF на почту</strong>
+        <span>Пришлём полную детализацию с нормами КоАП РФ и чек-лист исправлений</span>
+      </div>
+      <div class="sub-row">
+        <input type="email" name="email" placeholder="you@company.ru" required
+               aria-label="Email для отправки отчёта">
+        <button type="submit">Получить PDF</button>
+      </div>
+    </form>
+    {% endif %}
+  {% endif %}
+
   {% if unlocked %}
   <div class="subscribe-box done">
     ✅ Оплата прошла — все рекомендации «Как исправить» открыты ниже.
@@ -195,12 +215,12 @@
   <div class="offer-final">
     <div class="upsell">
       <div class="upsell-text">
-        <strong>{% if risk and risk.max %}Закрыть риск на {{ risk.max|money }} ₽ — 8 000 ₽{% else %}Закрыть найденные нарушения — 8 000 ₽{% endif %}</strong>
-        <span>Юрист разбирает ваш отчёт и присылает готовые документы под ваш сайт: Политика, согласия, уведомление в РКН, PDF-заключение и список правок. Разово, срок 5 рабочих дней.</span>
+        <strong>{% if risk and risk.max %}Снять риск штрафа до {{ risk.max|money }} ₽ за 8 000 ₽{% else %}Закрыть все найденные нарушения — 8 000 ₽{% endif %}</strong>
+        <span>Юрист Максим Подольский лично изучит отчёт и подготовит под ключ полный пакет: Политику, текст согласий, уведомление в Роскомнадзор и конкретный список правок для верстальщика. Срок — 5 рабочих дней.</span>
       </div>
       <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Заказать документы — 8 000 ₽</a>
     </div>
-    <p class="trust-row">Оплата разово, без автопродления · чек по 54-ФЗ на почту · по <a href="/oferta">оферте</a></p>
+    <p class="trust-row">Оплата разово, без автопродления · официальный чек по 54-ФЗ · работаем по <a href="/oferta">оферте</a></p>
   </div>
   {% endif %}
 

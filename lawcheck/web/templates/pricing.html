@@ -57,7 +57,7 @@
 <div class="upsell" style="margin-bottom: 20px;">
   <div class="upsell-text">
     <strong>Ваш отчёт по {{ scan_ctx.url }}</strong>
-    <span>{% if scan_ctx.locked %}{{ scan_ctx.locked }} исправлени{{ 'е' if scan_ctx.locked == 1 else ('я' if scan_ctx.locked in (2,3,4) else 'й' ) }} ждут открытия — {% endif %}закажите «Документы под сайт» — юрист подготовит их под этот отчёт. Или откройте Pro: рецепты, PDF и мониторинг.</span>
+    <span>{% if scan_ctx.locked %}{{ scan_ctx.locked }} исправлени{{ 'е' if scan_ctx.locked == 1 else ('я' if scan_ctx.locked in (2,3,4) else 'й' ) }} ждут открытия — {% endif %}пакет «Документы под сайт» за 8 000 ₽ полностью закрывает риски: юрист Максим Подольский подготовит комплект документов именно под ваш отчёт и даст чёткие указания по правкам.</span>
   </div>
   <a href="/report/{{ scan_ctx.id }}" class="upsell-cta" style="background: transparent; border: 1px solid #ffffff55;">← к отчёту</a>
 </div>
@@ -89,8 +89,8 @@
     <ul>
       <li>проверка вашего сайта и PDF-заключение юриста</li>
       <li>готовые документы под ваш сайт: Политика, согласия, уведомление в РКН</li>
-      <li>юрист проверяет документы лично перед отправкой</li>
-      <li>список правок на вашем сайте: что и где поправить</li>
+      <li>юрист Максим Подольский проверяет сайт и документы лично перед отправкой</li>
+      <li>список конкретных правок на вашем сайте: что и где поправить</li>
       <li>срок — 5 рабочих дней с оплаты</li>
     </ul>
     <form class="buy-form" action="/buy/docs" method="post" data-goal="pay_click">
