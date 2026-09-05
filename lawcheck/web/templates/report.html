@@ -30,8 +30,8 @@
       </div>
     {% else %}
       <div class="rec locked">
-        <strong>🔒 Как исправить</strong> — готовый текст в пакете «Документы под сайт».
-        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Снять риск — {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} и готовые документы за 8 000 ₽</a>
+        <strong>🔒 Как исправить</strong> — готовый текст открывается на тарифе Pro.
+        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Снять риск — {{ locked_total }} исправлен{{ 'ие' if locked_total == 1 else ('ия' if locked_total in (2,3,4) else 'ий') }} за 990 ₽</a>
       </div>
     {% endif %}
   {% endif %}
