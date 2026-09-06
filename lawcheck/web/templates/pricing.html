@@ -60,7 +60,11 @@
     {# Пришедший из замка отчёта кликнул «Открыть N исправлений — 990 ₽»:
        баннер обязан подтвердить это обещание, а не подменить его пакетом
        за 8 000 ₽ (вики free-report-gating, lawcheck-otchet-put-do-oplaty). #}
-    <span>{% if scan_ctx.locked %}Под замком — {{ scan_ctx.locked|fixes }}. Открыть готовые тексты и чинить самому — <a href="#pro">Pro за 990 ₽</a>. {% endif %}Отдать работу юристу — пакет «Документы под сайт» за 8 000 ₽: Максим Подольский подготовит комплект именно под ваш отчёт и даст чёткие указания по правкам.</span>
+    {% if scan_ctx.offer == 'pro' %}
+    <span>{% if scan_ctx.locked %}Под замком — {{ scan_ctx.locked|fixes }}. {% endif %}Открыть готовые тексты и починить самому — <a href="#pro">Pro за 990 ₽</a>. Если правки делать некому, пакет «Документы под сайт» за 8 000 ₽ закроет их руками юриста.</span>
+    {% else %}
+    <span>{% if scan_ctx.locked %}Под замком — {{ scan_ctx.locked|fixes }}. {% endif %}Отдать работу юристу — пакет «Документы под сайт» за 8 000 ₽: Максим Подольский подготовит комплект именно под ваш отчёт и даст чёткие указания по правкам. Чинить самому по готовым текстам — <a href="#pro">Pro за 990 ₽</a>.</span>
+    {% endif %}
   </div>
   <a href="/report/{{ scan_ctx.id }}" class="upsell-cta" style="background: transparent; border: 1px solid #ffffff55;">← к отчёту</a>
 </div>
@@ -84,7 +88,7 @@
      чек 990 ₽ не окупает платный трафик (CAC 11 607 ₽), средним продуктом стал
      разовый пакет «Документы под сайт» за 8 000 ₽ — при нём окупаемость требует
      конверсии ~2,7%, а не недостижимых 22%. Он же главный CTA отчёта. #}
-  <div class="plan featured{% if scan_ctx %} buy-first{% endif %}">
+  <div class="plan featured{% if scan_ctx and scan_ctx.offer != 'pro' %} buy-first{% endif %}">
     <span class="rec-badge">рекомендуем</span>
     <div class="name">Документы под сайт</div>
     <div class="price">8 000 ₽</div>
@@ -135,7 +139,7 @@
     </script>
   </div>
 
-  <div class="plan" id="pro">
+  <div class="plan{% if scan_ctx and scan_ctx.offer == 'pro' %} buy-first{% endif %}" id="pro">
     <div class="name">Pro</div>
     <div class="price">990 ₽</div>
     <div class="price-note">за месяц доступа, без автопродления · или 9 900 ₽ в год</div>

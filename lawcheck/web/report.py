@@ -273,12 +273,15 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
                     p.id in open_rec_ids for p in card.parts):
                 open_rec_ids.add(card.id)
 
+    risk = fines.risk_total(scan.findings)
     return _indexing(templates.TemplateResponse(request, "report.html", {
         "scan": scan,
         "blocks": blocks,
         "counts": counts,
         "compliance": compliance,
-        "risk": fines.risk_total(scan.findings),
+        "risk": risk,
+        # Главный оффер зависит от тяжести отчёта: см. gating.primary_offer.
+        "offer": gating.primary_offer(scan.findings, risk),
         "is_https": _channel_secure(scan),
         "is_active": scan.status in ("pending", "running"),
         "open_rec_ids": open_rec_ids,

@@ -4,6 +4,7 @@
 одинаковым замком, а /pricing считал исправления по-своему — обещание «открыть
 18 исправлений» встречало числом 23 (вики lawcheck-otchet-put-do-oplaty).
 """
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -160,3 +161,52 @@ def test_section_without_recipe_does_not_lock_paid_report(client):
     oid = _paid_order_for_scan()
     assert client.get(f"/report/{SCAN_ID}?order={oid}").status_code == 303
     assert "🔒 Как исправить" not in client.get(f"/report/{SCAN_ID}").text
+
+
+def _light_scan():
+    """Лёгкий отчёт: две некритичных находки, риск заведомо ниже порога."""
+    with session_scope() as s:
+        s.add(Scan(id=SCAN_ID, url="https://mysite.ru", status="done", pages_crawled=3))
+        for cid in ("F1.price", "F2.return"):
+            s.add(Finding(scan_id=SCAN_ID, check_id=cid, severity="warning",
+                          title=f"Находка {cid}", evidence="", location="",
+                          law_reference="ст. 10 ЗоЗПП", recommendation=f"Почините {cid}."))
+
+
+def _hero(html: str) -> str:
+    """Блок оффера на первом экране — тот же заголовок стоит и в нижнем
+    апселле, поэтому проверять надо именно шапку."""
+    m = re.search(r'<div class="upsell offer-hero">(.*?)</div>\s*</div>', html, re.S)
+    assert m, "блок offer-hero не найден"
+    return m.group(1)
+
+
+def test_light_report_leads_with_pro(client):
+    """Пакет за 8 000 ₽ несоразмерен двум мелким находкам — зовём в Pro."""
+    _light_scan()
+    html = client.get(f"/report/{SCAN_ID}").text
+    hero = _hero(html)
+    assert "990 ₽" in hero and "8 000 ₽" not in hero
+    assert "Открыть исправления — 990 ₽" in html      # CTA в оглавлении заодно
+    # пакет никуда не делся — он остаётся апселлом под находками
+    assert "Заказать документы — 8 000 ₽" in html
+
+
+def test_heavy_report_leads_with_docs_package(client):
+    """Двадцать пунктов руками никто не чинит — главным идёт пакет документов."""
+    _scan(sections=8, others=3)
+    hero = _hero(client.get(f"/report/{SCAN_ID}").text)
+    assert "8 000 ₽" in hero and "990 ₽" not in hero
+
+
+def test_pricing_banner_follows_report_offer(client):
+    """Баннер тарифов зовёт в тот же продукт, что и CTA отчёта."""
+    _light_scan()
+    banner = client.get(f"/pricing?scan={SCAN_ID}").text
+    assert "Открыть готовые тексты и починить самому" in banner
+
+
+def test_short_report_opens_one_recipe(client):
+    _light_scan()
+    html = client.get(f"/report/{SCAN_ID}").text
+    assert html.count("<strong>Как исправить:</strong>") == 1
