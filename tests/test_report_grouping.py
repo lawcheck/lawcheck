@@ -112,3 +112,51 @@ def test_paid_report_opens_recipes_inside_grouped_card(client):
     assert "🔒 Как исправить" not in r.text
     # рецепты отдельных разделов доступны внутри раскрывающегося списка
     assert "Добавьте в Политику раздел «Раздел 3»." in r.text
+
+
+def _scan_with_low_severity_section():
+    """Хвост сортировки — раздел Политики: он же кандидат в бесплатный тизер."""
+    with session_scope() as s:
+        s.add(Scan(id=SCAN_ID, url="https://mysite.ru", status="done", pages_crawled=3))
+        for i in range(3):
+            s.add(Finding(scan_id=SCAN_ID, check_id=f"A3.sec{i}", severity="critical",
+                          title=f"Обязательные разделы Политики обработки ПДн: Раздел {i}",
+                          evidence="Раздел не найден", location="https://mysite.ru/policy",
+                          law_reference="ст. 18.1 ч. 2 152-ФЗ",
+                          recommendation=f"Добавьте в Политику раздел «Раздел {i}»."))
+        # самая лёгкая находка отчёта — info-раздел Политики: сортировка
+        # critical→warning→info ставит его в самый хвост, то есть в тизер
+        s.add(Finding(scan_id=SCAN_ID, check_id="A3.cross_border", severity="info",
+                      title="Обязательные разделы Политики обработки ПДн: Трансграничная передача",
+                      evidence="Нет раздела", location="https://mysite.ru/policy",
+                      law_reference="ст. 12 152-ФЗ",
+                      recommendation="Добавьте раздел о трансграничной передаче."))
+        for cid, sev in [("B1.form", "critical"), ("D1.cookie", "warning"),
+                         ("G1.ads", "warning")]:
+            s.add(Finding(scan_id=SCAN_ID, check_id=cid, severity=sev,
+                          title=f"Находка {cid}", evidence="", location="",
+                          law_reference="ст. 1", recommendation=f"Почините {cid}."))
+
+
+def test_free_teaser_survives_grouping(client):
+    """Свёрнутая карточка открывается только целиком, поэтому бесплатные рецепты
+    должны доставаться находкам вне свёртки — иначе тизер молча теряется."""
+    _scan_with_low_severity_section()
+    html = client.get(f"/report/{SCAN_ID}").text
+    assert html.count("<strong>Как исправить:</strong>") == 2
+    # и ни один из них не спрятан внутри свёрнутой карточки
+    assert "Добавьте раздел о трансграничной передаче." not in html
+
+
+def test_section_without_recipe_does_not_lock_paid_report(client):
+    """Часть без рецепта не должна попадать в свёртку: её id не бывает
+    в open_rec_ids, и оплаченный отчёт остался бы с замком."""
+    _scan(sections=3, others=1)
+    with session_scope() as s:
+        s.add(Finding(scan_id=SCAN_ID, check_id="A3.no_recipe", severity="warning",
+                      title="Обязательные разделы Политики обработки ПДн: Без рецепта",
+                      evidence="Нет раздела", location="https://mysite.ru/policy",
+                      law_reference="ст. 18.1 ч. 2 152-ФЗ", recommendation=""))
+    oid = _paid_order_for_scan()
+    assert client.get(f"/report/{SCAN_ID}?order={oid}").status_code == 303
+    assert "🔒 Как исправить" not in client.get(f"/report/{SCAN_ID}").text
