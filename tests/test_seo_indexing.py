@@ -31,7 +31,10 @@ def test_robots_skleivaet_reklamnye_metki(client):
     assert r.status_code == 200
     clean = [ln for ln in r.text.splitlines() if ln.startswith("Clean-param:")]
     assert len(clean) == 1
-    for param in ("utm_source", "utm_medium", "utm_campaign", "yclid", "_openstat"):
+    # etext ставит сам Яндекс при переходе из выдачи — 17.08.2026 главная
+    # с такой меткой оказалась в индексе отдельной страницей
+    for param in ("utm_source", "utm_medium", "utm_campaign", "yclid",
+                  "_openstat", "etext", "ysclid"):
         assert param in clean[0]
 
 
@@ -110,3 +113,22 @@ def test_sitemap_datiruet_listing_bloga_svezhei_statei(client, monkeypatch):
     assert r.status_code == 200
     assert (f"<loc>http://testserver/blog</loc><lastmod>{max(dates)}</lastmod>"
             in r.text)
+
+
+def test_reestr_rkn_soderzhit_tochnye_formulirovki_zaprosov(client):
+    """Кластер запросов пишет «Роскомнадзора» полным словом, а страница
+    везде сокращала до «РКН» — точное вхождение потеряно в title и H1."""
+    r = client.get("/reestr-rkn")
+    assert r.status_code == 200
+    head = r.text[:r.text.index("</head>")]
+    assert "Реестр операторов персональных данных Роскомнадзора" in head
+    assert "<h1>Проверка в реестре операторов персональных данных Роскомнадзора по ИНН</h1>" in r.text
+
+
+def test_reestr_rkn_otvechaet_na_informacionnyy_intent(client):
+    """Половину выдачи по кластеру держат статьи «как проверить себя
+    в реестре» — инструмент без инструкции им проигрывает."""
+    r = client.get("/reestr-rkn")
+    assert "Как проверить компанию в реестре Роскомнадзора самостоятельно" in r.text
+    assert "pd.rkn.gov.ru" in r.text
+    assert "10 цифр" in r.text and "12" in r.text
