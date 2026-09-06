@@ -111,11 +111,17 @@
   {% if not unlocked and (counts.critical or counts.warning) %}
   <div class="upsell offer-hero">
     <div class="upsell-text">
+      {% if offer == 'pro' %}
+      <strong>Открыть все исправления — 990 ₽</strong>
+      <span>Готовые тексты под каждую находку, шаблоны Политики и согласия,
+        черновик уведомления в РКН и еженедельная перепроверка сайта.</span>
+      {% else %}
       <strong>Юрист сделает документы под ваш сайт — 8 000 ₽</strong>
       <span>Политика, тексты согласий, уведомление в РКН и список правок для верстальщика —
         под находки этого отчёта. Срок 5 рабочих дней.</span>
+      {% endif %}
     </div>
-    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Заказать документы</a>
+    <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">{{ 'Открыть исправления' if offer == 'pro' else 'Заказать документы' }}</a>
   </div>
   {% endif %}
 
@@ -209,7 +215,7 @@
         {% endfor %}
       </ul>
       {% if not unlocked and (counts.critical or counts.warning) %}
-      <a href="/pricing?scan={{ scan.id }}" class="toc-cta" data-goal="pricing_click">Юрист сделает документы — 8 000 ₽</a>
+      <a href="/pricing?scan={{ scan.id }}" class="toc-cta" data-goal="pricing_click">{{ 'Открыть исправления — 990 ₽' if offer == 'pro' else 'Юрист сделает документы — 8 000 ₽' }}</a>
       {% endif %}
     </aside>
 

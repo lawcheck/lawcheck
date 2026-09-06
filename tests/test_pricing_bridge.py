@@ -46,8 +46,9 @@ def test_pricing_bridge_shown_for_scan(client):
     assert r.status_code == 200
     assert "Ваш отчёт по" in r.text
     assert "https://mysite.ru" in r.text
-    # 5 проблем с рецептами − 2 бесплатных = 3 закрытых
-    assert "3 исправления" in r.text
+    # 5 проблем с рецептами − 1 бесплатный = 4 закрытых: короткий отчёт
+    # отдаёт один рецепт, а не два (gating.SMALL_REPORT)
+    assert "4 исправления" in r.text
     # scan_id пробрасывается в форму покупки
     assert f'name="scan_id" value="{SCAN_ID}"' in r.text
 

@@ -138,7 +138,9 @@ def test_build_context_fields():
     assert ctx["critical"] == 2
     assert len(ctx["top3"]) == 3
     assert ctx["top3"][0] in ("Нет согласия у формы", "Нет политики ПДн")  # critical сверху
-    assert ctx["locked"] == 2                 # 4 рецепта − 2 бесплатных
+    # 4 рецепта − 1 бесплатный: на коротком отчёте тизер открывает один,
+    # иначе даром уходит половина товара (gating.SMALL_REPORT)
+    assert ctx["locked"] == 3
     assert "152-ФЗ" in ctx["laws"]
     assert ctx["unsub_url"].endswith("/unsubscribe/tok-a@x.ru")  # отписка без UTM
     assert lid  # sanity

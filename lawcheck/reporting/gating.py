@@ -13,6 +13,18 @@ FREE_RECIPES = 2
 
 SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2, "ok": 3}
 
+# Отчёт «лёгкий», пока нарушений мало и риск не набрал полумиллиона: там пакет
+# за 8 000 ₽ несоразмерен находкам (четыре пункта, два из них по 5–10 тыс ₽
+# штрафа), и главным оффером идёт Pro за 990 ₽ — тот самый, которым оплачены
+# все состоявшиеся продажи. Тяжёлому отчёту наоборот: чинить руками два десятка
+# пунктов человек не станет, ему нужен пакет с документами под ключ.
+HEAVY_RISK = 500_000
+HEAVY_CRITICAL = 3
+
+# На коротком отчёте два бесплатных рецепта — это половина товара: находок
+# с рецептом всего четыре. Тизер оставляем, но одним.
+SMALL_REPORT = 5
+
 # Префикс проверок, чьи находки сворачиваются в одну карточку отчёта.
 GROUPED_PREFIX = "A3"
 
@@ -35,6 +47,18 @@ def will_collapse(findings) -> bool:
     return sum(1 for f in ordered_problems(findings) if is_grouped(f)) >= 2
 
 
+def free_recipes_for(problems: list) -> int:
+    """Сколько рецептов открыть бесплатно при таком объёме находок."""
+    return 1 if len(problems) <= SMALL_REPORT else FREE_RECIPES
+
+
+def primary_offer(findings, risk: dict | None = None) -> str:
+    """Какой продукт главный на этом отчёте: 'pro' (990 ₽) или 'docs' (8 000 ₽)."""
+    criticals = sum(1 for f in findings if f.severity == "critical")
+    risk_max = (risk or {}).get("max") or 0
+    return "docs" if criticals >= HEAVY_CRITICAL or risk_max >= HEAVY_RISK else "pro"
+
+
 def gate(findings) -> tuple[set, int]:
     """(id открытых рецептов, число закрытых исправлений) — один источник правды.
 
@@ -47,7 +71,8 @@ def gate(findings) -> tuple[set, int]:
     collapsed = will_collapse(findings)
     # Хвост = наименее тяжёлые: тизер на мелочи, crown-jewel фиксы под замком.
     teaser_pool = [f for f in problems if not (collapsed and is_grouped(f))]
-    free_ids = {f.id for f in teaser_pool[-FREE_RECIPES:]} if FREE_RECIPES else set()
+    free_n = free_recipes_for(problems)
+    free_ids = {f.id for f in teaser_pool[-free_n:]} if free_n else set()
     locked = [f for f in problems if f.id not in free_ids]
     grouped_locked = [f for f in locked if is_grouped(f)]
     return free_ids, len(locked) - max(0, len(grouped_locked) - 1)

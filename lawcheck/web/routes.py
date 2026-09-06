@@ -369,8 +369,12 @@ async def pricing(request: Request, scan: str = ""):
     if scan_id:
         s = await asyncio.to_thread(repo.get_scan, scan_id)
         if s is not None and s.status == "done":
+            # Баннер обязан звать в тот же продукт, что и CTA отчёта,
+            # иначе человек снова упирается в подмену цены.
             scan_ctx = {"url": s.url,
                         "locked": gating.locked_fix_count(s.findings),
+                        "offer": gating.primary_offer(s.findings,
+                                                      fines.risk_total(s.findings)),
                         "id": s.id}
     response = templates.TemplateResponse(request, "pricing.html",
                                       {"example": example, "scan_id": scan_id,
