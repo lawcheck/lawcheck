@@ -854,6 +854,13 @@
     .upsell-text a { color: #fff; text-decoration: underline; }
     .upsell-cta { flex-shrink: 0; background: var(--brand); color: #fff; padding: 13px 24px; border-radius: var(--r-m); font-weight: 600; font-size: var(--t-m); text-decoration: none; }
     .upsell-cta:hover { background: var(--brand-hover); }
+    /* Кто делает работу — строкой под ценой тарифа */
+    .plan-who { margin: 10px 0 2px; font-size: var(--t-s); font-weight: 600; color: var(--ink-soft); }
+    /* Блок «в чём разница» между тарифами */
+    .diff-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--s-6); margin-top: var(--s-5); }
+    .diff-col h3 { margin: 0 0 8px; font-size: var(--t-l); }
+    .diff-col p { margin: 0 0 10px; color: var(--ink-soft); line-height: 1.6; }
+    .diff-verdict { margin-top: var(--s-5); padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-m); color: var(--ink); }
     /* Тот же оффер на первом экране, сразу под суммой риска */
     .upsell.offer-hero { margin-top: 14px; }
     /* Разбивка суммы риска по статьям — «откуда цифра» */

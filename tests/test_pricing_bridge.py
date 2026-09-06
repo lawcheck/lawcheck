@@ -63,3 +63,15 @@ def test_pricing_bridge_ignores_unknown_scan(client):
     r = client.get("/pricing?scan=deadbeef")
     assert r.status_code == 200
     assert "Ваш отчёт по" not in r.text
+
+
+def test_raznica_mezhdu_pro_i_paketom_nazvana_slovami(client):
+    """Тарифы отличаются в восемь раз по цене; пока разница жила одной строкой
+    таблицы, человек читал «то же самое, но дороже» и выбирал дешёвое или ничего."""
+    r = client.get("/pricing")
+    assert r.status_code == 200
+    assert "990 или 8 000" in r.text
+    assert "Правки делаете вы, по готовым текстам" in r.text
+    assert "Документы делает юрист и подписывает результат" in r.text
+    assert "Кто делает работу" in r.text          # строка в сравнении тарифов
+    assert "Чем Pro отличается от пакета" in r.text  # вопрос в FAQ
