@@ -74,7 +74,7 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
         # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
         bg.add_task(telegram.notify_owner,
                     f"🔔 Клик «Оплатить {plan_title(plan)}» ({amount} ₽) от <b>{telegram.esc(email)}</b>. "
-                    f"Касса в fallback — возможно, придёт заявка на {OPERATOR['email']}.")
+                    f"Касса в fallback – возможно, придёт заявка на {OPERATOR['email']}.")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
 
     scan_id = scan_id.strip()

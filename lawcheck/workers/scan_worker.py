@@ -45,7 +45,7 @@ def _reap_stale() -> None:
     """
     try:
         for scan in repo.reap_stale_scans():
-            log.warning("скан %s (%s) завис в running — помечен как error",
+            log.warning("скан %s (%s) завис в running – помечен как error",
                         scan.id[:8], scan.url)
             notify_owner(
                 f"⚠️ Скан <b>{esc(scan.url)}</b> не уложился в лимит времени "

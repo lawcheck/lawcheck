@@ -28,14 +28,14 @@ def test_g1_no_superlatives_ok():
 
 def test_g1_superlatives_without_ad_signs_info_only():
     # Информационный сайт без рекламы: превосходная степень — не нарушение, INFO
-    [f] = SuperlativesCheck().run(_snap(text="Наш сервис — самый удобный на рынке"))
+    [f] = SuperlativesCheck().run(_snap(text="Наш сервис – самый удобный на рынке"))
     assert f.severity == Severity.INFO
     assert "не применяются" in f.evidence
 
 
 def test_g1_finds_samyj_and_warns():
     [f] = SuperlativesCheck().run(_snap(
-        text="Наш сервис — самый удобный на рынке", network=_ADS_NETWORK))
+        text="Наш сервис – самый удобный на рынке", network=_ADS_NETWORK))
     assert f.severity == Severity.WARNING
     assert "сам" in f.evidence.lower()
 
@@ -63,7 +63,7 @@ def test_g2_bad_without_disclaimer_and_without_ad_signs_info_only():
     # Сайт про собственную БАД без размещения рекламы: ст. 25 38-ФЗ
     # к информации о своих товарах не применяется — INFO, не WARNING
     findings = CategoryDisclaimersCheck().run(_snap(
-        text="Наша БАД для иммунитета — биологически активная добавка"
+        text="Наша БАД для иммунитета – биологически активная добавка"
     ))
     by_id = {f.check_id: f for f in findings}
     assert "G2.bad" in by_id
@@ -73,7 +73,7 @@ def test_g2_bad_without_disclaimer_and_without_ad_signs_info_only():
 
 def test_g2_bad_without_disclaimer_with_ad_signs_warns():
     findings = CategoryDisclaimersCheck().run(_snap(
-        text="Наша БАД для иммунитета — биологически активная добавка",
+        text="Наша БАД для иммунитета – биологически активная добавка",
         network=_ADS_NETWORK,
     ))
     by_id = {f.check_id: f for f in findings}

@@ -64,7 +64,7 @@
          12 → 14 → 16 → 20 → h3/h2 28 → display 38 → h1 48.
          impeccable-disable flat-type-hierarchy: редакционная лесенка
          12-14-16-20 (caption/small/body/lead); требование шага 1.25 от 12px
-         даёт 12→15→19→24 — переделка всей метрики текста, не полировка */
+         даёт 12→15→19→24 – переделка всей метрики текста, не полировка */
       --t-xs: 12px; --t-m: 14px; --t-l: 16px; --t-xl: 20px;
       /* --t-s схлопнут в --t-m: ступень 13px между 12 и 14 давала плоскую
          шкалу без иерархии (детектор impeccable: flat-type-hierarchy).
@@ -87,7 +87,7 @@
       --sh-brand-hover: 0 6px 20px rgba(0, 0, 0, .22);
       /* шкала отступов, шаг 4px. Для внутренних полей карточек, зазоров в сетках
          и вертикального ритма секций. Мелкие интерактивные элементы (кнопки, поля,
-         бейджи) держат свои значения — там padding подобран под высоту касания. */
+         бейджи) держат свои значения – там padding подобран под высоту касания. */
       --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
       --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 48px;
       --s-9: 64px; --s-10: 96px;   /* воздух между секциями полотна */
@@ -105,7 +105,7 @@
       background: var(--page); color: var(--ink);
       line-height: 1.5;
       /* держит полноширинную .pull-quote: 100vw шире body на ширину скроллбара.
-         clip, а не hidden — hidden сделал бы шапку .topnav неслипкой.
+         clip, а не hidden – hidden сделал бы шапку .topnav неслипкой.
          impeccable-disable clipped-overflow-container: осознанный клип,
          всплывающих слоёв вне врапперов на body нет */
       overflow-x: clip;
@@ -131,7 +131,7 @@
 
     /* --- Top-nav --- */
     /* Шапка полупрозрачная с размытием: контент проезжает под ней, а не упирается
-       в глухую плашку. background оставлен непрозрачным фолбэком — Firefox до 103
+       в глухую плашку. background оставлен непрозрачным фолбэком – Firefox до 103
        и старые вебкиты backdrop-filter не знают */
     .topnav { border-bottom: 1px solid var(--line); background: rgba(255,255,255,.94); position: sticky; top: 0; z-index: 20; }
     @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
@@ -171,7 +171,7 @@
 
     /* --- Hero лендинга --- */
     /* Герой во всю ширину окна: холодный градиент отделяет первый экран от
-       белого полотна. Приём тот же, что у .pull-quote — 100vw и отрицательные поля */
+       белого полотна. Приём тот же, что у .pull-quote – 100vw и отрицательные поля */
     .hero {
       display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: center;
       margin: calc(-1 * var(--s-7)) calc(50% - 50vw) var(--s-8);
@@ -264,7 +264,7 @@
     .what-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
     @media (max-width: 820px) { .what-grid { grid-template-columns: minmax(0, 1fr); } }
     /* max-width: полотно стало 1200px, и без ограничения строка описания
-       уезжает под 150 знаков — такую длину глаз уже не держит */
+       уезжает под 150 знаков – такую длину глаз уже не держит */
     .checklist { list-style: none; max-width: 900px; margin: 0; padding: 0; }
     .checklist li { display: flex; gap: var(--s-4); padding: var(--s-4) 0; border-bottom: 1px solid var(--line2); }
     .checklist li:last-child { border-bottom: 0; }
@@ -344,7 +344,7 @@
     .price-hero .price-math strong { color: var(--risk); }
     .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-6); align-items: stretch; }
     /* В одну колонку карточки встают стопкой, и пришедший платить упирается
-       сначала в Free с кнопкой «Запустить проверку» — шаг назад от того, за чем
+       сначала в Free с кнопкой «Запустить проверку» – шаг назад от того, за чем
        он пришёл. На узком экране Pro поднимаем первым. */
     @media (max-width: 880px) { .plans { grid-template-columns: minmax(0, 1fr); }
                                 .plans .plan.featured { order: -1; } }
@@ -377,7 +377,7 @@
     .plan .plan-cta.ghost.dark:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
 
     /* Полоса «Персональный аудит» на /pricing: не карточка в сетке самообслуживания,
-       а услуга руками юриста — широкая горизонтальная плашка под сеткой тарифов. */
+       а услуга руками юриста – широкая горизонтальная плашка под сеткой тарифов. */
     .audit-band { display: grid; grid-template-columns: 1fr auto; gap: var(--s-7); align-items: center; }
     .audit-band .name { margin-top: var(--s-4); }
     .audit-band ul { flex: initial; margin: var(--s-3) 0 0; }
@@ -757,7 +757,7 @@
       }
     }
     /* Раньше .pill был просто цветным текстом с бледной заливкой: на сером
-       фоне карточки её было видно, на белом — уже нет. Делаем таблеткой. */
+       фоне карточки её было видно, на белом – уже нет. Делаем таблеткой. */
     .pill { display: inline-block; font-size: var(--t-xs); font-weight: 700; border-radius: var(--r-full); padding: 3px 10px; white-space: nowrap; }
     .pill.critical { background: var(--crit-soft); color: var(--crit); }
     /* --warn и --info на своих подложках дают 3,3:1 и 4,3:1 — мелкому тексту мало.
@@ -785,7 +785,7 @@
     .finding.info     { border-left-color: var(--info); }
     .finding.ok       { border-left-color: var(--ok); }
     /* Демо-находка на лендинге: та же вёрстка, что в отчёте, но без сигнального
-       красного — на витрине он читается как украшение. В самом отчёте severity
+       красного – на витрине он читается как украшение. В самом отчёте severity
        остаётся цветным, там он отличает критичное от предупреждения. */
     .finding.demo.critical { border-left-color: var(--risk); }
     .finding.demo .pill.critical { background: var(--line2); color: var(--ink-soft); }
@@ -1012,7 +1012,7 @@
       width: 340px; max-width: calc(100vw - 36px); background: var(--surface);
       border: 0; border-radius: var(--r-l); overflow: hidden;
       /* возвышение одной тенью, без дежурной рамки рядом: связка
-         «граница + широкое размытие» — сигнатура сгенерированного UI */
+         «граница + широкое размытие» – сигнатура сгенерированного UI */
       box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
     #lc-chat-panel[hidden] { display: none; }
     .lc-chat-head { display: flex; align-items: center; justify-content: space-between;
@@ -1091,7 +1091,7 @@
 
     /* --- Section layout variation: full-width pull quote --- */
     /* Единственная полноширинная секция страницы. Всё остальное живёт в колонке
-       1040px на одном светлом фоне — без этого разрыва полотно идёт непрерывно
+       1040px на одном светлом фоне – без этого разрыва полотно идёт непрерывно
        от шапки до подвала. Тёмная полоса ставит паузу ровно в середине.
        margin-inline вытягивает блок из .container; клип по горизонтали на body
        нужен, потому что 100vw шире body на ширину скроллбара. Именно clip,
@@ -1121,7 +1121,7 @@
     .fine-cards .fine-card:nth-child(2) { grid-column: 2 / 3; grid-row: 1 / 2; }
     .fine-cards .fine-card:nth-child(3) { grid-column: 2 / 3; grid-row: 2 / 3; }
     /* Первая карточка тянется на две строки правой колонки. На широком полотне
-       её содержимое короче высоты — центрируем, иначе снизу зияет пустота */
+       её содержимое короче высоты – центрируем, иначе снизу зияет пустота */
     .fine-cards .fine-card:nth-child(1) { display: flex; flex-direction: column; justify-content: center; }
     .fine-cards .fine-card:nth-child(1) .amount { font-size: var(--t-h1); }
     @media (max-width: 820px) { .fine-cards .fine-card:nth-child(1) .amount { font-size: var(--t-h2); } }
@@ -1227,7 +1227,7 @@
 
     /* --- Лид-магнит в статье: открытый текст документа + форма на почту --- */
     /* Магнит лежит внутри белого листа .policy, поэтому подложки поменялись
-       местами: блок серый, а бланк документа внутри него — белый */
+       местами: блок серый, а бланк документа внутри него – белый */
     .magnet { margin: var(--s-8) 0; padding: var(--s-6); background: var(--page); border: 1px solid var(--line); border-radius: var(--r-l); }
     .magnet h2 { margin: 0 0 14px; font-size: var(--t-h3); }
     /* overflow-wrap: ряды подчёркиваний в бланке — один неразрывный токен,
@@ -1369,7 +1369,7 @@
   </nav>
   {% if accounts_enabled and session_unverified(request) %}
   <div class="verify-bar">
-    <span>Подтвердите email — мы отправили ссылку на <b>{{ session_email(request) }}</b>.</span>
+    <span>Подтвердите email – мы отправили ссылку на <b>{{ session_email(request) }}</b>.</span>
     {% if request.query_params.get('vsent') %}
       <span class="verify-sent">Письмо отправлено повторно ✓</span>
     {% else %}
@@ -1419,7 +1419,7 @@
   <div class="cookie-bar" id="cookie-bar" hidden>
     <div class="cookie-text">
       Используем cookie Яндекс.Метрики, чтобы понимать, как пользуются сервисом.
-      Можно отказаться — сервис будет работать так же. <a href="/privacy">Подробнее</a>
+      Можно отказаться – сервис будет работать так же. <a href="/privacy">Подробнее</a>
     </div>
     <div class="cookie-actions">
       <button type="button" id="cookie-accept">Принять</button>
@@ -1439,7 +1439,7 @@
         <button type="button" id="lc-chat-close" aria-label="Закрыть">✕</button>
       </div>
       <div class="lc-chat-body">
-        <p class="lc-chat-hint">Опишите вопрос по проверке сайта или ПДн — ответим в течение рабочего дня.</p>
+        <p class="lc-chat-hint">Опишите вопрос по проверке сайта или ПДн – ответим в течение рабочего дня.</p>
         <form id="lc-chat-form">
           <textarea name="message" id="lc-chat-msg" rows="3" required
                     placeholder="Ваш вопрос…" aria-label="Сообщение"></textarea>

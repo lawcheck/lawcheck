@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Проверка {{ scan.url }} · LawCheck{% endblock %}
 
-{% block meta_description %}Проверка сайта {{ scan.url }} на соответствие 152-ФЗ: найдено {{ counts.critical }} критичных проблем и {{ counts.warning }} предупреждений{% if risk %}, риск штрафа — до {{ risk.max|money }} ₽{% endif %}. Конкретные цитаты со страниц и рекомендации как исправить.{% endblock %}
+{% block meta_description %}Проверка сайта {{ scan.url }} на соответствие 152-ФЗ: найдено {{ counts.critical }} критичных проблем и {{ counts.warning }} предупреждений{% if risk %}, риск штрафа – до {{ risk.max|money }} ₽{% endif %}. Конкретные цитаты со страниц и рекомендации как исправить.{% endblock %}
 
 {% block head_extra %}{% endblock %}
 
@@ -29,7 +29,7 @@
     <summary>Каких разделов нет ({{ f.parts|length }})</summary>
     <ul>
       {% for p in f.parts %}
-      <li><strong>{{ p.title.split(': ')[-1] }}</strong> — {{ p.law_reference }}
+      <li><strong>{{ p.title.split(': ')[-1] }}</strong> – {{ p.law_reference }}
         {% if rec_open and p.recommendation %}<div class="part-rec">{{ p.recommendation }}</div>{% endif %}</li>
       {% endfor %}
     </ul>
@@ -48,8 +48,8 @@
          Пока обе кнопки обещали «снять риск», разные цены читались подменой
          (вики lawcheck-otchet-put-do-oplaty). #}
       <div class="rec locked">
-        <strong>🔒 Как исправить</strong> — готовый текст в Pro.
-        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Открыть {{ locked_total|fixes }} — 990 ₽</a>
+        <strong>🔒 Как исправить</strong> – готовый текст в Pro.
+        <a href="/pricing?scan={{ scan.id }}" data-goal="pricing_click">Открыть {{ locked_total|fixes }} – 990 ₽</a>
       </div>
     {% endif %}
   {% endif %}
@@ -94,11 +94,11 @@
         <summary>Как посчитано</summary>
         <ul>
           {% for g in risk.groups %}
-          <li>{{ g.koap }} — {{ g.min|money }}–{{ g.max|money }} ₽</li>
+          <li>{{ g.koap }} – {{ g.min|money }}–{{ g.max|money }} ₽</li>
           {% endfor %}
         </ul>
         <p>Складываются статьи, а не находки: несколько нарушений по одной статье
-        считаются один раз. Суммы — для юридических лиц.</p>
+        считаются один раз. Суммы – для юридических лиц.</p>
       </details>
     </div>
   </div>
@@ -112,12 +112,12 @@
   <div class="upsell offer-hero">
     <div class="upsell-text">
       {% if offer == 'pro' %}
-      <strong>Открыть все исправления — 990 ₽</strong>
+      <strong>Открыть все исправления – 990 ₽</strong>
       <span>Готовые тексты под каждую находку, шаблоны Политики и согласия,
         черновик уведомления в РКН и еженедельная перепроверка сайта.</span>
       {% else %}
-      <strong>Юрист сделает документы под ваш сайт — 8 000 ₽</strong>
-      <span>Политика, тексты согласий, уведомление в РКН и список правок для верстальщика —
+      <strong>Юрист сделает документы под ваш сайт – 8 000 ₽</strong>
+      <span>Политика, тексты согласий, уведомление в РКН и список правок для верстальщика –
         под находки этого отчёта. Срок 5 рабочих дней.</span>
       {% endif %}
     </div>
@@ -147,15 +147,15 @@
 
   {% if unlocked %}
   <div class="subscribe-box done">
-    ✅ Оплата прошла — все рекомендации «Как исправить» открыты ниже.
-    Шаблоны документов и PDF-заключение — в <a href="{{ cabinet_href }}">вашем кабинете</a>.
+    ✅ Оплата прошла – все рекомендации «Как исправить» открыты ниже.
+    Шаблоны документов и PDF-заключение – в <a href="{{ cabinet_href }}">вашем кабинете</a>.
     <div style="margin-top: 8px;">
       📄 <a href="/report/{{ scan.id }}/documents"><strong>Черновик Политики ПДн + текста согласия под ваш сайт</strong></a>
-      — факты вашего сайта уже подставлены.
+      – факты вашего сайта уже подставлены.
     </div>
     <div style="margin-top: 6px;">
       📨 <a href="/report/{{ scan.id }}/rkn-notification"><strong>Черновик уведомления в Роскомнадзор</strong></a>
-      — поля формы РКН с данными вашего сайта.
+      – поля формы РКН с данными вашего сайта.
     </div>
   </div>
   {% endif %}
@@ -215,7 +215,7 @@
         {% endfor %}
       </ul>
       {% if not unlocked and (counts.critical or counts.warning) %}
-      <a href="/pricing?scan={{ scan.id }}" class="toc-cta" data-goal="pricing_click">{{ 'Открыть исправления — 990 ₽' if offer == 'pro' else 'Юрист сделает документы — 8 000 ₽' }}</a>
+      <a href="/pricing?scan={{ scan.id }}" class="toc-cta" data-goal="pricing_click">{{ 'Открыть исправления – 990 ₽' if offer == 'pro' else 'Юрист сделает документы – 8 000 ₽' }}</a>
       {% endif %}
     </aside>
 
@@ -245,10 +245,10 @@
   <div class="offer-final">
     <div class="upsell">
       <div class="upsell-text">
-        <strong>Юрист сделает документы под ваш сайт — 8 000 ₽</strong>
-        <span>Юрист Максим Подольский лично изучит отчёт и подготовит под ключ полный пакет: Политику, текст согласий, уведомление в Роскомнадзор и конкретный список правок для верстальщика. Срок — 5 рабочих дней.</span>
+        <strong>Юрист сделает документы под ваш сайт – 8 000 ₽</strong>
+        <span>Юрист Максим Подольский лично изучит отчёт и соберёт полный пакет: Политику, текст согласий, уведомление в Роскомнадзор и список правок для верстальщика. Срок – 5 рабочих дней.</span>
       </div>
-      <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Заказать документы — 8 000 ₽</a>
+      <a href="/pricing?scan={{ scan.id }}" class="upsell-cta" data-goal="pricing_click">Заказать документы – 8 000 ₽</a>
     </div>
     <p class="trust-row">Оплата разово, без автопродления · официальный чек по 54-ФЗ · работаем по <a href="/oferta">оферте</a></p>
   </div>
@@ -259,7 +259,7 @@
     <div class="consult-text">
       <strong>Риск больше миллиона. Нужен юрист?</strong>
       <span>Персональный аудит: ручной разбор сайта, документы под ваши процессы,
-        уведомление в РКН и сопровождение при запросе от РКН — 35&nbsp;000&nbsp;₽.</span>
+        уведомление в РКН и сопровождение при запросе от РКН – 35&nbsp;000&nbsp;₽.</span>
     </div>
     <button type="button" class="consult-cta" id="lc-consult-cta">Обсудить аудит</button>
   </div>
@@ -279,7 +279,7 @@
 
   {% if subscribed %}
   <div class="subscribe-box done">
-    ✅ Готово — пришлём отчёт на почту и предупредим, если найдём новые нарушения.
+    ✅ Готово – пришлём отчёт на почту и предупредим, если найдём новые нарушения.
   </div>
   {% else %}
   <form class="subscribe-box" action="/report/{{ scan.id }}/subscribe" method="post" data-goal="email_subscribe">

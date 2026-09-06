@@ -53,7 +53,7 @@ def paid_alert(order) -> str:
     _titles = {"pro": "Pro", "docs": "Документы под сайт"}
     parts = [p for p in (order.entry_ref, order.entry_url) if p]
     src = " → ".join(parts) if parts else "прямой заход"
-    return (f"💰 Оплачен заказ <b>{order.id[:8]}</b> — "
+    return (f"💰 Оплачен заказ <b>{order.id[:8]}</b> – "
             f"{_titles.get(order.plan, order.plan.capitalize())} {order.amount} ₽.\n"
             f"Покупатель: <b>{esc(order.email) or 'email не указан'}</b>\n"
             f"Источник: {esc(src)}")

@@ -44,7 +44,7 @@
         }
         if (!/^[^\s.]+(\.[^\s.]+)+/.test(raw)) {
           e.preventDefault();
-          showError('Похоже на неполный адрес — нужен домен вида mystore.ru.');
+          showError('Похоже на неполный адрес – нужен домен вида mystore.ru.');
           return;
         }
         input.value = raw;

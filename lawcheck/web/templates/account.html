@@ -14,14 +14,14 @@
       </div>
     </div>
   </div>
-  <p class="account-note">Сохраните ссылку на эту страницу — это ваш доступ к функциям тарифа.
-    Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
+  <p class="account-note">Сохраните ссылку на эту страницу – это ваш доступ к функциям тарифа.
+    Вопросы – на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
 
   {% if not active and order.status == 'paid' %}
   <div class="status-banner error" style="margin-top: 12px;">
     Доступ по этому заказу закончился. Мониторинг остановлен, шаблоны и PDF закрыты.
-    <a href="/pricing">Заказать документы под сайт</a> — 8 000 ₽ разово, или
-    <a href="/pricing#pro">продлить Pro</a> — 990 ₽ за месяц.
+    <a href="/pricing">Заказать документы под сайт</a> – 8 000 ₽ разово, или
+    <a href="/pricing#pro">продлить Pro</a> – 990 ₽ за месяц.
   </div>
   {% elif order.status != 'paid' %}
   <div class="status-banner error" style="margin-top: 12px;">
@@ -34,10 +34,10 @@
 <div class="card">
   <h2 style="font-size: 18px; margin: 0 0 10px;">Еженедельный мониторинг</h2>
   {% if attached %}
-  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Сайт сохранён. Остался шаг — подтвердите владение ниже.</div>
+  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Сайт сохранён. Остался шаг – подтвердите владение ниже.</div>
   {% endif %}
   {% if verified %}
-  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Владение подтверждено. Первая проверка запущена, дальше — раз в неделю.</div>
+  <div class="subscribe-box done" style="margin: 0 0 14px;">✅ Владение подтверждено. Первая проверка запущена, дальше – раз в неделю.</div>
   {% endif %}
   {% if vfail %}
   <div class="status-banner error" style="margin: 0 0 14px;">Подтверждение не найдено. Проверьте, что TXT-запись или meta-тег добавлены, и попробуйте ещё раз (DNS может обновляться до часа).</div>
@@ -45,12 +45,12 @@
 
   {% if order.monitored_url and order.verified_at %}
     <p>Под наблюдением: <strong class="mono">{{ order.monitored_url }}</strong>
-      <span class="pill ok">подтверждён</span>. Проверяем раз в неделю; изменения — ниже.</p>
+      <span class="pill ok">подтверждён</span>. Проверяем раз в неделю; изменения – ниже.</p>
   {% elif order.monitored_url %}
     <p>Сайт <strong class="mono">{{ order.monitored_url }}</strong> ждёт подтверждения владения.
       Еженедельные проверки начнутся после подтверждения.</p>
   {% else %}
-    <p>Укажите сайт — после подтверждения владения будем проверять его каждую неделю
+    <p>Укажите сайт – после подтверждения владения будем проверять его каждую неделю
       и фиксировать изменения.</p>
   {% endif %}
 
@@ -67,13 +67,13 @@
   {% if order.monitored_url and not order.verified_at and verify_token %}
   <div class="verify-box">
     <h3>Подтвердите владение сайтом {{ monitored_domain }}</h3>
-    <p>Любым из способов — затем нажмите «Проверить»:</p>
+    <p>Любым из способов – затем нажмите «Проверить»:</p>
     <div class="verify-way">
-      <strong>Способ 1 — DNS TXT-запись</strong> (для домена <span class="mono">{{ monitored_domain }}</span>):
+      <strong>Способ 1 – DNS TXT-запись</strong> (для домена <span class="mono">{{ monitored_domain }}</span>):
       <pre class="verify-code">lawcheck-verify={{ verify_token }}</pre>
     </div>
     <div class="verify-way">
-      <strong>Способ 2 — meta-тег</strong> в <code>&lt;head&gt;</code> главной страницы:
+      <strong>Способ 2 – meta-тег</strong> в <code>&lt;head&gt;</code> главной страницы:
       <pre class="verify-code">&lt;meta name="lawcheck-verify" content="{{ verify_token }}"&gt;</pre>
     </div>
     <form action="/account/{{ order.id }}/verify" method="post" style="margin-top: 10px;">
@@ -87,7 +87,7 @@
     <h3 style="font-size: 15px; margin: 18px 0 8px;">Изменения с прошлой проверки
       <span class="stamp">({{ diff.prev.created_at.strftime('%d.%m') }} → {{ diff.last.created_at.strftime('%d.%m.%Y') }})</span></h3>
     {% if not diff.new and not diff.fixed %}
-      <p class="diff-none">Изменений нет — {{ diff.same }} наход{{ 'ка' if diff.same == 1 else ('ки' if diff.same in (2,3,4) else 'ок') }} без движения.</p>
+      <p class="diff-none">Изменений нет – {{ diff.same }} наход{{ 'ка' if diff.same == 1 else ('ки' if diff.same in (2,3,4) else 'ок') }} без движения.</p>
     {% endif %}
     {% if diff.new %}
       <div class="diff-group bad"><strong>Новые проблемы ({{ diff.new|length }}):</strong>
@@ -121,7 +121,7 @@
       <span class="muted">изменения приходят в ваш чат после каждой проверки</span>
     {% else %}
       <strong>Получать изменения в Telegram</strong>
-      <span class="muted">— бот пришлёт, что появилось или исправилось на сайте</span>
+      <span class="muted">– бот пришлёт, что появилось или исправилось на сайте</span>
       <a class="btn-tg" href="{{ tg_deeplink }}" target="_blank" rel="noopener">Подключить Telegram</a>
     {% endif %}
   </div>
@@ -130,14 +130,14 @@
 
 <div class="card">
   <h2 style="font-size: 18px; margin: 0 0 10px;">Шаблоны документов</h2>
-  <p>Политика обработки ПДн, согласие на обработку, уведомление в РКН — болванки
+  <p>Политика обработки ПДн, согласие на обработку, уведомление в РКН – болванки
     под ваш сайт.</p>
   <a class="btn-pay" href="/account/{{ order.id }}/templates">Открыть шаблоны</a>
 </div>
 
 <div class="card">
   <h2 style="font-size: 18px; margin: 0 0 10px;">PDF-заключение юриста</h2>
-  <p>Входит в тариф. Напишите на <a href="mailto:{{ operator.email }}?subject=PDF-заключение, заказ {{ order.id[:8] }}">{{ operator.email }}</a> —
+  <p>Входит в тариф. Напишите на <a href="mailto:{{ operator.email }}?subject=PDF-заключение, заказ {{ order.id[:8] }}">{{ operator.email }}</a> –
     укажите сайт и номер заказа; заключение готовится до 5 рабочих дней.</p>
 </div>
 {% endif %}

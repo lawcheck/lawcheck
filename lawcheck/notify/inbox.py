@@ -79,7 +79,7 @@ def run(limit: int = 20, dry_run: bool = False) -> dict:
     Telegram молча съедал бы входящие: письмо помечено, уведомления нет.
     """
     if not is_configured():
-        log.warning("inbox: IMAP не настроен — пропускаем")
+        log.warning("inbox: IMAP не настроен – пропускаем")
         return {"seen": 0, "notified": 0, "skipped": 0, "dry_run": dry_run}
 
     notified = skipped = 0
@@ -113,7 +113,7 @@ def run(limit: int = 20, dry_run: bool = False) -> dict:
                 m.store(msg_id, "+FLAGS", "\\Seen")
                 notified += 1
             else:
-                log.warning("inbox: уведомление о письме от %s не ушло — "
+                log.warning("inbox: уведомление о письме от %s не ушло – "
                             "Seen не ставим, попробуем в следующий прогон", sender)
                 skipped += 1
         return {"seen": len(ids), "notified": notified, "skipped": skipped,

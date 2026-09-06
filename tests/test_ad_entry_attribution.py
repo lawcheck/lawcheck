@@ -45,7 +45,7 @@ def client(monkeypatch):
 
 def _ad_entry(resp) -> str:
     m = _AD_ENTRY.search(resp.text)
-    assert m, "в шаблоне нет var AD_ENTRY — скрипту нечем восстановить метку"
+    assert m, "в шаблоне нет var AD_ENTRY – скрипту нечем восстановить метку"
     return m.group(1).strip('"')
 
 

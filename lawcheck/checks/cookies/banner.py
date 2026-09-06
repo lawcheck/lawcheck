@@ -48,7 +48,7 @@ class CookieBannerCheck(Check):
             return [Finding(
                 check_id=self.id, severity=Severity.CRITICAL, title=self.title,
                 evidence=f"Cookie-баннер на сайте не найден, но загружаются трекеры со ставящимися "
-                         f"идентификаторами: {tracker_names}. Идентификаторы относятся к ПДн (ст. 3) — "
+                         f"идентификаторами: {tracker_names}. Идентификаторы относятся к ПДн (ст. 3) – "
                          f"требуется получение согласия пользователя.",
                 location=snapshot.start_url, law_reference=LAW_REF,
                 recommendation="Добавьте cookie-баннер с кнопками «Принять» и «Отклонить» (или «Только необходимые») "

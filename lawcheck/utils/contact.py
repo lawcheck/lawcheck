@@ -23,7 +23,7 @@ def mask_contact(contact: str) -> str:
     """
     contact = (contact or "").strip()
     if not contact:
-        return "—"
+        return "–"
     if "@" in contact:
         local, _, domain = contact.partition("@")
         return f"{local[:1]}***@{domain}"

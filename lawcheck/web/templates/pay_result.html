@@ -10,31 +10,31 @@
        очередь дотерпит событие до инициализации счётчика за cookie-баннером. #}
     <script nonce="{{ csp_nonce(request) }}">if (window.lcGoal) lcGoal("pay_success");</script>
     <h1>✅ Оплата прошла</h1>
-    <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен —
+    <p>Спасибо! Заказ <span class="mono">{{ order.id[:8] }}</span> оплачен –
       тариф активирован.</p>
     {% if order.scan_id %}
     <a href="/report/{{ order.scan_id }}?order={{ order.id }}" class="btn-pay">Открыть отчёт с исправлениями</a>
     <p class="pay-note">Все рекомендации «Как исправить» в отчёте теперь открыты.
-      Шаблоны, мониторинг и PDF-заключение — в кабинете заказа ниже.</p>
+      Шаблоны, мониторинг и PDF-заключение – в кабинете заказа ниже.</p>
     <a href="/account/{{ order.id }}" class="pay-back">Кабинет заказа</a>
     {% else %}
     <a href="/account/{{ order.id }}" class="btn-pay">Открыть кабинет заказа</a>
     {% endif %}
     {% if tg_deeplink %}
     <div class="pay-save">
-      <p><strong>Чтобы не потерять доступ</strong> — сохраните ссылку на кабинет в Telegram:</p>
+      <p><strong>Чтобы не потерять доступ</strong> – сохраните ссылку на кабинет в Telegram:</p>
       <a href="{{ tg_deeplink }}" class="btn-tg" target="_blank" rel="noopener">Сохранить доступ в Telegram</a>
       <p class="pay-note">Бот пришлёт вашу постоянную ссылку на кабинет в личный чат.</p>
     </div>
     {% endif %}
-    <p class="pay-note"><strong>Сохраните ссылку на кабинет</strong> — это ваш доступ
+    <p class="pay-note"><strong>Сохраните ссылку на кабинет</strong> – это ваш доступ
       к мониторингу, отчётам об изменениях и шаблонам. Чек придёт на почту, указанную при
-      оплате. Вопросы — на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
+      оплате. Вопросы – на <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>.</p>
   {% elif pending %}
     <h1>⏳ Платёж обрабатывается</h1>
     <p>Банк подтвердил операцию по заказу <span class="mono">{{ order.id[:8] }}</span>,
       но деньги ещё не списаны. Обычно это занимает несколько минут.</p>
-    <p class="pay-note">Доступ откроется автоматически — обновите страницу через пару минут.
+    <p class="pay-note">Доступ откроется автоматически – обновите страницу через пару минут.
       Если через 15 минут ничего не изменилось, напишите на
       <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>, мы проверим вручную.</p>
     <div class="pay-row">
@@ -44,7 +44,7 @@
   {% else %}
     <h1>Оплата не завершена</h1>
     <p>{% if order %}Заказ <span class="mono">{{ order.id[:8] }}</span> пока не оплачен.
-      Если вы уже заплатили — обновите страницу через минуту или напишите нам.{% else %}
+      Если вы уже заплатили – обновите страницу через минуту или напишите нам.{% else %}
       Не нашли такой заказ. Попробуйте ещё раз с страницы тарифов.{% endif %}</p>
     <div class="pay-row">
       <a href="/pricing" class="btn-pay">Попробовать снова</a>

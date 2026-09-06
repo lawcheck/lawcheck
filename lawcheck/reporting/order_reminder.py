@@ -54,13 +54,13 @@ def render(ctx: dict) -> tuple[str, str, str]:
     e = html.escape
     title = ctx["plan_title"]
     amount = ctx["amount"]
-    subject = f"Ваш заказ LawCheck {title} — ссылка для оплаты"
+    subject = f"Ваш заказ LawCheck {title} – ссылка для оплаты"
 
     text_lines = [
         (f"{ctx['created']} вы оформили" if ctx["created"] else "Вы оформили")
         + f" заказ на LawCheck {title} за {amount} ₽, но оплата так и не прошла.",
         "",
-        "Ссылка банка живёт недолго, поэтому вот новая — она откроет оплату "
+        "Ссылка банка живёт недолго, поэтому вот новая – она откроет оплату "
         "картой или через СБП:",
         ctx["pay_url"],
         "",
@@ -72,11 +72,11 @@ def render(ctx: dict) -> tuple[str, str, str]:
         text_lines += ["", f"Ваш отчёт: {ctx['report_url']}"]
     text_lines += [
         "",
-        "Если передумали — делать ничего не нужно, это разовое напоминание, "
+        "Если передумали – делать ничего не нужно, это разовое напоминание, "
         "больше писем по этому заказу не будет. Что-то не сработало или есть "
-        "вопрос — просто ответьте на письмо, разберусь.",
+        "вопрос – просто ответьте на письмо, разберусь.",
         "",
-        "— Максим Подольский, LawCheck",
+        "– Максим Подольский, LawCheck",
     ]
     text_body = "\n".join(text_lines)
 
@@ -84,7 +84,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
         "<p>" + (f"{e(ctx['created'])} вы оформили" if ctx["created"] else "Вы оформили")
         + f" заказ на <b>LawCheck {e(title)}</b> за <b>{amount} ₽</b>, "
         "но оплата так и не прошла.</p>",
-        "<p>Ссылка банка живёт недолго, поэтому вот новая — она откроет оплату "
+        "<p>Ссылка банка живёт недолго, поэтому вот новая – она откроет оплату "
         "картой или через СБП:</p>",
         f'<p><a href="{e(ctx["pay_url"])}" style="display:inline-block;'
         'background:#1a1a1a;color:#fff;text-decoration:none;padding:12px 22px;'
@@ -96,10 +96,10 @@ def render(ctx: dict) -> tuple[str, str, str]:
     if ctx["report_url"]:
         parts.append(f'<p><a href="{e(ctx["report_url"])}">Открыть ваш отчёт →</a></p>')
     parts.append(
-        "<p>Если передумали — делать ничего не нужно, это разовое напоминание, "
+        "<p>Если передумали – делать ничего не нужно, это разовое напоминание, "
         "больше писем по этому заказу не будет. Что-то не сработало или есть "
-        "вопрос — просто ответьте на письмо, разберусь.</p>"
-        '<p style="color:#888;font-size:13px">— Максим Подольский, LawCheck · '
+        "вопрос – просто ответьте на письмо, разберусь.</p>"
+        '<p style="color:#888;font-size:13px">– Максим Подольский, LawCheck · '
         "проверка сайтов на 152-ФЗ и смежные законы<br>"
         "Вы получили письмо, потому что оформили заказ на lawchek.ru.</p>")
     return subject, "".join(parts), text_body
@@ -112,7 +112,7 @@ def send_one(order: Order) -> bool:
     if ok:
         repo.mark_order_reminded(order.id)
     else:
-        log.warning("order_reminder: письмо по заказу %s не ушло — reminded_at не ставим",
+        log.warning("order_reminder: письмо по заказу %s не ушло – reminded_at не ставим",
                     order.id)
     return ok
 

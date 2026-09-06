@@ -36,7 +36,7 @@ class FormsInventoryCheck(Check):
             cats = sorted(form_pd_categories(form))
             findings.append(Finding(
                 check_id=self.id, severity=Severity.INFO, title=self.title,
-                evidence=f"Форма ({form.method.upper()} {form.action or '—'}) собирает ПДн категорий: "
+                evidence=f"Форма ({form.method.upper()} {form.action or '–'}) собирает ПДн категорий: "
                          f"{', '.join(cats)}. Полей: {len(form.fields)}.",
                 location=form.page_url, law_reference=LAW_REF,
                 extra={"categories": cats, "field_count": len(form.fields), "action": form.action},
