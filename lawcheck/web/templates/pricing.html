@@ -57,7 +57,10 @@
 <div class="upsell" style="margin-bottom: 20px;">
   <div class="upsell-text">
     <strong>Ваш отчёт по {{ scan_ctx.url }}</strong>
-    <span>{% if scan_ctx.locked %}{{ scan_ctx.locked }} исправлени{{ 'е' if scan_ctx.locked == 1 else ('я' if scan_ctx.locked in (2,3,4) else 'й' ) }} ждут открытия — {% endif %}пакет «Документы под сайт» за 8 000 ₽ полностью закрывает риски: юрист Максим Подольский подготовит комплект документов именно под ваш отчёт и даст чёткие указания по правкам.</span>
+    {# Пришедший из замка отчёта кликнул «Открыть N исправлений — 990 ₽»:
+       баннер обязан подтвердить это обещание, а не подменить его пакетом
+       за 8 000 ₽ (вики free-report-gating, lawcheck-otchet-put-do-oplaty). #}
+    <span>{% if scan_ctx.locked %}Под замком — {{ scan_ctx.locked|fixes }}. Открыть готовые тексты и чинить самому — <a href="#pro">Pro за 990 ₽</a>. {% endif %}Отдать работу юристу — пакет «Документы под сайт» за 8 000 ₽: Максим Подольский подготовит комплект именно под ваш отчёт и даст чёткие указания по правкам.</span>
   </div>
   <a href="/report/{{ scan_ctx.id }}" class="upsell-cta" style="background: transparent; border: 1px solid #ffffff55;">← к отчёту</a>
 </div>
@@ -132,7 +135,7 @@
     </script>
   </div>
 
-  <div class="plan">
+  <div class="plan" id="pro">
     <div class="name">Pro</div>
     <div class="price">990 ₽</div>
     <div class="price-note">за месяц доступа, без автопродления · или 9 900 ₽ в год</div>

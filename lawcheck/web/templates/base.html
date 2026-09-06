@@ -851,8 +851,23 @@
     .upsell-text { display: flex; flex-direction: column; gap: 5px; flex: 1 1 340px; min-width: 0; }
     .upsell-text strong { font-size: var(--t-xl); font-weight: 700; letter-spacing: -0.01em; }
     .upsell-text span { font-size: var(--t-m); color: #94a3b8; line-height: 1.55; }
+    .upsell-text a { color: #fff; text-decoration: underline; }
     .upsell-cta { flex-shrink: 0; background: var(--brand); color: #fff; padding: 13px 24px; border-radius: var(--r-m); font-weight: 600; font-size: var(--t-m); text-decoration: none; }
     .upsell-cta:hover { background: var(--brand-hover); }
+    /* Тот же оффер на первом экране, сразу под суммой риска */
+    .upsell.offer-hero { margin-top: 14px; }
+    /* Разбивка суммы риска по статьям — «откуда цифра» */
+    .risk-math { margin-top: 8px; }
+    .risk-math summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; }
+    .risk-math ul { margin: 8px 0 6px; padding-left: 18px; }
+    .risk-math li { margin: 2px 0; }
+    .risk-math p { margin: 0; color: var(--muted); }
+    /* Свёрнутые разделы Политики: диагноз не режем, но и стеной не показываем */
+    .grouped-parts { margin-top: 8px; font-size: var(--t-s); }
+    .grouped-parts summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; }
+    .grouped-parts ul { margin: 8px 0 0; padding-left: 18px; }
+    .grouped-parts li { margin: 3px 0; color: var(--ink-soft); }
+    .grouped-parts .part-rec { margin: 2px 0 6px; color: var(--muted); }
     /* Финальный оффер под находками (после того, как дожали болью) + строка доверия */
     .offer-final { margin-top: 24px; }
     .offer-final .upsell { margin-top: 0; }
