@@ -263,8 +263,11 @@ async def robots() -> str:
     return (
         "User-agent: *\n"
         "Allow: /\n"
+        # etext и ysclid добавлены 06.09.2026: в поиске лежала главная с
+        # `?etext=2202...` как отдельная страница — метку ставит сам Яндекс
+        # при переходе, и без директивы каждый такой переход плодит дубль.
         "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term"
-        "&yclid&_openstat&gclid\n"
+        "&yclid&_openstat&gclid&etext&ysclid\n"
         f"Sitemap: {base}/sitemap.xml\n"
     )
 
