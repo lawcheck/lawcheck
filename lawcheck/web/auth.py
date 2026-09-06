@@ -47,10 +47,10 @@ def _send_verification(user) -> None:
     token = repo.create_auth_token(user.id, "verify_email", _VERIFY_TTL_H)
     link = f"{_base()}/verify-email?token={token}"
     html = (
-        f"<p>Здравствуйте!</p><p>Подтвердите email для аккаунта LawCheck — "
+        f"<p>Здравствуйте!</p><p>Подтвердите email для аккаунта LawCheck – "
         f"перейдите по ссылке (действует {_VERIFY_TTL_H} часа):</p>"
         f'<p><a href="{link}">{link}</a></p>'
-        f"<p>Если вы не регистрировались — просто проигнорируйте письмо.</p>"
+        f"<p>Если вы не регистрировались – просто проигнорируйте письмо.</p>"
     )
     mailer.send_email(user.email, "Подтверждение email · LawCheck", html)
 
@@ -63,7 +63,7 @@ def _send_reset(user) -> None:
         f"<p>Здравствуйте!</p><p>Вы запросили сброс пароля в LawCheck. "
         f"Задайте новый пароль по ссылке (действует {_RESET_TTL_H} час):</p>"
         f'<p><a href="{link}">{link}</a></p>'
-        f"<p>Если вы не запрашивали сброс — просто проигнорируйте письмо, "
+        f"<p>Если вы не запрашивали сброс – просто проигнорируйте письмо, "
         f"пароль останется прежним.</p>"
     )
     mailer.send_email(user.email, "Сброс пароля · LawCheck", html)
@@ -95,14 +95,14 @@ async def register(request: Request, email: str = Form(...), password: str = For
     if not valid_email(email):
         err = "Проверьте адрес email."
     elif len(password) < 8:
-        err = "Пароль — минимум 8 символов."
+        err = "Пароль – минимум 8 символов."
     if err:
         return templates.TemplateResponse(request, "register.html",
                                           {"error": err, "email": email}, status_code=422)
     user = await asyncio.to_thread(repo.create_user, email, security.hash_password(password))
     if user is None:
         return templates.TemplateResponse(request, "register.html",
-                                          {"error": "На этот email уже есть аккаунт — войдите.",
+                                          {"error": "На этот email уже есть аккаунт – войдите.",
                                            "email": email}, status_code=409)
     deps.login_user(request, user)
     log.info("account: зарегистрирован %s (#%s)", mask_contact(email), user.id)
@@ -174,7 +174,7 @@ async def verify_email(request: Request, token: str = ""):
     if user:
         await asyncio.to_thread(repo.claim_for_user, user.id, user.email)
     return _message(request, "Email подтверждён ✅",
-                    "Спасибо! Ваш email подтверждён — аккаунт активен.",
+                    "Спасибо! Ваш email подтверждён – аккаунт активен.",
                     cta_href="/", cta_label="На главную")
 
 
@@ -222,7 +222,7 @@ async def reset_form(request: Request, token: str = ""):
 async def reset(request: Request, token: str = Form(...), password: str = Form(...)):
     if len(password) < 8:
         return templates.TemplateResponse(request, "reset_password.html",
-                                          {"token": token, "error": "Пароль — минимум 8 символов."},
+                                          {"token": token, "error": "Пароль – минимум 8 символов."},
                                           status_code=422)
     uid = await asyncio.to_thread(repo.consume_auth_token, token, "reset_password")
     if uid is None:

@@ -39,13 +39,13 @@ def _parse_file(path: Path) -> Article | None:
     """Разобрать один .md: YAML-фронтматтер между --- и тело в markdown."""
     raw = path.read_text(encoding="utf-8")
     if not raw.startswith("---"):
-        log.warning("blog: %s без фронтматтера — пропущен", path.name)
+        log.warning("blog: %s без фронтматтера – пропущен", path.name)
         return None
     _, fm, body = raw.split("---", 2)
     meta = yaml.safe_load(fm) or {}
     title = meta.get("title")
     if not title:
-        log.warning("blog: %s без title — пропущен", path.name)
+        log.warning("blog: %s без title – пропущен", path.name)
         return None
     raw_date = meta.get("date")
     parsed_date = raw_date if isinstance(raw_date, date) else date.min

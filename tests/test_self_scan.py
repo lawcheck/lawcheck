@@ -125,6 +125,6 @@ def test_razbor_domena_ne_hodit_v_set():
     from lawcheck.utils.domain import _extract
 
     assert _extract.suffix_list_urls == (), (
-        "экстрактор снова тянет public suffix list по сети — "
+        "экстрактор снова тянет public suffix list по сети – "
         "в пути веб-запроса этого быть не должно"
     )

@@ -38,7 +38,7 @@ def test_ispravnyy_sertifikat_daet_ok(monkeypatch):
 @pytest.mark.parametrize("reason", [
     "срок действия сертификата истёк",
     "сертификат выписан на другое имя",
-    "сертификат самоподписанный — браузер ему не доверяет",
+    "сертификат самоподписанный – браузер ему не доверяет",
 ])
 def test_bityy_sertifikat_pri_https_eto_kritichno(monkeypatch, reason):
     findings = _run(monkeypatch, "https://example.com/",

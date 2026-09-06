@@ -147,7 +147,7 @@ def payment_state(operation_id: str) -> str:
         return "paid"
     if status in _PENDING_STATUSES:
         return "pending"
-    log.info("tochka: операция %s в статусе %s", operation_id, status or "—")
+    log.info("tochka: операция %s в статусе %s", operation_id, status or "–")
     return "unknown"
 
 

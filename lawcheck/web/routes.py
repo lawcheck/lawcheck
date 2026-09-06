@@ -221,7 +221,7 @@ async def inquiry(request: Request, bg: BackgroundTasks,
         telegram.notify_owner,
         f"💬 Вопрос с сайта #{inq_id}\n{telegram.esc(message[:1500])}\n\n"
         f"Ответить: <b>{telegram.contact_link(contact)}</b>"
-        + ("\n📬 Согласие на рассылку — можно писать предложения" if ads else "")
+        + ("\n📬 Согласие на рассылку – можно писать предложения" if ads else "")
         + (f"\nСтраница: {telegram.esc(page)}" if page else ""),
     )
     return {"ok": True}
@@ -340,7 +340,7 @@ async def telegram_webhook(request: Request):
         if order:
             lines = [f"✅ Доступ к заказу <b>{order.id[:8]}</b> сохранён.",
                      f"Личный кабинет: {settings.site_base_url}/account/{order.id}",
-                     "(сохраните это сообщение — здесь ваша постоянная ссылка)"]
+                     "(сохраните это сообщение – здесь ваша постоянная ссылка)"]
             if order.monitored_url:
                 lines.append(f"\nБуду присылать сюда изменения по сайту "
                              f"<b>{order.monitored_url}</b> после еженедельных проверок.")
@@ -456,7 +456,7 @@ async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
             f"<a href=\"{page_url}\">{page_url}</a>.</p>"
             f"<h2>{magnet.doc_title}</h2>{magnet.body_html}"
             f"<hr><p>Подставить сюда реквизиты вашей компании, поля ваших форм и "
-            f"найденные на сайте трекеры — это делает LawCheck на тарифе Pro: "
+            f"найденные на сайте трекеры – это делает LawCheck на тарифе Pro: "
             f"<a href=\"{settings.site_base_url}/pricing\">{settings.site_base_url}/pricing</a></p>")
     bg.add_task(mailer.send_email, email, magnet.doc_title, body)
     if is_new:
@@ -480,10 +480,10 @@ async def unsubscribe(request: Request, token: str):
     if email:
         title = "Вы отписаны"
         message = (f"Больше не будем писать на {email}. "
-                   "Если передумаете — просто запустите проверку сайта заново.")
+                   "Если передумаете – просто запустите проверку сайта заново.")
     else:
         title = "Ссылка недействительна"
-        message = "Не нашли подписку по этой ссылке — возможно, вы уже отписались."
+        message = "Не нашли подписку по этой ссылке – возможно, вы уже отписались."
     return templates.TemplateResponse(request, "message.html", {
         "title": title, "message": message,
         "cta_href": "/", "cta_label": "На главную",

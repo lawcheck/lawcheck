@@ -107,7 +107,7 @@ def test_sitemap_datiruet_listing_bloga_svezhei_statei(client, monkeypatch):
 
     dates = [a.date.isoformat() for a in blog.list_articles()
              if a.date and a.date.year > 1]
-    assert dates, "в блоге нет ни одной датированной статьи — тест бессмыслен"
+    assert dates, "в блоге нет ни одной датированной статьи – тест бессмыслен"
 
     r = client.get("/sitemap.xml")
     assert r.status_code == 200

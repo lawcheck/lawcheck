@@ -28,7 +28,7 @@ class FormConsentCheck(Check):
 
         findings: list[Finding] = []
         for idx, form in enumerate(pd_forms, start=1):
-            form_label = f"форма #{idx} ({form.method.upper()} {form.action or '—'}) на {form.page_url}"
+            form_label = f"форма #{idx} ({form.method.upper()} {form.action or '–'}) на {form.page_url}"
             checkbox = find_consent_checkbox(form)
 
             if checkbox is None:

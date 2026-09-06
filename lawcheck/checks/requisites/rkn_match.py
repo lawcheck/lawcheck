@@ -71,7 +71,7 @@ class RknOperatorCheck(Check):
                 return [Finding(
                     check_id=self.id, severity=Severity.CRITICAL, title=self.title,
                     evidence=f"Оператор с ИНН {inn} не найден в реестре РКН, но на сайте есть формы "
-                             f"сбора ПДн и/или трекеры со ставящимися идентификаторами — обработка ПДн "
+                             f"сбора ПДн и/или трекеры со ставящимися идентификаторами – обработка ПДн "
                              f"осуществляется. Регистрация обязательна.",
                     location=snapshot.start_url, law_reference=LAW_REF,
                     recommendation="Подайте уведомление о намерении осуществлять обработку ПДн через "
@@ -81,13 +81,13 @@ class RknOperatorCheck(Check):
             return [Finding(
                 check_id=self.id, severity=Severity.INFO, title=self.title,
                 evidence=f"Оператор с ИНН {inn} не найден в реестре РКН. На сайте также не обнаружено "
-                         f"очевидных признаков обработки ПДн — регистрация может не требоваться.",
+                         f"очевидных признаков обработки ПДн – регистрация может не требоваться.",
                 location=snapshot.start_url, law_reference=LAW_REF,
             )]
 
         return [Finding(
             check_id=self.id, severity=Severity.INFO, title=self.title,
-            evidence=f"Ответ реестра РКН для ИНН {inn} получен, но в неожиданном формате — сверку "
+            evidence=f"Ответ реестра РКН для ИНН {inn} получен, но в неожиданном формате – сверку "
                      f"автоматически выполнить не удалось.",
             location=snapshot.start_url, law_reference=LAW_REF,
         )]

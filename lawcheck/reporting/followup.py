@@ -146,7 +146,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
     locked_word = _plural(locked, "готовый текст", "готовых текста", "готовых текстов")
     risk_line = ""
     if risk and risk.get("max"):
-        risk_line = (f"Суммарный риск штрафа по найденным нарушениям — "
+        risk_line = (f"Суммарный риск штрафа по найденным нарушениям – "
                      f"до {int(risk['max']):,} ₽.".replace(",", " "))
 
     # --- text/plain ---
@@ -154,7 +154,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
         text_lines = [
             "Здравствуйте!",
             "",
-            f"Вы запускали проверку {len(sites)} сайтов на LawCheck — "
+            f"Вы запускали проверку {len(sites)} сайтов на LawCheck – "
             f"{ctx['sites_label']}.",
             "Собрали итоги в одном письме, чтобы не потерялись.",
             "",
@@ -163,8 +163,8 @@ def render(ctx: dict) -> tuple[str, str, str]:
         ]
         for c in sites:
             c_word = _plural(c["problems"], "нарушение", "нарушения", "нарушений")
-            text_lines.append(f"{c['site']} — {c['problems']} {c_word}:")
-            text_lines += [f"  — {t}" for t in c["top3"]]
+            text_lines.append(f"{c['site']} – {c['problems']} {c_word}:")
+            text_lines += [f"  – {t}" for t in c["top3"]]
             text_lines.append(f"  отчёт: {c['report_url']}")
             text_lines.append("")
     else:
@@ -176,12 +176,12 @@ def render(ctx: dict) -> tuple[str, str, str]:
             "",
             f"Что нашли: {n_prob} {prob_word}{crit_line}. Самое важное:",
         ]
-        text_lines += [f"  — {t}" for t in top3]
+        text_lines += [f"  – {t}" for t in top3]
         text_lines.append("")
     if laws:
         text_lines.append(
-            f"Это зона {laws} — по ней Роскомнадзор штрафует бизнес. "
-            "Проверка сама по себе штраф не убирает — нарушения надо закрыть.")
+            f"Это зона {laws} – по ней Роскомнадзор штрафует бизнес. "
+            "Проверка сама по себе штраф не убирает – нарушения надо закрыть.")
     if risk_line:
         text_lines.append(risk_line)
     text_lines.append("")
@@ -193,15 +193,15 @@ def render(ctx: dict) -> tuple[str, str, str]:
             f"cookie-баннер под {under}) откроются на Pro.")
     text_lines += [
         "",
-        "Как закрыть найденное — два варианта.",
+        "Как закрыть найденное – два варианта.",
         "",
-        f"Pro, 990 ₽/мес — готовые тексты исправлений под "
+        f"Pro, 990 ₽/мес – готовые тексты исправлений под "
         f"{'ваши сайты' if many else site}, "
         f"шаблоны Политики, согласий и уведомления в РКН, "
         f"еженедельный мониторинг и PDF-заключение с подписью юриста: "
         f"{ctx['pricing_url']}",
         "",
-        f"Персональный аудит, 35 000 ₽ разово — беру проект руками: "
+        f"Персональный аудит, 35 000 ₽ разово – беру проект руками: "
         f"разбираю формы, метрики и сторонние скрипты, готовлю документы "
         f"под ваши процессы, уведомление в РКН и час консультации. "
         f"Напишите на {ctx['contact_email']}, и я расскажу что войдёт в аудит "
@@ -209,9 +209,9 @@ def render(ctx: dict) -> tuple[str, str, str]:
         f"Или сразу на странице тарифов: {ctx['pricing_url']}",
         "",
         *([] if many else [f"Открыть отчёт: {ctx['report_url']}", ""]),
-        "Не готовы платить — тоже ответьте: подскажу, с чего начать, бесплатно.",
+        "Не готовы платить – тоже ответьте: подскажу, с чего начать, бесплатно.",
         "",
-        "— Максим Подольский, LawCheck · проверка сайтов на 152-ФЗ и смежные законы",
+        "– Максим Подольский, LawCheck · проверка сайтов на 152-ФЗ и смежные законы",
         (f"Вы получили письмо, потому что оставили email для отчётов по "
          f"{ctx['sites_label']}." if many else
          f"Вы получили письмо, потому что оставили email для отчёта по {site}."),
@@ -227,7 +227,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
         greeting_html = f"""\
   <tr><td style="padding:0 40px 12px;font-size:15px;line-height:1.65;color:#1E293B">
     <p style="margin:0 0 12px">Здравствуйте!</p>
-    <p style="margin:0">Вы запускали проверку {len(sites)} сайтов на LawCheck — <b style="color:#0B5CFF">{e(ctx['sites_label'])}</b>. Собрали итоги в одном письме, чтобы не потерялись.</p>
+    <p style="margin:0">Вы запускали проверку {len(sites)} сайтов на LawCheck – <b style="color:#0B5CFF">{e(ctx['sites_label'])}</b>. Собрали итоги в одном письме, чтобы не потерялись.</p>
   </td></tr>
 """
         blocks = []
@@ -289,7 +289,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
   <tr><td style="padding:20px 40px 0;font-size:14px;line-height:1.65;color:#475569">"""
         if laws:
             html_body += f"""\
-    <p style="margin:0 0 8px">Это зона {e(laws)} — по ней Роскомнадзор штрафует бизнес. Проверка сама по себе штраф не убирает — нарушения надо закрыть.</p>"""
+    <p style="margin:0 0 8px">Это зона {e(laws)} – по ней Роскомнадзор штрафует бизнес. Проверка сама по себе штраф не убирает – нарушения надо закрыть.</p>"""
         if risk_line:
             html_body += f"""\
     <p style="margin:0;font-size:14px;font-weight:600;color:#1E293B">⚠ {e(risk_line)}</p>"""
@@ -305,7 +305,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
     html_body += f"""\
   <!-- Тарифы -->
   <tr><td style="padding:28px 40px 8px">
-    <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#00053D">Как закрыть найденное — два варианта</p>
+    <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#00053D">Как закрыть найденное – два варианта</p>
 
     <!-- Pro -->
     <a href="{e(ctx['pricing_url'])}" style="display:block;text-decoration:none;color:inherit">
@@ -353,7 +353,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
 
   <!-- Мягкий CTA -->
   <tr><td style="padding:0 40px 32px;font-size:14px;color:#64748B;text-align:center">
-    Не готовы платить — тоже ответьте: подскажу, с чего начать, бесплатно.
+    Не готовы платить – тоже ответьте: подскажу, с чего начать, бесплатно.
   </td></tr>
 
   <!-- Разделитель -->
@@ -361,7 +361,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
 
   <!-- Футер -->
   <tr><td style="padding:20px 40px 32px;font-size:12px;color:#94A3B8;line-height:1.6">
-    — Максим Подольский, LawCheck · проверка сайтов на 152-ФЗ и смежные законы<br>
+    – Максим Подольский, LawCheck · проверка сайтов на 152-ФЗ и смежные законы<br>
     Вы получили письмо, потому что оставили email для {"отчётов по " + e(ctx["sites_label"]) if many else "отчёта по " + e(site)}.
     <a href="{e(ctx['unsub_url'])}" style="color:#94A3B8">Отписаться</a>.
   </td></tr>
@@ -392,7 +392,7 @@ def send_one(pairs: list[tuple[Lead, Scan]]) -> bool:
         for lead, _ in pairs:
             repo.mark_lead_mailed(lead.id)
     else:
-        log.warning("followup: письмо лиду %s не ушло — mailed_at не ставим",
+        log.warning("followup: письмо лиду %s не ушло – mailed_at не ставим",
                     mask_contact(email))
     return ok
 

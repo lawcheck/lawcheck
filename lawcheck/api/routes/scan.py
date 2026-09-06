@@ -67,7 +67,7 @@ async def create_scan(req: ScanRequest, request: Request, bg: BackgroundTasks) -
     if is_own_site(str(req.url)):
         raise HTTPException(
             status_code=422,
-            detail=f"{registrable_domain(settings.site_base_url)} — собственный сайт сервиса, "
+            detail=f"{registrable_domain(settings.site_base_url)} – собственный сайт сервиса, "
                    f"сами себя не проверяем",
         )
     try:

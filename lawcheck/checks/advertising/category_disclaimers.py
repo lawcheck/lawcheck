@@ -144,10 +144,10 @@ class CategoryDisclaimersCheck(Check):
                     check_id=f"{self.id}.{rule.sub_id}", severity=Severity.INFO, title=f"{TITLE}: {rule.name}",
                     evidence=f"Категория '{rule.name}' упомянута ('{trigger.strip()}'), дисклеймер не найден, "
                              f"но признаков размещения рекламы на сайте нет. Информация о собственных "
-                             f"товарах на собственном сайте, как правило, рекламой не является — "
+                             f"товарах на собственном сайте, как правило, рекламой не является – "
                              f"требования ст. 24, 25, 28 38-ФЗ к ней не применяются.",
                     location=snapshot.start_url, law_reference=LAW_REF,
                     recommendation=f"Если материалы этой категории используются в рекламе (баннеры, "
-                                   f"объявления, рассылки) — там дисклеймер обязателен. {rule.recommendation}",
+                                   f"объявления, рассылки) – там дисклеймер обязателен. {rule.recommendation}",
                 ))
         return findings

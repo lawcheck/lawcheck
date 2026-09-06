@@ -42,13 +42,13 @@ class RequisitesPresenceCheck(Check):
                     evidence=f"Найдены ИНН, но все провалили проверку контрольной суммы: {', '.join(invalid)}. "
                              f"Скорее всего, опечатка.",
                     location=req.inn[0].source_url, law_reference=LAW_REF,
-                    recommendation="Перепроверьте ИНН — текущее значение не валидно.",
+                    recommendation="Перепроверьте ИНН – текущее значение не валидно.",
                 ))
             elif len(valid) > 1:
                 findings.append(Finding(
                     check_id=f"{self.id}.inn", severity=Severity.WARNING, title=f"{TITLE}: ИНН",
                     evidence=f"На сайте указано несколько разных ИНН: {', '.join(valid)}. "
-                             f"Это противоречие — оператор должен быть единственным.",
+                             f"Это противоречие – оператор должен быть единственным.",
                     location=req.inn[0].source_url, law_reference=LAW_REF,
                     recommendation="Приведите ИНН к единому значению (футер, Политика, страница контактов).",
                     extra={"all_values": valid},
@@ -79,7 +79,7 @@ class RequisitesPresenceCheck(Check):
                     check_id=f"{self.id}.ogrn", severity=Severity.WARNING, title=f"{TITLE}: ОГРН/ОГРНИП",
                     evidence=f"Найдены ОГРН, но все провалили проверку контрольной суммы: {', '.join(invalid)}.",
                     location=req.ogrn[0].source_url, law_reference=LAW_REF,
-                    recommendation="Перепроверьте ОГРН — текущее значение не валидно.",
+                    recommendation="Перепроверьте ОГРН – текущее значение не валидно.",
                 ))
             elif len(valid) > 1:
                 findings.append(Finding(

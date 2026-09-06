@@ -78,7 +78,7 @@ _FORMS_JS = """
         label: label.slice(0, 300),
       };
     });
-    // ближайший общий контейнер — родитель формы; даёт текст рядом с submit
+    // ближайший общий контейнер – родитель формы; даёт текст рядом с submit
     const parent = form.parentElement || form;
     const surrounding = (parent.innerText || parent.textContent || '').slice(0, 3000);
     // ссылки на Политику в окрестности формы

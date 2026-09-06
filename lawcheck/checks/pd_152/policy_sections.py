@@ -116,7 +116,7 @@ class PolicySectionsCheck(Check):
             check_id=f"{self.id}.cross_border", severity=Severity.OK,
             title=f"{TITLE}: {section_title}",
             evidence="Раздел о трансграничной передаче в Политике отсутствует, "
-                     "но признаков передачи данных за рубеж на сайте не обнаружено — "
+                     "но признаков передачи данных за рубеж на сайте не обнаружено – "
                      "отдельный раздел в этом случае не обязателен.",
             location=policy_url, law_reference=law_ref,
             extra={"strong_hits": 0, "weak_hits": weak_n, "foreign_trackers": []},

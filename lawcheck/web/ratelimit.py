@@ -104,7 +104,7 @@ def _hit_redis(conn, key: str, window_sec: int) -> int | None:
         count, _ = pipe.execute()
         return int(count)
     except Exception as e:
-        log.warning("ratelimit: redis недоступен (%s) — считаем в памяти", e)
+        log.warning("ratelimit: redis недоступен (%s) – считаем в памяти", e)
         return None
 
 

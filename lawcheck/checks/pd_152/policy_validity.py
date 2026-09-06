@@ -56,7 +56,7 @@ class PolicyValidityCheck(Check):
                 return []
             return [Finding(
                 check_id=self.id, severity=Severity.WARNING, title=self.title,
-                evidence=f"Не удалось загрузить документ Политики ({policy_url}) — "
+                evidence=f"Не удалось загрузить документ Политики ({policy_url}) – "
                          f"он не попал в число проверенных страниц.",
                 location=policy_url, law_reference=LAW_REF,
                 recommendation="Убедитесь, что Политика открывается по прямой ссылке "
@@ -83,7 +83,7 @@ class PolicyValidityCheck(Check):
         if text_len < MIN_TEXT_LEN:
             return [Finding(
                 check_id=self.id, severity=Severity.WARNING, title=self.title,
-                evidence=f"Документ Политики слишком короткий ({text_len} символов) — "
+                evidence=f"Документ Политики слишком короткий ({text_len} символов) – "
                          f"возможно, это заглушка или ссылка ведёт на PDF без текстового слоя.",
                 location=policy_url, law_reference=LAW_REF,
                 recommendation="Разместите полный текст Политики обработки ПДн в виде HTML-страницы.",

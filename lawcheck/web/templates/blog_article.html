@@ -41,10 +41,10 @@
     <div class="magnet-doc">{{ magnet.body_html|safe }}</div>
 
     {% if request.query_params.get('msent') %}
-      <p class="magnet-ok">Отправили на почту. Если письма нет — проверьте «Спам».</p>
+      <p class="magnet-ok">Отправили на почту. Если письма нет – проверьте «Спам».</p>
     {% else %}
       {% if request.query_params.get('mfail') %}
-      <p class="magnet-err">Проверьте адрес — похоже, в нём опечатка.</p>
+      <p class="magnet-err">Проверьте адрес – похоже, в нём опечатка.</p>
       {% endif %}
       <form class="magnet-form" action="/obrazec/{{ magnet.slug }}" method="post" data-goal="magnet_submit">
         <label for="magnet-email">Прислать копию на почту, чтобы не потерялась</label>
@@ -56,7 +56,7 @@
 
     <p class="magnet-upsell">Это типовая форма с пропусками. Заполнить её
       реквизитами вашей компании, полями ваших форм и найденными на сайте
-      трекерами LawCheck умеет сам — <a href="/pricing">на тарифе Pro</a>.</p>
+      трекерами LawCheck умеет сам – <a href="/pricing">на тарифе Pro</a>.</p>
   </section>
   {% endif %}
 

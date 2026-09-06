@@ -19,7 +19,7 @@ class PolicyPresenceCheck(Check):
         if not snapshot.pages:
             return [Finding(
                 check_id=self.id, severity=Severity.CRITICAL, title=self.title,
-                evidence="Сайт недоступен — не удалось загрузить ни одной страницы.",
+                evidence="Сайт недоступен – не удалось загрузить ни одной страницы.",
                 location=snapshot.start_url, law_reference=LAW_REF,
                 recommendation="Проверьте доступность сайта.",
             )]
@@ -28,7 +28,7 @@ class PolicyPresenceCheck(Check):
         if not valid_pages:
             return [Finding(
                 check_id=self.id, severity=Severity.CRITICAL, title=self.title,
-                evidence="Все страницы сайта вернули ошибку — проверка невозможна.",
+                evidence="Все страницы сайта вернули ошибку – проверка невозможна.",
                 location=snapshot.start_url, law_reference=LAW_REF,
             )]
 

@@ -87,7 +87,7 @@ class AgeMarkingCheck(Check):
                          f"(0+/6+/12+/16+/18+) на просканированных страницах не обнаружена.",
                 location=snapshot.start_url, law_reference=LAW_REF,
                 recommendation="Разместите возрастную маркировку у каждого материала. "
-                               "Для общего сайта — в подвале или в шапке.",
+                               "Для общего сайта – в подвале или в шапке.",
             )]
 
         return [Finding(

@@ -42,7 +42,7 @@ def _make_simple_pdf(text: str) -> bytes:
     try:
         from reportlab.pdfgen import canvas
     except ImportError:
-        pytest.skip("reportlab не установлен — тест извлечения скипаем")
+        pytest.skip("reportlab не установлен – тест извлечения скипаем")
     buf = io.BytesIO()
     c = canvas.Canvas(buf)
     c.drawString(72, 720, text)

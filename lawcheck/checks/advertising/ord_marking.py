@@ -59,7 +59,7 @@ class OrdMarkingCheck(Check):
             return [Finding(
                 check_id=self.id, severity=Severity.OK, title=self.title,
                 evidence=f"Найдены только пиксели для продвижения самого сайта "
-                         f"({', '.join(names[:5])}) — это не размещение рекламы. Обязанность "
+                         f"({', '.join(names[:5])}) – это не размещение рекламы. Обязанность "
                          f"маркировки (erid) возникла бы при показе чужой рекламы на вашем сайте; "
                          f"признаков этого не обнаружено.",
                 location=snapshot.start_url, law_reference=LAW_REF,
@@ -68,7 +68,7 @@ class OrdMarkingCheck(Check):
 
         return [Finding(
             check_id=self.id, severity=Severity.OK, title=self.title,
-            evidence="Признаков размещения рекламы на сайте не обнаружено — требования "
+            evidence="Признаков размещения рекламы на сайте не обнаружено – требования "
                      "о маркировке интернет-рекламы к сайту не применяются.",
             location=snapshot.start_url, law_reference=LAW_REF,
         )]

@@ -173,7 +173,7 @@ def create_app() -> FastAPI:
     secret = settings.session_secret
     if not secret:
         secret = secrets.token_hex(32)
-        log.warning("SESSION_SECRET не задан — использую эфемерный секрет "
+        log.warning("SESSION_SECRET не задан – использую эфемерный секрет "
                     "(сессии сбросятся при рестарте). В проде задайте SESSION_SECRET в .env.")
     # Порядок важен: последний добавленный оборачивает остальные, то есть
     # выполняется первым. Нужно HEAD → session → csrf → csp → загрузка

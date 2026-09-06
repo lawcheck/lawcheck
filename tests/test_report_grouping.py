@@ -73,7 +73,7 @@ def test_lock_price_promise_matches_pricing_page(client):
     # Замок отчёта и баннер тарифов обязаны называть одно число.
     expected = gating.locked_fix_count(_findings())
     assert f"Открыть {expected} исправлен" in report.text
-    assert f"Под замком — {expected} исправлен" in pricing.text
+    assert f"Под замком – {expected} исправлен" in pricing.text
 
 
 def _findings():
@@ -187,9 +187,9 @@ def test_light_report_leads_with_pro(client):
     html = client.get(f"/report/{SCAN_ID}").text
     hero = _hero(html)
     assert "990 ₽" in hero and "8 000 ₽" not in hero
-    assert "Открыть исправления — 990 ₽" in html      # CTA в оглавлении заодно
+    assert "Открыть исправления – 990 ₽" in html      # CTA в оглавлении заодно
     # пакет никуда не делся — он остаётся апселлом под находками
-    assert "Заказать документы — 8 000 ₽" in html
+    assert "Заказать документы – 8 000 ₽" in html
 
 
 def test_heavy_report_leads_with_docs_package(client):

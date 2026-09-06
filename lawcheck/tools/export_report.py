@@ -175,7 +175,7 @@ _PAGE = """<!doctype html>
 {risk_line}
 {blocks}
 <footer>Отчёт подготовлен автоматически сервисом LawCheck и не является юридической
-консультацией. Оценка риска штрафа ориентировочна. По вопросам — juristlawer@gmail.com</footer>
+консультацией. Оценка риска штрафа ориентировочна. По вопросам – juristlawer@gmail.com</footer>
 </body></html>"""
 
 
