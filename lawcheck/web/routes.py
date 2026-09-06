@@ -23,7 +23,7 @@ from lawcheck.config import settings
 from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
 from lawcheck.notify import mailer, telegram
-from lawcheck.reporting import fines
+from lawcheck.reporting import fines, gating
 from lawcheck.utils import consent
 from lawcheck.utils.contact import contact_url, mask_contact
 from lawcheck.utils.domain import is_own_site
@@ -47,7 +47,13 @@ def _money(value: int) -> str:
     return f"{int(value):,}".replace(",", " ")
 
 
+def _fixes(value: int) -> str:
+    """18 -> '18 исправлений'. Склонение по последней цифре, а не по 2–4."""
+    return f"{value} {gating.plural(value, 'исправление', 'исправления', 'исправлений')}"
+
+
 templates.env.filters["money"] = _money
+templates.env.filters["fixes"] = _fixes
 templates.env.globals["fine_group"] = fines.group_for  # вызывается внутри Jinja-макроса
 templates.env.globals["contact_url"] = contact_url  # контакт заявки ссылкой в /inbox
 
@@ -363,10 +369,8 @@ async def pricing(request: Request, scan: str = ""):
     if scan_id:
         s = await asyncio.to_thread(repo.get_scan, scan_id)
         if s is not None and s.status == "done":
-            locked = sum(1 for f in s.findings
-                         if f.severity != "ok" and f.recommendation)
             scan_ctx = {"url": s.url,
-                        "locked": max(0, locked - report.FREE_RECIPES),
+                        "locked": gating.locked_fix_count(s.findings),
                         "id": s.id}
     response = templates.TemplateResponse(request, "pricing.html",
                                       {"example": example, "scan_id": scan_id,

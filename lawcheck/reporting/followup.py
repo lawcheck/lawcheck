@@ -19,21 +19,15 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.db.models import Lead, Scan
 from lawcheck.notify import mailer
-from lawcheck.reporting import fines
+from lawcheck.reporting import fines, gating
 from lawcheck.utils.contact import mask_contact
 
 log = logging.getLogger(__name__)
 
-_FREE_RECIPES = 2
-_SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2, "ok": 3}
+_SEVERITY_ORDER = gating.SEVERITY_ORDER
 
 
-def _plural(n: int, one: str, few: str, many: str) -> str:
-    if n % 10 == 1 and n % 100 != 11:
-        return one
-    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
-        return few
-    return many
+_plural = gating.plural
 
 
 def _host(url: str) -> str:
@@ -63,8 +57,7 @@ def build_context(lead: Lead, scan: Scan) -> dict:
         key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id),
     )
     critical = [f for f in problems if f.severity == "critical"]
-    with_recipe = [f for f in problems if f.recommendation]
-    locked = max(0, len(with_recipe) - _FREE_RECIPES)
+    locked = gating.locked_fix_count(scan.findings)
     base = settings.site_base_url.rstrip("/")
     contact = settings.reply_to or settings.smtp_user or "maxim@lawchek.ru"
     return {

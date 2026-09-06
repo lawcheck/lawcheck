@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.notify import telegram
-from lawcheck.reporting import fines, policy_draft, rkn_notification_draft
+from lawcheck.reporting import fines, gating, policy_draft, rkn_notification_draft
 from lawcheck.utils.contact import mask_contact
 from lawcheck.utils.email import valid_email
 from lawcheck.web import deps
@@ -101,9 +101,56 @@ _BLOCK_DEFS = [
 ]
 
 
-# Сколько рекомендаций «Как исправить» открыто в бесплатном отчёте.
-# Диагноз (что сломано, цитата, штраф) открыт всегда; рецепты сверх лимита — в Pro.
-FREE_RECIPES = 2
+# Отсутствующие разделы Политики (A3.*) сворачиваются в одну карточку: их
+# бывает до восьми, они выглядят как восемь отдельных бед, а закрываются одним
+# действием — новой Политикой. Проход по боевому отчёту 06.09.2026 показал
+# стену из одинаковых пунктов с одинаковым замком (вики
+# lawcheck-otchet-put-do-oplaty). Диагноз при этом НЕ режем: части лежат внутри
+# раскрывающегося списка (вики free-report-gating — урезанный диагноз убивает
+# доверие).
+_GROUPED_PREFIX = gating.GROUPED_PREFIX
+_GROUPED_LAW = "ст. 18.1 ч. 2 152-ФЗ"
+
+
+class GroupedFinding:
+    """Свёрнутая карточка: одна проблема, внутри — исходные находки.
+
+    Повторяет утиный интерфейс Finding для шаблона отчёта, поэтому макрос
+    finding_card рисует её без ветвлений, а `parts` добавляет вложенный список.
+    """
+
+    def __init__(self, parts: list, total_sections: int):
+        first = parts[0]
+        self.id = f"grouped-{_GROUPED_PREFIX}"
+        self.check_id = _GROUPED_PREFIX
+        self.severity = min(parts, key=lambda f: _SEVERITY_ORDER.get(f.severity, 9)).severity
+        self.title = (f"В Политике не хватает обязательных разделов: "
+                      f"{len(parts)} из {total_sections}")
+        self.law_reference = _GROUPED_LAW
+        self.location = first.location
+        self.evidence = ("Одно исправление закрывает все пункты ниже: "
+                         "Политику нужно заменить на полную.")
+        # Рецепт у свёрнутой карточки — сводный: рецепты отдельных разделов
+        # лежат в parts и раскрываются вместе с ней после оплаты.
+        self.recommendation = ("Замените Политику на полную: в текущей нет "
+                               f"{len(parts)} обязательных разделов из {total_sections}.")
+        self.extra = None
+        self.parts = parts
+
+
+def _group_policy_sections(problems: list, all_items: list) -> list:
+    """Свернуть отсутствующие разделы Политики в одну карточку блока."""
+    grouped = [f for f in problems if f.check_id.split(".")[0] == _GROUPED_PREFIX]
+    if len(grouped) < 2:
+        return problems
+    total = sum(1 for f in all_items if f.check_id.split(".")[0] == _GROUPED_PREFIX)
+    card = GroupedFinding(grouped, total)
+    rest = [f for f in problems if f.check_id.split(".")[0] != _GROUPED_PREFIX]
+    return sorted([card, *rest],
+                  key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id))
+
+
+FREE_RECIPES = gating.FREE_RECIPES
 
 
 async def unlock_order_id(request: Request, scan, order: str = "") -> str | None:
@@ -181,6 +228,7 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
         problems = [f for f in items if f.severity != "ok"]
         oks = [f for f in items if f.severity == "ok"]
         worst = problems[0].severity if problems else "ok"
+        problems = _group_policy_sections(problems, items)
         blocks.append({
             "slug": slug, "title": title,
             "problems": problems, "oks": oks, "worst": worst,
@@ -193,10 +241,7 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
     # самый крупный риск держим под замком — иначе бесплатно раздаётся ровно
     # то, за что платят (см. вики free-report-gating, замер воронки 2026-07-21).
     # Оплаченный заказ с этим scan_id снимает замок со всех рецептов.
-    all_problems = sorted(
-        (f for f in scan.findings if f.severity != "ok" and f.recommendation),
-        key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id),
-    )
+    all_problems = gating.ordered_problems(scan.findings)
     # Разблокировка «Как исправить»: (1) разовая покупка с этого отчёта, либо
     # (2) Pro-подписка — залогиненный ВЛАДЕЛЕЦ скана с оплаченным заказом видит
     # свои отчёты открытыми целиком (чужие сканы так не открываются).
@@ -211,9 +256,18 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
     else:
         # all_problems отсортированы critical→info, поэтому «хвост» — наименее
         # тяжёлые находки: их рецепты и показываем как тизер качества.
-        free_sample = all_problems[-FREE_RECIPES:] if FREE_RECIPES else []
-        open_rec_ids = {f.id for f in free_sample}
-        locked_count = max(0, len(all_problems) - len(open_rec_ids))
+        open_rec_ids = gating.free_recipe_ids(all_problems)
+        locked_count = gating.locked_fix_count(scan.findings)
+
+    # Свёрнутая карточка — не находка, её id в open_rec_ids сам не попадёт:
+    # без этого оплаченный отчёт оставил бы разделы Политики под замком
+    # (та же дыра «оплатил и не открылось», что чинили в июле, см. вики
+    # lawcheck-report-paywall-unlock).
+    for b in blocks:
+        for card in b["problems"]:
+            if isinstance(card, GroupedFinding) and all(
+                    p.id in open_rec_ids for p in card.parts):
+                open_rec_ids.add(card.id)
 
     return _indexing(templates.TemplateResponse(request, "report.html", {
         "scan": scan,
