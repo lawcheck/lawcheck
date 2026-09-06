@@ -25,18 +25,37 @@ def ordered_problems(findings) -> list:
     )
 
 
-def free_recipe_ids(problems: list) -> set:
-    """id находок, чьи рецепты открыты бесплатно — «хвост» наименее тяжёлых."""
-    return {f.id for f in (problems[-FREE_RECIPES:] if FREE_RECIPES else [])}
+def is_grouped(finding) -> bool:
+    """Уйдёт ли находка в свёрнутую карточку разделов Политики."""
+    return finding.check_id.split(".")[0] == GROUPED_PREFIX
+
+
+def will_collapse(findings) -> bool:
+    """Свернётся ли блок Политики: одна карточка имеет смысл от двух разделов."""
+    return sum(1 for f in ordered_problems(findings) if is_grouped(f)) >= 2
+
+
+def gate(findings) -> tuple[set, int]:
+    """(id открытых рецептов, число закрытых исправлений) — один источник правды.
+
+    Бесплатный тизер берётся среди находок, которые НЕ уедут в свёрнутую
+    карточку: та открывается только целиком, поэтому попавший в неё бесплатный
+    рецепт человек всё равно не увидит — на боевом скане skillbox так терялся
+    один из двух (вики lawcheck-otchet-put-do-oplaty).
+    """
+    problems = ordered_problems(findings)
+    collapsed = will_collapse(findings)
+    # Хвост = наименее тяжёлые: тизер на мелочи, crown-jewel фиксы под замком.
+    teaser_pool = [f for f in problems if not (collapsed and is_grouped(f))]
+    free_ids = {f.id for f in teaser_pool[-FREE_RECIPES:]} if FREE_RECIPES else set()
+    locked = [f for f in problems if f.id not in free_ids]
+    grouped_locked = [f for f in locked if is_grouped(f)]
+    return free_ids, len(locked) - max(0, len(grouped_locked) - 1)
 
 
 def locked_fix_count(findings) -> int:
     """Число закрытых замком исправлений — в тех же единицах, что карточки."""
-    problems = ordered_problems(findings)
-    free_ids = free_recipe_ids(problems)
-    locked = [f for f in problems if f.id not in free_ids]
-    grouped = [f for f in locked if f.check_id.split(".")[0] == GROUPED_PREFIX]
-    return len(locked) - max(0, len(grouped) - 1)
+    return gate(findings)[1]
 
 
 def plural(n: int, one: str, few: str, many: str) -> str:

@@ -139,13 +139,18 @@ class GroupedFinding:
 
 
 def _group_policy_sections(problems: list, all_items: list) -> list:
-    """Свернуть отсутствующие разделы Политики в одну карточку блока."""
-    grouped = [f for f in problems if f.check_id.split(".")[0] == _GROUPED_PREFIX]
+    """Свернуть отсутствующие разделы Политики в одну карточку блока.
+
+    Сворачиваем только находки С рецептом: карточка открывается, когда открыты
+    все её части, а находка без рецепта в open_rec_ids не попадает никогда —
+    одна такая заперла бы разделы Политики даже в оплаченном отчёте.
+    """
+    grouped = [f for f in problems if gating.is_grouped(f) and f.recommendation]
     if len(grouped) < 2:
         return problems
-    total = sum(1 for f in all_items if f.check_id.split(".")[0] == _GROUPED_PREFIX)
+    total = sum(1 for f in all_items if gating.is_grouped(f))
     card = GroupedFinding(grouped, total)
-    rest = [f for f in problems if f.check_id.split(".")[0] != _GROUPED_PREFIX]
+    rest = [f for f in problems if f not in grouped]
     return sorted([card, *rest],
                   key=lambda f: (_SEVERITY_ORDER.get(f.severity, 9), f.check_id))
 
@@ -256,8 +261,7 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
     else:
         # all_problems отсортированы critical→info, поэтому «хвост» — наименее
         # тяжёлые находки: их рецепты и показываем как тизер качества.
-        open_rec_ids = gating.free_recipe_ids(all_problems)
-        locked_count = gating.locked_fix_count(scan.findings)
+        open_rec_ids, locked_count = gating.gate(scan.findings)
 
     # Свёрнутая карточка — не находка, её id в open_rec_ids сам не попадёт:
     # без этого оплаченный отчёт оставил бы разделы Политики под замком
