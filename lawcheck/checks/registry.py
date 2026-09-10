@@ -41,3 +41,8 @@ CHECKS: list[Check] = [
     AgeMarkingCheck(),
     TlsCheck(),
 ]
+
+
+def checkpoints() -> int:
+    """Сколько пунктов проверяет сканер — цифра для лендингов и FAQ."""
+    return sum(c.points() for c in CHECKS)

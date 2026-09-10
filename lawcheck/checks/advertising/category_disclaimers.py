@@ -103,6 +103,9 @@ class CategoryDisclaimersCheck(Check):
     id = CHECK_ID
     title = TITLE
 
+    def points(self) -> int:
+        return len(RULES)
+
     def run(self, snapshot: SiteSnapshot) -> list[Finding]:
         # Собираем нормализованный текст со всех страниц одним блоком
         all_text = normalize_ru(" ".join(

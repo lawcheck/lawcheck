@@ -22,6 +22,9 @@ class RequisitesPresenceCheck(Check):
     id = CHECK_ID
     title = TITLE
 
+    def points(self) -> int:
+        return 3  # ИНН, ОГРН/ОГРНИП, наименование
+
     def run(self, snapshot: SiteSnapshot) -> list[Finding]:
         req = extract(snapshot)
         findings: list[Finding] = []
