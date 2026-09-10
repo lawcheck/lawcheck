@@ -18,6 +18,7 @@ from lawcheck.checks.security.tls import TlsCheck
 from lawcheck.checks.zozpp.delivery import DeliveryCheck
 from lawcheck.checks.zozpp.oferta import OfertaCheck
 from lawcheck.checks.zozpp.returns import ReturnsCheck
+from lawcheck.checks.zozpp.state_language import StateLanguageCheck
 
 CHECKS: list[Check] = [
     PolicyPresenceCheck(),
@@ -33,6 +34,7 @@ CHECKS: list[Check] = [
     OfertaCheck(),
     DeliveryCheck(),
     ReturnsCheck(),
+    StateLanguageCheck(),
     SuperlativesCheck(),
     CategoryDisclaimersCheck(),
     OrdMarkingCheck(),
