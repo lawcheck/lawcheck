@@ -29,3 +29,9 @@ def pd_field_patterns() -> dict[str, dict[str, Any]]:
 
 def consent_markers() -> dict[str, list[str]]:
     return load("consent_markers")
+
+
+def foreign_words() -> dict[str, dict[str, str]]:
+    """Слои «интерфейс» и «поля формы»: иностранное слово -> русский аналог."""
+    data = load("foreign_words")
+    return {"interface": data["interface"], "form_fields": data["form_fields"]}

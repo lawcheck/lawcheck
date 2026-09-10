@@ -41,6 +41,9 @@ class PolicySectionsCheck(Check):
     id = CHECK_ID
     title = TITLE
 
+    def points(self) -> int:
+        return len(loader.policy_sections())
+
     def run(self, snapshot: SiteSnapshot) -> list[Finding]:
         links = find_policy_links(snapshot)
         if not links:

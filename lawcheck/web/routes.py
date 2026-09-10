@@ -19,6 +19,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from urllib.parse import urlparse
 
+from lawcheck.checks.registry import checkpoints
 from lawcheck.config import settings
 from lawcheck.crawler.url_guard import UnsafeUrl, check_url
 from lawcheck.db import repo
@@ -52,11 +53,20 @@ def _fixes(value: int) -> str:
     return f"{value} {gating.plural(value, 'исправление', 'исправления', 'исправлений')}"
 
 
+def _checks(value: int) -> str:
+    """33 -> '33 проверки'. Склонение по последней цифре, как и у _fixes."""
+    return f"{value} {gating.plural(value, 'проверка', 'проверки', 'проверок')}"
+
+
 templates.env.filters["money"] = _money
 templates.env.filters["fixes"] = _fixes
+templates.env.filters["checks"] = _checks
 templates.env.globals["fine_group"] = fines.group_for  # вызывается внутри Jinja-макроса
 templates.env.globals["contact_url"] = contact_url  # контакт заявки ссылкой в /inbox
 
+# Цифра «N проверок» на лендингах считается из реестра проверок, а не вписывается
+# руками: хардкод «30» пережил четыре релиза и разошёлся с движком на три пункта.
+templates.env.globals["checkpoints"] = checkpoints()
 templates.env.globals["operator"] = OPERATOR
 templates.env.globals["metrika_id"] = settings.metrika_id
 templates.env.globals["site_base_url"] = settings.site_base_url.rstrip("/")
