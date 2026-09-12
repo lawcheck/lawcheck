@@ -63,6 +63,48 @@ def is_configured() -> bool:
     return bool(settings.telegram_bot_token and settings.telegram_owner_chat_id)
 
 
+# Адреса api.telegram.org, которые пробуем, когда канал не отвечает. Российский
+# хостер режет их поодиночке, а DNS отдаёт заблокированный, поэтому рабочий
+# адрес пинится в extra_hosts (см. docker-compose.yml). Если пин перестанет
+# отвечать, алерт должен сразу сказать, на какой адрес его менять, — иначе
+# придётся заново перебирать руками.
+_KNOWN_IPS = ("149.154.167.220", "149.154.167.197", "149.154.166.110",
+              "149.154.165.120", "149.154.175.50", "91.108.4.5")
+
+
+def reachable_ips(timeout: float = 4.0) -> list[str]:
+    """Какие адреса Telegram отвечают на 443 прямо сейчас."""
+    import socket
+    alive = []
+    for ip in _KNOWN_IPS:
+        try:
+            with socket.create_connection((ip, 443), timeout=timeout):
+                alive.append(ip)
+        except OSError:
+            continue
+    return alive
+
+
+def check_api() -> tuple[bool, str]:
+    """Жив ли канал: getMe к Bot API. Возвращает (ок, подробность).
+
+    Проверять надо именно вызовом API, а не TCP-соединением: адрес может
+    терминировать TLS и при этом не обслуживать бота.
+    """
+    if not settings.telegram_bot_token:
+        return False, "TELEGRAM_BOT_TOKEN не задан"
+    try:
+        r = httpx.get(_API.format(token=settings.telegram_bot_token, method="getMe"),
+                      timeout=10)
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        return False, f"{type(e).__name__}: {str(e)[:200]}"
+    if not data.get("ok"):
+        return False, f"Bot API вернул ok=false: {str(data)[:200]}"
+    return True, str((data.get("result") or {}).get("username") or "бот без username")
+
+
 def send_message(chat_id: str, text: str) -> bool:
     """Отправить сообщение в произвольный чат (HTML). Best-effort: ошибки не
     пробрасываем. True — если ушло (для разовых проверок)."""

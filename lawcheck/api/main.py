@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import secrets
 from pathlib import Path
@@ -18,6 +19,7 @@ force_ipv4()
 
 from lawcheck.api.routes import scan  # noqa: E402
 from lawcheck.db.session import init_db  # noqa: E402
+from lawcheck.notify import heartbeat  # noqa: E402
 from lawcheck.web import routes as web_routes  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -197,8 +199,12 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
     @app.on_event("startup")
-    def _on_startup() -> None:
+    async def _on_startup() -> None:
         init_db()
+        # Сторож за задачами по расписанию. Живёт внутри api намеренно: если
+        # завести его отдельным cron'ом, он охранял бы сам себя — тем же
+        # механизмом, поломку которого должен замечать.
+        asyncio.create_task(heartbeat.watch())
 
     @app.get("/healthz")
     async def healthz() -> dict:
