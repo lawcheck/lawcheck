@@ -105,7 +105,13 @@ def check_api() -> tuple[bool, str]:
 # виснет до таймаута. Замер на проде — примерно один прогон из пяти. Повтор со
 # сбросом выбранного адреса превращает это в редкость; без него каждое пятое
 # уведомление просто пропадало бы, и заметить это нечем.
-_ATTEMPTS = 2
+_ATTEMPTS = 3
+# Таймаут по фазам, а не одним числом. С общим `timeout=8` худший случай на
+# проде разросся до 34 с: соединение зависало, и каждая фаза отсчитывала свой
+# лимит заново. Подключение упирается в DPI, поэтому ему дан короткий срок —
+# живой адрес отвечает за миллисекунды, а мёртвый не ответит и за минуту.
+# Чтению нужно больше: там уже работает сам Bot API.
+_TIMEOUT = httpx.Timeout(connect=5.0, read=8.0, write=8.0, pool=5.0)
 
 
 def _request_with_retry(method: str, **kwargs) -> httpx.Response:
@@ -116,7 +122,7 @@ def _request_with_retry(method: str, **kwargs) -> httpx.Response:
     for attempt in range(1, _ATTEMPTS + 1):
         try:
             r = httpx.post(_API.format(token=settings.telegram_bot_token, method=method),
-                           timeout=8, **kwargs)
+                           timeout=_TIMEOUT, **kwargs)
             r.raise_for_status()
             return r
         except httpx.TransportError as e:
