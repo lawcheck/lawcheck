@@ -98,8 +98,16 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
             amount_rub=amount, purpose=f"{purpose} (заказ {order_id[:8]})", order_id=order_id,
             email=email,
         )
-    except Exception:
+    except Exception as exc:
         log.exception("tochka: не удалось создать платёжную ссылку")
+        # Клиент дошёл до оплаты и упёрся в стену — знать об этом надо сразу, а
+        # не через месяц по таблице `orders`. Прошлые две поломки эквайринга
+        # (карта без чека, корень Минцифры) жили незамеченными неделями именно
+        # потому, что единственным следом был ERROR в логах.
+        bg.add_task(telegram.notify_owner,
+                    f"🚨 Касса не выписала ссылку: заказ <b>{order_id[:8]}</b>, "
+                    f"{plan_title(plan)} ({amount} ₽), {telegram.esc(email)}.\n"
+                    f"<code>{telegram.esc(type(exc).__name__)}: {telegram.esc(str(exc)[:200])}</code>")
         return templates.TemplateResponse(request, "pay_fallback.html", {"plan": plan, "amount": amount})
     await asyncio.to_thread(repo.set_order_payment, order_id, link.operation_id, link.url)
     return RedirectResponse(url=link.url, status_code=303)
