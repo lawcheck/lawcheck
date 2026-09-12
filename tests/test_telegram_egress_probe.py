@@ -139,7 +139,7 @@ def test_dve_neudachi_podryad_vozvrashchayut_false(monkeypatch):
 
     monkeypatch.setattr(httpx, "post", always_fail)
     assert telegram.send_message("42", "текст") is False
-    assert len(calls) == 2, "ровно две попытки, без бесконечного цикла"
+    assert len(calls) == telegram._ATTEMPTS, "фиксированное число попыток, без цикла"
 
 
 def test_oshibka_razmetki_ne_povtoryaetsya(monkeypatch):
@@ -162,3 +162,14 @@ def test_oshibka_razmetki_ne_povtoryaetsya(monkeypatch):
     monkeypatch.setattr(httpx, "post", bad_markup)
     assert telegram.send_message("42", "<b>кривая") is False
     assert len(calls) == 1
+
+
+def test_hudshiy_sluchay_ogranichen():
+    """Общий `timeout=8` давал 34 с на проде: фазы отсчитывали лимит заново."""
+    from lawcheck.notify import telegram
+
+    t = telegram._TIMEOUT
+    worst = telegram._ATTEMPTS * (t.connect + net._TG_PROBE_TIMEOUT_SEC
+                                  * len(net._TELEGRAM_FALLBACK_IPS))
+    assert t.connect <= 5, "подключение упирается в DPI — ждать долго бессмысленно"
+    assert worst < 45
