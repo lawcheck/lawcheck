@@ -94,3 +94,71 @@ def test_naydennyy_adres_kesniruetsya(monkeypatch):
     second = net._pick_telegram_ip()
     assert first == second
     assert len(calls) == 1, "второй вызов обязан брать адрес из кеша"
+
+
+# === Повтор при сетевой ошибке ===
+
+def test_povtor_pri_setevoy_oshibke(monkeypatch):
+    """DPI роняет часть соединений после рукопожатия — один повтор спасает."""
+    import httpx
+
+    from lawcheck.notify import telegram
+
+    monkeypatch.setattr(telegram.settings, "telegram_bot_token", "tok")
+    calls: list[int] = []
+    resets: list[int] = []
+    monkeypatch.setattr(net, "reset_telegram_ip", lambda: resets.append(1))
+
+    class OK:
+        def raise_for_status(self): pass
+
+    def flaky(url, **kw):
+        calls.append(1)
+        if len(calls) == 1:
+            raise httpx.ConnectTimeout("timed out")
+        return OK()
+
+    monkeypatch.setattr(httpx, "post", flaky)
+    assert telegram.send_message("42", "текст") is True
+    assert len(calls) == 2
+    assert len(resets) == 1, "адрес обязан сбрасываться перед повтором"
+
+
+def test_dve_neudachi_podryad_vozvrashchayut_false(monkeypatch):
+    import httpx
+
+    from lawcheck.notify import telegram
+
+    monkeypatch.setattr(telegram.settings, "telegram_bot_token", "tok")
+    monkeypatch.setattr(net, "reset_telegram_ip", lambda: None)
+    calls: list[int] = []
+
+    def always_fail(url, **kw):
+        calls.append(1)
+        raise httpx.ConnectTimeout("timed out")
+
+    monkeypatch.setattr(httpx, "post", always_fail)
+    assert telegram.send_message("42", "текст") is False
+    assert len(calls) == 2, "ровно две попытки, без бесконечного цикла"
+
+
+def test_oshibka_razmetki_ne_povtoryaetsya(monkeypatch):
+    """400 от Telegram — не сетевая ошибка, повторять её бессмысленно."""
+    import httpx
+
+    from lawcheck.notify import telegram
+
+    monkeypatch.setattr(telegram.settings, "telegram_bot_token", "tok")
+    calls: list[int] = []
+
+    class Bad:
+        def raise_for_status(self):
+            raise httpx.HTTPStatusError("400", request=None, response=None)
+
+    def bad_markup(url, **kw):
+        calls.append(1)
+        return Bad()
+
+    monkeypatch.setattr(httpx, "post", bad_markup)
+    assert telegram.send_message("42", "<b>кривая") is False
+    assert len(calls) == 1

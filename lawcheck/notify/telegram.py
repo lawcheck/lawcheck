@@ -92,10 +92,7 @@ def check_api() -> tuple[bool, str]:
     if not settings.telegram_bot_token:
         return False, "TELEGRAM_BOT_TOKEN не задан"
     try:
-        r = httpx.get(_API.format(token=settings.telegram_bot_token, method="getMe"),
-                      timeout=10)
-        r.raise_for_status()
-        data = r.json()
+        data = _request_with_retry("getMe").json()
     except Exception as e:
         return False, f"{type(e).__name__}: {str(e)[:200]}"
     if not data.get("ok"):
@@ -103,23 +100,47 @@ def check_api() -> tuple[bool, str]:
     return True, str((data.get("result") or {}).get("username") or "бот без username")
 
 
+# Сколько раз пробуем запрос к Bot API. DPI из РФ-ДЦ роняет часть соединений
+# уже после успешного TCP-рукопожатия: проба адреса проходит, а запрос по нему
+# виснет до таймаута. Замер на проде — примерно один прогон из пяти. Повтор со
+# сбросом выбранного адреса превращает это в редкость; без него каждое пятое
+# уведомление просто пропадало бы, и заметить это нечем.
+_ATTEMPTS = 2
+
+
+def _request_with_retry(method: str, **kwargs) -> httpx.Response:
+    """POST к Bot API с повтором по сетевой ошибке и сменой адреса."""
+    from lawcheck import net
+
+    last: Exception | None = None
+    for attempt in range(1, _ATTEMPTS + 1):
+        try:
+            r = httpx.post(_API.format(token=settings.telegram_bot_token, method=method),
+                           timeout=8, **kwargs)
+            r.raise_for_status()
+            return r
+        except httpx.TransportError as e:
+            last = e
+            log.warning("telegram: попытка %s/%s не удалась (%s)", attempt, _ATTEMPTS, e)
+            # Держаться за адрес, по которому только что не прошло, незачем:
+            # следующий перебор может выбрать другой.
+            net.reset_telegram_ip()
+    raise last if last is not None else RuntimeError("telegram: неизвестная ошибка")
+
+
 def send_message(chat_id: str, text: str) -> bool:
     """Отправить сообщение в произвольный чат (HTML). Best-effort: ошибки не
     пробрасываем. True — если ушло (для разовых проверок)."""
     if not settings.telegram_bot_token or not chat_id:
         return False
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
     try:
-        r = httpx.post(
-            _API.format(token=settings.telegram_bot_token, method="sendMessage"),
-            json={
-                "chat_id": chat_id,
-                "text": text,
-                "parse_mode": "HTML",
-                "disable_web_page_preview": True,
-            },
-            timeout=8,
-        )
-        r.raise_for_status()
+        _request_with_retry("sendMessage", json=payload)
         return True
     except Exception as e:
         log.warning("telegram: сообщение в %s не отправлено: %s", chat_id, e)
