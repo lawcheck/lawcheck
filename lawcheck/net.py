@@ -10,7 +10,7 @@
 """
 import socket
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 _orig_getaddrinfo = socket.getaddrinfo
 
@@ -70,9 +70,11 @@ def _pick_telegram_ip() -> str | None:
     httpx упирался в свой таймаут внутри резолвера, а не на соединении с
     Telegram (прямой запрос к живому адресу укладывается в 0.34 с).
 
-    Параллельно весь перебор стоит одну пробу независимо от длины списка.
-    Победителя выбираем по исходному порядку, а не по скорости ответа: адрес
-    из DNS должен выигрывать у запасного, когда отвечают оба.
+    Параллельно перебор стоит столько, сколько думает САМЫЙ БЫСТРЫЙ живой
+    адрес, а не сумма таймаутов мёртвых. Побеждает первый ответивший: любой
+    адрес, обслуживающий Bot API, одинаково пригоден, а предпочтение порядку
+    стоило бы ожидания более приоритетных проб — то есть ровно той задержки,
+    ради устранения которой всё и делается.
     """
     global _tg_ip_cache, _tg_ip_cached_at
     if _tg_ip_cache and (time.monotonic() - _tg_ip_cached_at) < _TG_IP_TTL_SEC:
@@ -81,14 +83,25 @@ def _pick_telegram_ip() -> str | None:
     candidates = _telegram_candidates()
     if not candidates:
         return None
-    with ThreadPoolExecutor(max_workers=len(candidates)) as ex:
-        alive = dict(zip(candidates, ex.map(_probe, candidates)))
-    for ip in candidates:
-        if alive.get(ip):
-            _tg_ip_cache = ip
-            _tg_ip_cached_at = time.monotonic()
-            return ip
-    return None
+    # Берём ПЕРВЫЙ ответивший и не ждём остальных. Ожидание всех проб сводило
+    # параллельность на нет: живой адрес отвечает за миллисекунды, а каждый
+    # мёртвый честно выбирает свой таймаут, и перебор снова стоил полторы
+    # секунды вместо сотых. Executor гасим без ожидания — недобежавшие пробы
+    # никому не мешают и завершатся сами.
+    ex = ThreadPoolExecutor(max_workers=len(candidates))
+    try:
+        futures = {ex.submit(_probe, ip): ip for ip in candidates}
+        try:
+            for fut in as_completed(futures, timeout=_TG_PROBE_TIMEOUT_SEC + 0.5):
+                if fut.result():
+                    _tg_ip_cache = futures[fut]
+                    _tg_ip_cached_at = time.monotonic()
+                    return _tg_ip_cache
+        except TimeoutError:
+            pass
+        return None
+    finally:
+        ex.shutdown(wait=False, cancel_futures=True)
 
 
 def _ipv4_only(host, port, family=0, *args, **kwargs):
