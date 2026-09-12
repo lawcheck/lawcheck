@@ -38,15 +38,6 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://lawcheck:${POSTGRES_PASSWORD:-lawcheck}@postgres:5432/lawcheck
       REDIS_URL: redis://redis:6379/0
-    # api.telegram.org режется у российского хостера ПО ОТДЕЛЬНЫМ адресам, а не
-    # целиком: DNS отдаёт 149.154.166.110 (таймаут на 443), при этом
-    # 149.154.167.220 обслуживает Bot API нормально (getMe → 200 ok=true).
-    # Поэтому уведомления то доходили, то нет — как повезёт с резолвом.
-    # Пин адреса решает это без прокси. Имя сохраняется, значит SNI и проверка
-    # сертификата остаются штатными. Если Telegram сменит адрес, сломается
-    # снова — на этот случай notify_owner дублирует алерт на почту.
-    extra_hosts:
-      - "api.telegram.org:149.154.167.220"
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,10 +71,6 @@ services:
       CRAWLER_MAX_PAGES: ${CRAWLER_MAX_PAGES:-30}
       CRAWLER_TIMEOUT_SEC: ${CRAWLER_TIMEOUT_SEC:-30}
       CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-LawCheckBot/0.1 (+https://lawchek.ru/bot)}
-    # Тот же пин, что у api: воркер рассылает клиентам диффы мониторинга.
-    # Причина — в комментарии у сервиса api.
-    extra_hosts:
-      - "api.telegram.org:149.154.167.220"
     depends_on:
       postgres:
         condition: service_healthy

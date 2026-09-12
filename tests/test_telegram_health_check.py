@@ -77,3 +77,23 @@ def test_check_api_bez_tokena_ne_hodit_v_set(monkeypatch):
     ok, detail = telegram.check_api()
     assert ok is False
     assert "TELEGRAM_BOT_TOKEN" in detail
+
+
+def test_spisok_adresov_beryotsya_iz_net(monkeypatch):
+    """Свой список кандидатов разъехался бы с тем, по которому идёт выбор."""
+    from lawcheck import net
+
+    probed: list[str] = []
+
+    class FakeSock:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_conn(addr, timeout=None):
+        probed.append(addr[0])
+        raise OSError("blocked")
+
+    monkeypatch.setattr("socket.create_connection", fake_conn)
+    telegram.reachable_ips()
+
+    assert probed == net._TELEGRAM_FALLBACK_IPS
