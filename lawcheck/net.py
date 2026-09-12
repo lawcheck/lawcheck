@@ -77,6 +77,19 @@ def _ipv4_only(host, port, family=0, *args, **kwargs):
     return v4 or res
 
 
+def reset_telegram_ip() -> None:
+    """Забыть выбранный адрес, чтобы следующий запрос перебрал заново.
+
+    Нужно на повторе после сетевой ошибки: DPI роняет часть соединений уже
+    после успешного TCP-рукопожатия, поэтому «адрес отвечает на пробу» не
+    значит «по нему пройдёт запрос». Держаться за него до истечения TTL в
+    такой ситуации — значит повторять в ту же стену.
+    """
+    global _tg_ip_cache, _tg_ip_cached_at
+    _tg_ip_cache = None
+    _tg_ip_cached_at = 0.0
+
+
 def force_ipv4() -> None:
     """Идемпотентно подменяет socket.getaddrinfo (IPv4 + пиннинг Telegram)."""
     socket.getaddrinfo = _ipv4_only
