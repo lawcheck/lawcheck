@@ -17,9 +17,13 @@
 /payments_with_receipt та же карта дала APPROVED. СБП проходил в обоих случаях —
 поэтому поломка месяц оставалась незаметной.
 """
+import hashlib
 import logging
+import ssl
 from dataclasses import dataclass
+from pathlib import Path
 
+import certifi
 import httpx
 
 from lawcheck.config import settings
@@ -57,11 +61,48 @@ def is_configured() -> bool:
     return bool(settings.tochka_jwt and settings.tochka_customer_code)
 
 
+# `enter.tochka.com` предъявляет сертификат, выпущенный УЦ Минцифры: глобальные
+# УЦ российским банкам больше не выдают. Корня Минцифры нет ни в системном
+# хранилище Debian, ни в certifi, поэтому TLS-проверка падает с «self-signed
+# certificate in certificate chain», а с ней — выписка платёжной ссылки
+# (11.09.2026 так потеряны два заказа: 8 000 ₽ и 990 ₽).
+#
+# Корень добавляем ТОЛЬКО этому клиенту, а не в системное хранилище образа.
+# В этом же контейнере Chromium ходит по сайтам, адрес которых назвал
+# произвольный посетитель; УЦ в общем хранилище ручался бы за любой хост из
+# этого обхода, а нам нужен ровно один — банковский.
+_ROOT_CA = Path(__file__).parent / "certs" / "russian_trusted_root_ca.pem"
+# Отпечаток «Russian Trusted Root CA» (действителен до 27.02.2032). Сверяется
+# при каждой сборке клиента — платежей единицы в месяц, экономить тут не на чем.
+# Подменённый в образе корень — это доверие к чужому УЦ, и заметить такое по
+# логам нечем.
+_ROOT_CA_SHA256 = "d26d2d0231b7c39f92cc738512ba54103519e4405d68b5bd703e9788ca8ecf31"
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """Доверие: стандартные корни certifi плюс корень Минцифры.
+
+    Сверяем отпечаток самого сертификата (SHA-256 от DER), а не файла: так
+    константа совпадает с тем, что показывают `openssl x509 -fingerprint`
+    и любой просмотрщик, и её можно проверить глазами.
+    """
+    pem = _ROOT_CA.read_text(encoding="ascii")
+    got = hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem)).hexdigest()
+    if got != _ROOT_CA_SHA256:
+        raise RuntimeError(
+            f"корень Минцифры в {_ROOT_CA.name} не тот: ожидался "
+            f"{_ROOT_CA_SHA256}, в файле {got}")
+    ctx = ssl.create_default_context(cafile=certifi.where())
+    ctx.load_verify_locations(cadata=pem)
+    return ctx
+
+
 def _client() -> httpx.Client:
     return httpx.Client(
         base_url=settings.tochka_base_url,
         headers={"Authorization": f"Bearer {settings.tochka_jwt}"},
         timeout=20,
+        verify=_ssl_context(),
     )
 
 
