@@ -64,13 +64,16 @@ def test_kesh_ip_telegram_protuhaet(monkeypatch):
     monkeypatch.setattr(net, "_tg_ip_cached_at", 0.0)
 
     assert net._pick_telegram_ip() == "149.154.167.220"
+    # Пробы идут параллельно, поэтому первый вызов трогает всех кандидатов —
+    # считаем не абсолютное число, а прирост после второго вызова.
+    after_first = len(calls)
     net._pick_telegram_ip()
-    assert len(calls) == 1, "второй вызов должен брать из кеша"
+    assert len(calls) == after_first, "второй вызов должен брать из кеша"
 
     # Отматываем время за пределы TTL.
     monkeypatch.setattr(net, "_tg_ip_cached_at", time.monotonic() - net._TG_IP_TTL_SEC - 1)
     net._pick_telegram_ip()
-    assert len(calls) == 2, "после TTL адрес должен перепроверяться"
+    assert len(calls) > after_first, "после TTL адрес должен перепроверяться"
 
 
 # === №17: очередь краулера ===
