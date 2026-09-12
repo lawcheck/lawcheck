@@ -22,6 +22,13 @@ import logging
 from lawcheck.db.session import init_db
 from lawcheck.reporting import nurture
 
+from lawcheck.net import force_ipv4
+
+# Отдельная точка входа: через api/main.py она не проходит, а контейнер
+# IPv4-only. Без патча httpx/smtplib берут AAAA-адрес и падают с «Network is
+# unreachable» — тот же случай, что описан в tools/poll_inbox.py.
+force_ipv4()
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Рассылка nurture-цепочки")
