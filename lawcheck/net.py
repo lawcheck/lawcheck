@@ -10,6 +10,7 @@
 """
 import socket
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 _orig_getaddrinfo = socket.getaddrinfo
 
@@ -51,19 +52,42 @@ def _telegram_candidates() -> list[str]:
     return list(dict.fromkeys(candidates))
 
 
+def _probe(ip: str) -> bool:
+    try:
+        socket.create_connection((ip, 443), timeout=_TG_PROBE_TIMEOUT_SEC).close()
+        return True
+    except Exception:
+        return False
+
+
 def _pick_telegram_ip() -> str | None:
+    """Первый отвечающий адрес из списка кандидатов, с кешем на TTL.
+
+    Пробы идут ПАРАЛЛЕЛЬНО. Последовательный перебор стоил столько, сколько
+    мёртвых адресов встретится до живого: на проде из шести кандидатов
+    отвечает ровно один, то есть до пяти проб по 1.5 с — девять секунд при
+    бюджете подключения в пять. Именно так и выглядели «зависания» по 15 с:
+    httpx упирался в свой таймаут внутри резолвера, а не на соединении с
+    Telegram (прямой запрос к живому адресу укладывается в 0.34 с).
+
+    Параллельно весь перебор стоит одну пробу независимо от длины списка.
+    Победителя выбираем по исходному порядку, а не по скорости ответа: адрес
+    из DNS должен выигрывать у запасного, когда отвечают оба.
+    """
     global _tg_ip_cache, _tg_ip_cached_at
     if _tg_ip_cache and (time.monotonic() - _tg_ip_cached_at) < _TG_IP_TTL_SEC:
         return _tg_ip_cache
     _tg_ip_cache = None
-    for ip in _telegram_candidates():
-        try:
-            socket.create_connection((ip, 443), timeout=_TG_PROBE_TIMEOUT_SEC).close()
+    candidates = _telegram_candidates()
+    if not candidates:
+        return None
+    with ThreadPoolExecutor(max_workers=len(candidates)) as ex:
+        alive = dict(zip(candidates, ex.map(_probe, candidates)))
+    for ip in candidates:
+        if alive.get(ip):
             _tg_ip_cache = ip
             _tg_ip_cached_at = time.monotonic()
             return ip
-        except Exception:
-            continue
     return None
 
 

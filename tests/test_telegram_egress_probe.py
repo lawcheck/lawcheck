@@ -53,8 +53,8 @@ def test_upavshiy_rezolver_ne_lomaet_perebor(monkeypatch):
     assert net._telegram_candidates() == net._TELEGRAM_FALLBACK_IPS
 
 
-def test_perebor_ne_probuet_odin_adres_dvazhdy(monkeypatch):
-    """Главное: на дубликаты таймаут больше не тратится."""
+def test_kazhdyy_adres_probuetsya_odin_raz(monkeypatch):
+    """Дубликаты из DNS не должны съедать бюджет повторными пробами."""
     _fake_dns(monkeypatch, ["149.154.166.110"] * 3)
     probed: list[str] = []
 
@@ -68,7 +68,37 @@ def test_perebor_ne_probuet_odin_adres_dvazhdy(monkeypatch):
 
     monkeypatch.setattr(socket, "create_connection", fake_conn)
     assert net._pick_telegram_ip() == "149.154.167.220"
-    assert probed == ["149.154.166.110", "149.154.167.220"]
+    assert sorted(probed) == sorted(set(probed)), "каждый адрес ровно один раз"
+    assert probed.count("149.154.166.110") == 1
+
+
+def test_pobezhdaet_pervyy_po_poryadku_a_ne_po_skorosti(monkeypatch):
+    """Пробы идут параллельно, но адрес из DNS важнее запасного."""
+    _fake_dns(monkeypatch, ["1.2.3.4"])
+
+    class S:
+        def close(self): pass
+
+    monkeypatch.setattr(socket, "create_connection", lambda addr, timeout=None: S())
+    assert net._pick_telegram_ip() == "1.2.3.4"
+
+
+def test_perebor_stoit_odnu_probu_a_ne_summu(monkeypatch):
+    """Ради этого всё и затевалось: длина списка больше не цена перебора."""
+    import time as _t
+
+    _fake_dns(monkeypatch, ["149.154.166.110"])
+
+    def slow_dead(addr, timeout=None):
+        _t.sleep(0.3)
+        raise OSError("blocked")
+
+    monkeypatch.setattr(socket, "create_connection", slow_dead)
+    started = _t.monotonic()
+    assert net._pick_telegram_ip() is None
+    spent = _t.monotonic() - started
+    # Последовательно это стоило бы 0.3 × число кандидатов.
+    assert spent < 0.3 * len(net._telegram_candidates()) / 2
 
 
 def test_hudshiy_sluchay_ukladyvaetsya_v_taymaut_httpx(monkeypatch):
@@ -91,9 +121,10 @@ def test_naydennyy_adres_kesniruetsya(monkeypatch):
 
     monkeypatch.setattr(socket, "create_connection", fake_conn)
     first = net._pick_telegram_ip()
+    probes_after_first = len(calls)
     second = net._pick_telegram_ip()
     assert first == second
-    assert len(calls) == 1, "второй вызов обязан брать адрес из кеша"
+    assert len(calls) == probes_after_first, "второй вызов обязан брать адрес из кеша"
 
 
 # === Повтор при сетевой ошибке ===
@@ -169,7 +200,7 @@ def test_hudshiy_sluchay_ogranichen():
     from lawcheck.notify import telegram
 
     t = telegram._TIMEOUT
-    worst = telegram._ATTEMPTS * (t.connect + net._TG_PROBE_TIMEOUT_SEC
-                                  * len(net._TELEGRAM_FALLBACK_IPS))
+    # Пробы параллельны, поэтому перебор стоит ОДНУ пробу, а не сумму по списку.
+    worst = telegram._ATTEMPTS * (t.connect + net._TG_PROBE_TIMEOUT_SEC)
     assert t.connect <= 5, "подключение упирается в DPI — ждать долго бессмысленно"
-    assert worst < 45
+    assert worst < 20
