@@ -10,7 +10,8 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import load_only, raiseload, selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import AuthToken, Finding, Inquiry, Lead, NurtureSubscriber, Order, Scan, User, utcnow
+from lawcheck.db.models import (AuthToken, Finding, Inquiry, JobRun, Lead, NurtureSubscriber,
+                                Order, Scan, User, utcnow)
 from lawcheck.db.session import session_scope
 from lawcheck.utils.contact import contact_url
 
@@ -814,3 +815,45 @@ def nurture_remove_paid(email: str) -> int:
         for sub in subs:
             sub.unsubscribed_at = utcnow()
         return len(subs)
+
+
+# === Отметки задач по расписанию (notify/heartbeat.py) ===
+
+def mark_job_ok(name: str) -> None:
+    """Задача по расписанию отработала: обновить отметку и снять тревогу."""
+    with session_scope() as sess:
+        row = sess.get(JobRun, name)
+        if row is None:
+            sess.add(JobRun(name=name, last_ok_at=utcnow()))
+            return
+        row.last_ok_at = utcnow()
+        # Задача ожила — следующая просрочка должна дать алерт сразу, а не
+        # ждать суток с прошлой жалобы.
+        row.last_alert_at = None
+
+
+def list_job_runs() -> list[JobRun]:
+    with session_scope() as sess:
+        return list(sess.execute(select(JobRun)).scalars().all())
+
+
+def job_alert_due(name: str, not_alerted_since: datetime) -> bool:
+    """Пора ли снова жаловаться на эту задачу."""
+    with session_scope() as sess:
+        row = sess.get(JobRun, name)
+        if row is None:
+            return False
+        if row.last_alert_at is None:
+            return True
+        # sqlite отдаёт naive datetime — нормализуем к UTC (как выше).
+        last = row.last_alert_at
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        return last < not_alerted_since
+
+
+def mark_job_alerted(name: str, when: datetime) -> None:
+    with session_scope() as sess:
+        row = sess.get(JobRun, name)
+        if row is not None:
+            row.last_alert_at = when

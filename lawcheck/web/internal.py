@@ -12,7 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from lawcheck.config import settings
 from lawcheck.db import repo
-from lawcheck.notify import telegram
+from lawcheck.notify import heartbeat, telegram
 from lawcheck.reporting import followup
 from lawcheck.web import security
 from lawcheck.web.scanning import start_scan
@@ -83,6 +83,9 @@ async def telegram_health(request: Request):
     if not _internal_key_ok(request):
         raise HTTPException(status_code=403, detail="forbidden")
     ok, detail = await asyncio.to_thread(telegram.check_api)
+    # Отмечаемся в любом случае: факт «проверка запускалась» не зависит от её
+    # результата, иначе мёртвый канал выглядел бы ещё и как пропавший cron.
+    await asyncio.to_thread(repo.mark_job_ok, "telegram-health")
     if ok:
         log.info("health/telegram: канал жив (%s)", detail)
         return {"ok": True, "bot": detail}
@@ -95,3 +98,36 @@ async def telegram_health(request: Request):
         f"Отвечают на 443: {telegram.esc(', '.join(alive) or 'ни один из известных')}.\n"
         f"Чинится пином в extra_hosts (api и worker) в docker-compose.yml.")
     return {"ok": False, "detail": detail, "reachable_ips": alive}
+
+
+@router.post("/internal/heartbeat/{job}")
+async def heartbeat_ping(job: str, request: Request):
+    """Отметка «задача по расписанию отработала». Зовётся cron'ом после успеха.
+
+    Смысл — в обратной логике: тревогу поднимает не пойманная ошибка, а
+    отсутствие отметки. Задача, которая не запустилась вовсе, исключения не
+    бросает, и именно так были потеряны три недели бэкапов.
+    """
+    if not _internal_key_ok(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    if job not in heartbeat.JOBS:
+        # Опечатка в cron-скрипте иначе выглядела бы как исправная отметка,
+        # которую никто никогда не проверит.
+        raise HTTPException(status_code=404, detail=f"неизвестная задача: {job}")
+    await asyncio.to_thread(repo.mark_job_ok, job)
+    log.info("heartbeat: %s отметилась", job)
+    return {"ok": True, "job": job}
+
+
+@router.get("/internal/heartbeat")
+async def heartbeat_status(request: Request):
+    """Состояние всех задач по расписанию — для ручной проверки глазами."""
+    if not _internal_key_ok(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    rows = {r.name: r.last_ok_at.isoformat() for r in await asyncio.to_thread(repo.list_job_runs)}
+    return {
+        "jobs": {name: {"limit_hours": int(limit.total_seconds() // 3600),
+                        "last_ok": rows.get(name)}
+                 for name, limit in heartbeat.JOBS.items()},
+        "overdue": [name for name, _ in await asyncio.to_thread(heartbeat.overdue)],
+    }

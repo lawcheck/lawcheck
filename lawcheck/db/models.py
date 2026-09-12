@@ -184,3 +184,27 @@ class Order(Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Разовое напоминание о брошенной оплате. NULL = ещё не писали.
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class JobRun(Base):
+    """Отметка о последнем успешном прогоне задачи по расписанию.
+
+    Смысл таблицы — сделать молчание событием. Хостовый cron падал молча
+    дважды: после переезда деплоя бэкап Postgres не снимался три недели, а
+    еженедельный мониторинг клиентских сайтов получал 403 — оба писали ошибку
+    в лог-файл, который никто не читает. Алерт на падении тут не помогает:
+    задача, которая не запустилась вовсе, ничего о себе не сообщит.
+
+    Поэтому cron отмечается здесь ПОСЛЕ успеха, а приложение периодически
+    смотрит, не устарела ли отметка. Просроченная задача = отсутствие отметки,
+    а не пойманное исключение.
+    """
+    __tablename__ = "job_runs"
+
+    # Имя задачи из notify/heartbeat.JOBS: короткий слаг, он же в cron-скрипте.
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    last_ok_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Когда в последний раз жаловались на просрочку. Держит алерт от повтора
+    # каждый час: пока задачу не починили, напоминаем раз в сутки.
+    last_alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                           nullable=True)
