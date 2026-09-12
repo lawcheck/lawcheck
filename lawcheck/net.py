@@ -24,6 +24,31 @@ _tg_ip_cached_at: float = 0.0
 # Кеш протухает: без TTL выбранный адрес пиннился на весь процесс, и если он
 # переставал отвечать, воркер долбился в мёртвый IP до рестарта контейнера.
 _TG_IP_TTL_SEC = 600
+# Проба на один адрес. Было 4 с, и этого хватало, чтобы перебор не уложился в
+# таймаут вызывающего: getaddrinfo отдаёт один и тот же адрес трижды, и если
+# он заблокирован — это 12 с только на дубликатах при 10 с у httpx. Отсюда и
+# бралось «уведомления то доходят, то нет»: кеш живёт 10 минут, и первая
+# отправка после каждого протухания играла в орлянку. Заблокированный адрес
+# не отвечает вовсе, живой отвечает за миллисекунды — полутора секунд хватает,
+# а весь перебор укладывается в таймаут с запасом.
+_TG_PROBE_TIMEOUT_SEC = 1.5
+
+
+def _telegram_candidates() -> list[str]:
+    """Адреса для перебора: сначала из DNS, затем запасные. Без повторов.
+
+    Дедупликация обязательна: резолвер возвращает один и тот же адрес по
+    числу записей, и без неё перебор тратит таймаут на повторные пробы
+    того же самого заблокированного адреса.
+    """
+    candidates: list[str] = []
+    try:
+        candidates += [str(r[4][0])
+                       for r in _orig_getaddrinfo(_TELEGRAM_HOST, 443, socket.AF_INET)]
+    except Exception:
+        pass
+    candidates += _TELEGRAM_FALLBACK_IPS
+    return list(dict.fromkeys(candidates))
 
 
 def _pick_telegram_ip() -> str | None:
@@ -31,15 +56,9 @@ def _pick_telegram_ip() -> str | None:
     if _tg_ip_cache and (time.monotonic() - _tg_ip_cached_at) < _TG_IP_TTL_SEC:
         return _tg_ip_cache
     _tg_ip_cache = None
-    candidates: list[str] = []
-    try:
-        candidates += [str(r[4][0]) for r in _orig_getaddrinfo(_TELEGRAM_HOST, 443, socket.AF_INET)]
-    except Exception:
-        pass
-    candidates += [ip for ip in _TELEGRAM_FALLBACK_IPS if ip not in candidates]
-    for ip in candidates:
+    for ip in _telegram_candidates():
         try:
-            socket.create_connection((ip, 443), timeout=4).close()
+            socket.create_connection((ip, 443), timeout=_TG_PROBE_TIMEOUT_SEC).close()
             _tg_ip_cache = ip
             _tg_ip_cached_at = time.monotonic()
             return ip
