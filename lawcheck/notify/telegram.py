@@ -86,8 +86,40 @@ def send_message(chat_id: str, text: str) -> bool:
         return False
 
 
+# Защита от кольца: mailer при сбое SMTP сам зовёт notify_owner. Без флага
+# «Telegram лежит + SMTP лежит» дало бы бесконечную рекурсию между модулями.
+_in_email_fallback = False
+
+
+def _owner_email_fallback(text: str) -> None:
+    """Продублировать алерт на почту, когда Telegram не ответил.
+
+    Telegram остаётся основным каналом — почта нужна ровно на случай, когда он
+    молчит. Молчал он уже дважды: адрес api.telegram.org у российского хостера
+    режется по отдельным IP, а ошибки отправки глушатся в лог, поэтому
+    пропавшее уведомление ничем себя не выдаёт.
+    """
+    global _in_email_fallback
+    if _in_email_fallback:
+        return
+    from lawcheck.notify import mailer
+    from lawcheck.web.operator import OPERATOR
+    to = OPERATOR.get("email", "")
+    if not to or not mailer.is_configured():
+        return
+    _in_email_fallback = True
+    try:
+        mailer.send_email(to, "LawCheck: алерт не ушёл в Telegram", text)
+    except Exception:
+        log.exception("алерт владельцу не доставлен ни в Telegram, ни на почту")
+    finally:
+        _in_email_fallback = False
+
+
 def notify_owner(text: str) -> None:
-    """Отправить владельцу сообщение (HTML-разметка)."""
+    """Отправить владельцу сообщение (HTML-разметка), с запасным каналом."""
     if not settings.telegram_owner_chat_id:
         return
-    send_message(settings.telegram_owner_chat_id, text)
+    if send_message(settings.telegram_owner_chat_id, text):
+        return
+    _owner_email_fallback(text)
