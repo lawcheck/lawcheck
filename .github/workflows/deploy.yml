@@ -91,12 +91,17 @@ jobs:
           # host key прод-сервера, сверен с доверенным known_hosts владельца
           echo "${DEPLOY_HOST} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJLmx+owImbyBf++4GFDTJYb6FE0Py6HT7NFgPspMxKu" >> ~/.ssh/known_hosts
 
+      # Список путей явный, и это ловушка того же рода, что с сервисами ниже:
+      # забытый каталог молча не доезжает, а узнаёшь об этом, когда он
+      # понадобился. `ops` здесь потому, что в нём живут cron-скрипты хоста —
+      # они переехали в репозиторий ровно затем, чтобы не протухать при
+      # переездах каталога деплоя.
       - name: Синхронизация кода на сервер
         run: |
           rsync -az \
             --exclude '__pycache__/' --exclude '.git/' --exclude '.venv/' \
             --exclude '*.db' --exclude '.env' \
-            lawcheck alembic alembic.ini pyproject.toml Dockerfile Caddyfile docker-compose.yml \
+            lawcheck alembic alembic.ini pyproject.toml Dockerfile Caddyfile docker-compose.yml ops \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
 
       # Сервисы НЕ перечисляем поимённо: со списком новый сервис в compose
