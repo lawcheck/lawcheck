@@ -72,15 +72,25 @@ def test_kazhdyy_adres_probuetsya_odin_raz(monkeypatch):
     assert probed.count("149.154.166.110") == 1
 
 
-def test_pobezhdaet_pervyy_po_poryadku_a_ne_po_skorosti(monkeypatch):
-    """Пробы идут параллельно, но адрес из DNS важнее запасного."""
+def test_pobezhdaet_pervyy_otvetivshiy(monkeypatch):
+    """Ждать более приоритетные пробы — та самая задержка, что и убирали."""
+    import time as _t
+
     _fake_dns(monkeypatch, ["1.2.3.4"])
 
     class S:
         def close(self): pass
 
-    monkeypatch.setattr(socket, "create_connection", lambda addr, timeout=None: S())
-    assert net._pick_telegram_ip() == "1.2.3.4"
+    def conn(addr, timeout=None):
+        if addr[0] == "1.2.3.4":
+            _t.sleep(0.4)       # приоритетный, но медленный
+        return S()
+
+    monkeypatch.setattr(socket, "create_connection", conn)
+    started = _t.monotonic()
+    picked = net._pick_telegram_ip()
+    assert picked in net._TELEGRAM_FALLBACK_IPS
+    assert _t.monotonic() - started < 0.4
 
 
 def test_perebor_stoit_odnu_probu_a_ne_summu(monkeypatch):
