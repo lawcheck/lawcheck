@@ -10,7 +10,6 @@
 """
 import socket
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 _orig_getaddrinfo = socket.getaddrinfo
 
@@ -22,6 +21,9 @@ _TELEGRAM_FALLBACK_IPS = [
 ]
 _tg_ip_cache: str | None = None
 _tg_ip_cached_at: float = 0.0
+# Последний сработавший адрес. В отличие от кеша, переживает истечение TTL:
+# это подсказка «с чего начинать перебор», а не разрешение не проверять.
+_tg_last_good: str | None = None
 # Кеш протухает: без TTL выбранный адрес пиннился на весь процесс, и если он
 # переставал отвечать, воркер долбился в мёртвый IP до рестарта контейнера.
 _TG_IP_TTL_SEC = 600
@@ -63,45 +65,30 @@ def _probe(ip: str) -> bool:
 def _pick_telegram_ip() -> str | None:
     """Первый отвечающий адрес из списка кандидатов, с кешем на TTL.
 
-    Пробы идут ПАРАЛЛЕЛЬНО. Последовательный перебор стоил столько, сколько
-    мёртвых адресов встретится до живого: на проде из шести кандидатов
-    отвечает ровно один, то есть до пяти проб по 1.5 с — девять секунд при
-    бюджете подключения в пять. Именно так и выглядели «зависания» по 15 с:
-    httpx упирался в свой таймаут внутри резолвера, а не на соединении с
-    Telegram (прямой запрос к живому адресу укладывается в 0.34 с).
+    Перебор ПОСЛЕДОВАТЕЛЬНЫЙ. Параллельные пробы пробовались и оказались хуже:
+    шесть одновременных соединений к диапазонам Telegram выглядят как скан и
+    режутся — проба стабильно упиралась в полный таймаут, возвращала None или
+    адрес, который Bot API не обслуживает. Замер на проде: 9/10 и среднее
+    7.4 с против 12/12 и 3.9 с у последовательного варианта.
 
-    Параллельно перебор стоит столько, сколько думает САМЫЙ БЫСТРЫЙ живой
-    адрес, а не сумма таймаутов мёртвых. Побеждает первый ответивший: любой
-    адрес, обслуживающий Bot API, одинаково пригоден, а предпочтение порядку
-    стоило бы ожидания более приоритетных проб — то есть ровно той задержки,
-    ради устранения которой всё и делается.
+    Цену последовательного перебора снимает не параллельность, а память:
+    адрес, сработавший в прошлый раз, пробуется первым и переживает истечение
+    TTL. В норме это одна проба за 0.04 с вместо полутора секунд на мёртвом
+    адресе из DNS, а при его смерти перебор просто идёт дальше по списку.
     """
-    global _tg_ip_cache, _tg_ip_cached_at
+    global _tg_ip_cache, _tg_ip_cached_at, _tg_last_good
     if _tg_ip_cache and (time.monotonic() - _tg_ip_cached_at) < _TG_IP_TTL_SEC:
         return _tg_ip_cache
     _tg_ip_cache = None
     candidates = _telegram_candidates()
-    if not candidates:
-        return None
-    # Берём ПЕРВЫЙ ответивший и не ждём остальных. Ожидание всех проб сводило
-    # параллельность на нет: живой адрес отвечает за миллисекунды, а каждый
-    # мёртвый честно выбирает свой таймаут, и перебор снова стоил полторы
-    # секунды вместо сотых. Executor гасим без ожидания — недобежавшие пробы
-    # никому не мешают и завершатся сами.
-    ex = ThreadPoolExecutor(max_workers=len(candidates))
-    try:
-        futures = {ex.submit(_probe, ip): ip for ip in candidates}
-        try:
-            for fut in as_completed(futures, timeout=_TG_PROBE_TIMEOUT_SEC + 0.5):
-                if fut.result():
-                    _tg_ip_cache = futures[fut]
-                    _tg_ip_cached_at = time.monotonic()
-                    return _tg_ip_cache
-        except TimeoutError:
-            pass
-        return None
-    finally:
-        ex.shutdown(wait=False, cancel_futures=True)
+    if _tg_last_good:
+        candidates = [_tg_last_good] + [ip for ip in candidates if ip != _tg_last_good]
+    for ip in candidates:
+        if _probe(ip):
+            _tg_ip_cache = _tg_last_good = ip
+            _tg_ip_cached_at = time.monotonic()
+            return ip
+    return None
 
 
 def _ipv4_only(host, port, family=0, *args, **kwargs):
