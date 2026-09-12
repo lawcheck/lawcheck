@@ -17,9 +17,11 @@ from lawcheck import net
 def clean_cache():
     net._tg_ip_cache = None
     net._tg_ip_cached_at = 0.0
+    net._tg_last_good = None
     yield
     net._tg_ip_cache = None
     net._tg_ip_cached_at = 0.0
+    net._tg_last_good = None
 
 
 def _fake_dns(monkeypatch, addresses):
@@ -72,43 +74,59 @@ def test_kazhdyy_adres_probuetsya_odin_raz(monkeypatch):
     assert probed.count("149.154.166.110") == 1
 
 
-def test_pobezhdaet_pervyy_otvetivshiy(monkeypatch):
-    """Ждать более приоритетные пробы — та самая задержка, что и убирали."""
-    import time as _t
-
-    _fake_dns(monkeypatch, ["1.2.3.4"])
+def test_srabotavshiy_adres_probuetsya_pervym(monkeypatch):
+    """Память о рабочем адресе снимает цену перебора мёртвых из DNS."""
+    _fake_dns(monkeypatch, ["9.9.9.9"])
+    probed: list[str] = []
 
     class S:
         def close(self): pass
 
     def conn(addr, timeout=None):
-        if addr[0] == "1.2.3.4":
-            _t.sleep(0.4)       # приоритетный, но медленный
-        return S()
-
-    monkeypatch.setattr(socket, "create_connection", conn)
-    started = _t.monotonic()
-    picked = net._pick_telegram_ip()
-    assert picked in net._TELEGRAM_FALLBACK_IPS
-    assert _t.monotonic() - started < 0.4
-
-
-def test_perebor_stoit_odnu_probu_a_ne_summu(monkeypatch):
-    """Ради этого всё и затевалось: длина списка больше не цена перебора."""
-    import time as _t
-
-    _fake_dns(monkeypatch, ["149.154.166.110"])
-
-    def slow_dead(addr, timeout=None):
-        _t.sleep(0.3)
+        probed.append(addr[0])
+        if addr[0] == "149.154.167.220":
+            return S()
         raise OSError("blocked")
 
-    monkeypatch.setattr(socket, "create_connection", slow_dead)
-    started = _t.monotonic()
+    monkeypatch.setattr(socket, "create_connection", conn)
+    assert net._pick_telegram_ip() == "149.154.167.220"
+
+    probed.clear()
+    net._tg_ip_cache = None           # TTL истёк, подсказка осталась
+    assert net._pick_telegram_ip() == "149.154.167.220"
+    assert probed == ["149.154.167.220"], "мёртвый адрес из DNS трогать незачем"
+
+
+def test_podskazka_ne_meshaet_pri_smerti_adresa(monkeypatch):
+    """Если запомненный адрес умер — перебор идёт дальше, а не встаёт."""
+    _fake_dns(monkeypatch, [])
+
+    class S:
+        def close(self): pass
+
+    net._tg_last_good = "149.154.175.50"
+
+    def conn(addr, timeout=None):
+        if addr[0] == "149.154.167.220":
+            return S()
+        raise OSError("blocked")
+
+    monkeypatch.setattr(socket, "create_connection", conn)
+    assert net._pick_telegram_ip() == "149.154.167.220"
+    assert net._tg_last_good == "149.154.167.220", "подсказка обязана обновиться"
+
+
+def test_probuyutsya_vse_kandidaty_poka_ne_naydyotsya_zhivoy(monkeypatch):
+    _fake_dns(monkeypatch, ["149.154.166.110"])
+    probed: list[str] = []
+
+    def dead(addr, timeout=None):
+        probed.append(addr[0])
+        raise OSError("blocked")
+
+    monkeypatch.setattr(socket, "create_connection", dead)
     assert net._pick_telegram_ip() is None
-    spent = _t.monotonic() - started
-    # Последовательно это стоило бы 0.3 × число кандидатов.
-    assert spent < 0.3 * len(net._telegram_candidates()) / 2
+    assert probed == net._telegram_candidates()
 
 
 def test_hudshiy_sluchay_ukladyvaetsya_v_taymaut_httpx(monkeypatch):
@@ -210,7 +228,7 @@ def test_hudshiy_sluchay_ogranichen():
     from lawcheck.notify import telegram
 
     t = telegram._TIMEOUT
-    # Пробы параллельны, поэтому перебор стоит ОДНУ пробу, а не сумму по списку.
-    worst = telegram._ATTEMPTS * (t.connect + net._TG_PROBE_TIMEOUT_SEC)
+    worst = telegram._ATTEMPTS * (t.connect + net._TG_PROBE_TIMEOUT_SEC
+                                  * len(net._TELEGRAM_FALLBACK_IPS))
     assert t.connect <= 5, "подключение упирается в DPI — ждать долго бессмысленно"
-    assert worst < 20
+    assert worst < 45
