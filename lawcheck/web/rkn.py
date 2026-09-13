@@ -11,12 +11,18 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from lawcheck.db import repo
 from lawcheck.external.rkn_operators import lookup_by_inn
 from lawcheck.utils import consent
 from lawcheck.utils.inn_ogrn import is_valid_inn
+from lawcheck.web import ratelimit
 
 router = APIRouter()
 templates: Jinja2Templates = None  # type: ignore[assignment]  # задаётся из routes.py
+
+# Форма открыта всем и пишет строку в consent_log на каждую проверку – без лимита
+# бот раздувал бы журнал. Человек проверяет пару ИНН, двадцать в час ему хватит.
+_RL_RKN = ratelimit.Limit(limit=20, window_sec=3600)
 
 
 @router.get("/uvedomlenie-rkn", response_class=HTMLResponse)
@@ -42,6 +48,8 @@ async def rkn_check(request: Request, inn: str = Form(""), pd_consent: str = For
     выполняем. Форма идёт с `novalidate` (ошибки показываем своим текстом, а не
     браузерным), значит `required` на чекбоксе клиент не удержит — решает сервер.
     """
+    ratelimit.enforce(request, "rkn_check", _RL_RKN,
+                      message="Слишком много проверок с этого адреса. Попробуйте через час.")
     if not consent.checked(pd_consent):
         return templates.TemplateResponse(
             request, "rkn_check.html",
@@ -51,6 +59,9 @@ async def rkn_check(request: Request, inn: str = Form(""), pd_consent: str = For
         return templates.TemplateResponse(
             request, "rkn_check.html",
             {"state": "invalid", "inn": inn.strip(), "op": None})
+    # Пишем только когда данные реально уйдут в обработку. Сам ИНН в журнал не
+    # пишем: он нужен только для запроса к реестру.
+    await asyncio.to_thread(repo.log_consent, "rkn_check", "", ratelimit.client_ip(request))
     result = await asyncio.to_thread(lookup_by_inn, inn_digits)
     if result.error:
         state = "error"

@@ -137,7 +137,7 @@ def test_poddelannyy_xff_ne_daet_obyti_limit():
 
 def test_registraciya_ogranichena(client):
     codes = [client.post("/register",
-                         data={"email": f"u{i}@x.ru", "password": "longenough1"}).status_code
+                         data={"email": f"u{i}@x.ru", "password": "longenough1", "pd_consent": "1"}).status_code
              for i in range(7)]
     assert codes.count(429) >= 1, codes
     assert 429 in codes[5:], "первые пять должны пройти"
@@ -174,9 +174,9 @@ def test_chat_vidzhet_ogranichen(client):
 def test_limit_ne_meshaet_normalnomu_polzovatelyu(client):
     """Живой человек регистрируется один раз и ошибается паролем пару раз."""
     assert client.post("/register",
-                       data={"email": "normal@x.ru", "password": "longenough1"}).status_code == 303
+                       data={"email": "normal@x.ru", "password": "longenough1", "pd_consent": "1"}).status_code == 303
     for _ in range(3):
         assert client.post("/login",
                            data={"email": "normal@x.ru", "password": "wrong"}).status_code == 401
     assert client.post("/login",
-                       data={"email": "normal@x.ru", "password": "longenough1"}).status_code == 303
+                       data={"email": "normal@x.ru", "password": "longenough1", "pd_consent": "1"}).status_code == 303

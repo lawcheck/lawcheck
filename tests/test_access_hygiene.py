@@ -41,7 +41,7 @@ def client(monkeypatch):
 def test_smena_parolya_vygonyaet_starye_sessii(client):
     """Пароль меняют в том числе когда аккаунт увели. Если старые cookie
     продолжают пускать, смена пароля не решает исходную проблему."""
-    client.post("/register", data={"email": "victim@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "victim@x.ru", "password": "longenough1"})
     user = repo.get_user_by_email("victim@x.ru")
     assert client.get("/dashboard").status_code == 200  # сессия жива
 
@@ -57,7 +57,7 @@ def test_smena_parolya_vygonyaet_starye_sessii(client):
 
 
 def test_obychnyy_vhod_posle_smeny_parolya_rabotaet(client):
-    client.post("/register", data={"email": "u@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "u@x.ru", "password": "longenough1"})
     user = repo.get_user_by_email("u@x.ru")
     token = repo.create_auth_token(user.id, "reset_password", 1)
     client.post("/reset-password", data={"token": token, "password": "brandnewpass1"})
@@ -70,7 +70,7 @@ def test_obychnyy_vhod_posle_smeny_parolya_rabotaet(client):
 def test_sessiya_bez_epoch_ne_razloginivaetsya(client):
     """Сессии, выданные до появления поля, несут 0 и совпадают с дефолтом —
     выкат не должен разлогинить всех разом."""
-    client.post("/register", data={"email": "old@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "old@x.ru", "password": "longenough1"})
     user = repo.get_user_by_email("old@x.ru")
     assert user.session_epoch == 0
     assert client.get("/dashboard").status_code == 200
@@ -79,7 +79,7 @@ def test_sessiya_bez_epoch_ne_razloginivaetsya(client):
 # === №9: вход не выдаёт существование email ===
 
 def test_vhod_ne_razlichaet_sushchestvuyushchiy_i_net(client):
-    client.post("/register", data={"email": "real@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "real@x.ru", "password": "longenough1"})
     client.post("/logout")
 
     r_real = client.post("/login", data={"email": "real@x.ru", "password": "wrongpass1"})

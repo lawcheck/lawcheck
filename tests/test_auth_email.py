@@ -43,7 +43,7 @@ def _token_from(sent: list[dict], needle: str) -> str:
 
 def test_verification_email_on_register_then_verify(env):
     client, sent = env
-    client.post("/register", data={"email": "v@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "v@x.ru", "password": "longenough1"})
     assert any("Подтверждение email" in s["subject"] for s in sent)
     # до подтверждения — баннер виден
     assert "Подтвердите email" in client.get("/").text
@@ -58,7 +58,7 @@ def test_verification_email_on_register_then_verify(env):
 
 def test_verify_token_single_use_and_bad_token(env):
     client, sent = env
-    client.post("/register", data={"email": "v2@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "v2@x.ru", "password": "longenough1"})
     token = _token_from(sent, "Подтверждение email")
     assert client.get(f"/verify-email?token={token}").status_code == 200
     # повторное использование — отказ
@@ -68,7 +68,7 @@ def test_verify_token_single_use_and_bad_token(env):
 
 def test_forgot_password_no_enumeration(env):
     client, sent = env
-    client.post("/register", data={"email": "real@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "real@x.ru", "password": "longenough1"})
     sent.clear()
     # несуществующий email — тот же ответ, письма нет
     r1 = client.post("/forgot-password", data={"email": "ghost@x.ru"})
@@ -82,7 +82,7 @@ def test_forgot_password_no_enumeration(env):
 
 def test_reset_password_flow(env):
     client, sent = env
-    client.post("/register", data={"email": "r@x.ru", "password": "oldpassword1"})
+    client.post("/register", data={"pd_consent": "1", "email": "r@x.ru", "password": "oldpassword1"})
     client.cookies.clear()
     client.post("/forgot-password", data={"email": "r@x.ru"})
     token = _token_from(sent, "Сброс пароля")

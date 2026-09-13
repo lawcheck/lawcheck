@@ -66,7 +66,7 @@ def test_get_ne_proveryaetsya(client):
 
 
 def test_v_cookie_net_email(client):
-    r = client.post("/register", data={"email": "klient@x.ru", "password": "parol123"},
+    r = client.post("/register", data={"pd_consent": "1", "email": "klient@x.ru", "password": "parol123"},
                     headers={"Origin": "http://testserver"})
     assert r.status_code == 303
     payload = _session_payload(client)
@@ -75,7 +75,7 @@ def test_v_cookie_net_email(client):
 
 
 def test_navigaciya_vsyo_ravno_znaet_email(client):
-    client.post("/register", data={"email": "klient@x.ru", "password": "parol123"},
+    client.post("/register", data={"pd_consent": "1", "email": "klient@x.ru", "password": "parol123"},
                 headers={"Origin": "http://testserver"})
     # Email в cookie нет, но шапка его показывает — значит, читается из БД.
     assert "klient@x.ru" in client.get("/").text

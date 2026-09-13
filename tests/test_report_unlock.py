@@ -51,7 +51,7 @@ def _locks(html: str) -> int:
 
 
 def _register(client, email):
-    client.post("/register", data={"email": email, "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": email, "password": "longenough1"})
     return repo.get_user_by_email(email)
 
 

@@ -72,6 +72,8 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
 
     if not tochka.is_configured():
         # Эквайринг ещё не активирован в ЛК банка — принимаем заявку на email.
+        # Заказа нет, но email уже ушёл дальше – согласие фиксируем без ссылки.
+        await asyncio.to_thread(repo.log_consent, "buy", "", ratelimit.client_ip(request))
         bg.add_task(telegram.notify_owner,
                     f"🔔 Клик «Оплатить {plan_title(plan)}» ({amount} ₽) от <b>{telegram.esc(email)}</b>. "
                     f"Касса в fallback – возможно, придёт заявка на {OPERATOR['email']}.")
@@ -92,6 +94,9 @@ async def buy(request: Request, plan: str, bg: BackgroundTasks, email: str = For
         entry_ref, entry_url = deps.entry_source(request)
         await asyncio.to_thread(repo.create_order, order_id, plan, amount, email, scan_id,
                                 entry_ref, entry_url)
+    # Повторный клик с уже выписанной ссылкой сюда не доходит – его согласие
+    # записано при первом клике по тому же заказу.
+    await asyncio.to_thread(repo.log_consent, "buy", order_id, ratelimit.client_ip(request))
     try:
         link = await asyncio.to_thread(
             tochka.create_payment,

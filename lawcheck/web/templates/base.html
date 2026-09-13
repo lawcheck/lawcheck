@@ -236,6 +236,10 @@
     .auth-card button.submit { width: 100%; background: var(--brand); color: #fff; border: none; padding: 12px; border-radius: var(--r-m); font-size: var(--t-m); font-weight: 600; cursor: pointer; }
     .auth-card button.submit:hover { background: var(--brand-hover); }
     .auth-card .alt { margin-top: 14px; font-size: var(--t-m); color: var(--ink-soft); }
+    /* Галочка согласия: общие правила label/input карточки (block, width 100%)
+       разносят её и текст на две строки – возвращаем раскладку .pd-consent. */
+    .auth-card .pd-consent { display: flex; font-size: var(--t-xs); color: var(--muted); margin: 0 0 14px; }
+    .auth-card .pd-consent input { width: auto; padding: 0; }
     .auth-error { background: var(--crit-soft); color: var(--crit); border-radius: var(--r-m); padding: 10px 12px; font-size: var(--t-m); margin-bottom: 14px; }
     /* --- Баннер «подтвердите email» --- */
     .verify-bar { background: var(--info-soft); color: var(--ink); font-size: var(--t-m); padding: 9px 20px; display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
@@ -1402,6 +1406,7 @@
           <a href="/pricing">Тарифы и услуги</a>
           <a href="/oferta">Договор-оферта</a>
           <a href="/privacy">Политика обработки ПДн</a>
+          <a href="/soglasie">Согласие на обработку ПДн</a>
         </div>
       </div>
       <div class="legal">
@@ -1452,8 +1457,9 @@
              формы считает предустановленную галочку отсутствием согласия. #}
           <label class="pd-consent">
             <input type="checkbox" name="pd_consent" id="lc-chat-pd" value="1" required>
-            <span>Даю согласие на обработку персональных данных по
-              <a href="/privacy" target="_blank" rel="noopener">Политике</a></span>
+            <span>Даю согласие на обработку персональных данных на условиях
+              <a href="/soglasie" target="_blank" rel="noopener">Согласия</a> и
+              <a href="/privacy" target="_blank" rel="noopener">Политики</a></span>
           </label>
           <label class="pd-consent">
             <input type="checkbox" name="ad_consent" id="lc-chat-ad" value="1">
