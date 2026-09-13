@@ -46,7 +46,7 @@ def test_dashboard_requires_login(env):
 
 def test_new_scan_tied_to_logged_in_user(env):
     client, _ = env
-    client.post("/register", data={"email": "runner@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "runner@x.ru", "password": "longenough1"})
     r = client.post("/scan", data={"url": "example.com", "max_pages": "5"})
     assert r.status_code == 303  # редирект на /report/{id}
     dash = client.get("/dashboard")
@@ -62,7 +62,7 @@ def test_claiming_gated_on_verification(env):
     repo.create_scan("scanlead", "https://lead-site.ru", 10)
     repo.create_lead("scanlead", "https://lead-site.ru", "claim@x.ru")
 
-    client.post("/register", data={"email": "claim@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "claim@x.ru", "password": "longenough1"})
     # до подтверждения — ничего чужого не подцеплено
     dash = client.get("/dashboard").text
     assert "paid-site.ru" not in dash and "lead-site.ru" not in dash
@@ -78,7 +78,7 @@ def test_claiming_gated_on_verification(env):
 
 def test_claim_on_login_for_later_order(env):
     client, sent = env
-    client.post("/register", data={"email": "late@x.ru", "password": "longenough1"})
+    client.post("/register", data={"pd_consent": "1", "email": "late@x.ru", "password": "longenough1"})
     client.get(f"/verify-email?token={_verify_token(sent)}")
     # заказ появляется ПОЗЖЕ (например, оплата с того же email)
     repo.create_scan("scanlate", "https://late-site.ru", 10)

@@ -196,6 +196,13 @@ async def privacy(request: Request):
     return templates.TemplateResponse(request, "privacy.html", {})
 
 
+@router.get("/soglasie", response_class=HTMLResponse)
+async def soglasie(request: Request):
+    """Текст согласия на обработку ПДн – отдельно от Политики и оферты (ст. 9 152-ФЗ)."""
+    return templates.TemplateResponse(request, "soglasie.html",
+                                      {"version": consent.CONSENT_VERSION})
+
+
 @router.post("/inquiry")
 async def inquiry(request: Request, bg: BackgroundTasks,
                   message: str = Form(...), contact: str = Form(""),
@@ -223,6 +230,7 @@ async def inquiry(request: Request, bg: BackgroundTasks,
         raise HTTPException(status_code=422, detail="no pd consent")
     ads = consent.checked(ad_consent)
     inq_id = await asyncio.to_thread(repo.create_inquiry, message, contact, page, ads)
+    await asyncio.to_thread(repo.log_consent, "inquiry", str(inq_id), ratelimit.client_ip(request))
     # Текст обращения в лог не пишем: человек оставляет там и ФИО, и адрес сайта,
     # и обстоятельства дела. Он целиком уходит владельцу в Telegram и лежит в БД.
     log.info("inquiry #%s: %s симв. | контакт: %s | реклама: %s",

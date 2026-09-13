@@ -186,6 +186,26 @@ class Order(Base):
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class ConsentLog(Base):
+    """Факт согласия на обработку ПДн: какая форма, к какой записи, на какой текст.
+
+    Доказать согласие должен оператор (ч. 3 ст. 9 152-ФЗ), а галочка в форме
+    после отправки следа не оставляет. Строка на каждое отправленное согласие;
+    `version` – редакция /soglasie (utils/consent.CONSENT_VERSION).
+    """
+    __tablename__ = "consent_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # buy | inquiry | rkn_check | register
+    form: Mapped[str] = mapped_column(String(32))
+    # id заказа, заявки или пользователя. Пусто у проверки ИНН (записи там нет)
+    # и у заказа, принятого без кассы.
+    ref: Mapped[str] = mapped_column(String(64), default="", server_default="", index=True)
+    version: Mapped[str] = mapped_column(String(16))
+    ip: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
 class JobRun(Base):
     """Отметка о последнем успешном прогоне задачи по расписанию.
 

@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.notify import mailer
+from lawcheck.utils import consent
 from lawcheck.utils.contact import mask_contact
 from lawcheck.utils.email import valid_email
 from lawcheck.web import deps, ratelimit, security
@@ -84,7 +85,8 @@ async def register_form(request: Request):
 
 
 @router.post("/register", response_class=HTMLResponse)
-async def register(request: Request, email: str = Form(...), password: str = Form(...)):
+async def register(request: Request, email: str = Form(...), password: str = Form(...),
+                   pd_consent: str = Form("")):
     # Регистрация шлёт письмо на любой введённый адрес — без лимита это рассылка
     # с нашего домена по чужим ящикам.
     ratelimit.enforce(request, "register", _RL_REGISTER,
@@ -96,6 +98,9 @@ async def register(request: Request, email: str = Form(...), password: str = For
         err = "Проверьте адрес email."
     elif len(password) < 8:
         err = "Пароль – минимум 8 символов."
+    elif not consent.checked(pd_consent):
+        # Email – персональные данные: без согласия аккаунт не заводим (ст. 9 152-ФЗ).
+        err = "Нужно согласие на обработку персональных данных."
     if err:
         return templates.TemplateResponse(request, "register.html",
                                           {"error": err, "email": email}, status_code=422)
@@ -104,6 +109,7 @@ async def register(request: Request, email: str = Form(...), password: str = For
         return templates.TemplateResponse(request, "register.html",
                                           {"error": "На этот email уже есть аккаунт – войдите.",
                                            "email": email}, status_code=409)
+    await asyncio.to_thread(repo.log_consent, "register", str(user.id), ratelimit.client_ip(request))
     deps.login_user(request, user)
     log.info("account: зарегистрирован %s (#%s)", mask_contact(email), user.id)
     await asyncio.to_thread(_send_verification, user)

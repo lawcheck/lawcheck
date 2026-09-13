@@ -10,9 +10,10 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import load_only, raiseload, selectinload
 
 from lawcheck.checks.base import Finding as CheckFinding
-from lawcheck.db.models import (AuthToken, Finding, Inquiry, JobRun, Lead, NurtureSubscriber,
-                                Order, Scan, User, utcnow)
+from lawcheck.db.models import (AuthToken, ConsentLog, Finding, Inquiry, JobRun, Lead,
+                                NurtureSubscriber, Order, Scan, User, utcnow)
 from lawcheck.db.session import session_scope
+from lawcheck.utils import consent
 from lawcheck.utils.contact import contact_url
 
 
@@ -501,6 +502,13 @@ def create_inquiry(message: str, contact: str, page: str, ad_consent: bool = Fal
         sess.add(inq)
         sess.flush()
         return inq.id
+
+
+def log_consent(form: str, ref: str, ip: str) -> None:
+    """Записывает факт согласия на обработку ПДн (см. models.ConsentLog)."""
+    with session_scope() as sess:
+        sess.add(ConsentLog(form=form, ref=ref[:64], version=consent.CONSENT_VERSION,
+                            ip=ip[:64]))
 
 
 def inquiries_with_ad_consent(limit: int = 100) -> list[Inquiry]:
