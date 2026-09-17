@@ -19,9 +19,17 @@ def client(monkeypatch):
     monkeypatch.setattr(settings, "database_url", f"sqlite:///{tmp}")
     monkeypatch.setattr(settings, "session_secret", "test-secret-please-ignore")
     monkeypatch.setattr(settings, "site_base_url", "http://testserver")
+    monkeypatch.setattr(settings, "seo_enabled", True)
     init_db()
     from lawcheck.api.main import create_app
-    with TestClient(create_app(), follow_redirects=False) as c:
+    app = create_app()
+    # routes.py подключает роутер блога один раз — на импорте модуля, до
+    # monkeypatch. На чистом раннере (SEO_ENABLED не задан) его нет и /blog/*
+    # отдают 404 — подключаем явно (тот же паттерн, что в test_magnets.py).
+    if not any(getattr(r, "path", "").startswith("/blog/") for r in app.routes):
+        from lawcheck.web import blog as blog_web
+        app.include_router(blog_web.router)
+    with TestClient(app, follow_redirects=False) as c:
         yield c
 
 
@@ -163,3 +171,29 @@ def test_index_title_pod_klaster_proverki_na_shtrafy(client):
     assert r.status_code == 200
     head = r.text[:r.text.index("</head>")]
     assert "Проверка сайта на штрафы РКН" in head
+
+def test_registraciya_v_roskomnadzore_statya(client):
+    """Статья из очереди content-queue.md (кластер «регистрация в роскомнадзоре
+    для ип/ооо/самозанятых», 33 gaps): рендерится, ключи в title/H1, нормы
+    сверены с pravo.gov.ru (ч. 10 ст. 13.11 КоАП, ч. 4 и 7 ст. 22 152-ФЗ)."""
+    r = client.get("/blog/registraciya-v-roskomnadzore-ip-ooo")
+    assert r.status_code == 200
+    html = r.text
+    assert ("<title>Регистрация в Роскомнадзоре для ИП, ООО и самозанятых "
+            "в 2026 году</title>") in html
+    assert "<h1>Регистрация в Роскомнадзоре для ИП, ООО и самозанятых в 2026 году</h1>" in html
+    assert r.text.count("<h1") == 1
+    # ключевые формулировки кластера из suggest-пула (регистронезависимо)
+    low = html.lower()
+    assert "регистрация ип в роскомнадзоре" in low
+    assert "самозанят" in low
+    assert "через госуслуги" in low
+    # сверенные нормы
+    assert "100 000–300 000" in html        # ч. 10 ст. 13.11 КоАП
+    assert "30 дней" in html                 # ч. 4 ст. 22 152-ФЗ
+    assert "15-го числа" in html             # ч. 7 ст. 22 152-ФЗ
+    assert "десяти рабочих дней" in html.lower() or "10 рабочих дней" in html
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/blog/kak-podat-uvedomlenie-v-rkn"' in html
+    assert 'href="/"' in html
