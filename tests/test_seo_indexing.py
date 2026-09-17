@@ -132,3 +132,34 @@ def test_reestr_rkn_otvechaet_na_informacionnyy_intent(client):
     assert "Как проверить компанию в реестре Роскомнадзора самостоятельно" in r.text
     assert "pd.rkn.gov.ru" in r.text
     assert "10 цифр" in r.text and "12" in r.text
+
+
+def test_reestr_rkn_zakryvaet_dlinnyy_hvost_klastera(client):
+    """Хвосты кластера из Вебмастера: «зарегистрирован ли ИП», «что делать
+    если нет в реестре», «через сколько появится» — страница-хаб отвечает
+    на них текстом и FAQ-разметкой."""
+    r = client.get("/reestr-rkn")
+    assert r.status_code == 200
+    assert "Что делать, если компании или ИП нет в реестре операторов" in r.text
+    assert "зарегистрирован ли ИП в Роскомнадзоре" in r.text
+    assert "в течение 30 дней" in r.text  # ч. 4 ст. 22 152-ФЗ
+    # FAQPage-разметка содержит те же вопросы
+    import json
+    import re
+    blocks = re.findall(
+        r'<script type="application/ld\+json"[^>]*>(.*?)</script>', r.text, re.S)
+    faq = next(json.loads(b) for b in blocks
+               if '"FAQPage"' in b)
+    questions = " ".join(q["name"] for q in faq["mainEntity"])
+    assert "ИП" in questions
+    assert "нет в реестре" in questions
+    assert "30 дней" in questions or "Через сколько" in questions
+
+
+def test_index_title_pod_klaster_proverki_na_shtrafy(client):
+    """Кластер «проверить сайт на штрафы ркн» (32+17 показов/мес) — точное
+    вхождение должно быть в title главной."""
+    r = client.get("/")
+    assert r.status_code == 200
+    head = r.text[:r.text.index("</head>")]
+    assert "Проверка сайта на штрафы РКН" in head
