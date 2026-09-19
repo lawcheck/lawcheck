@@ -125,9 +125,13 @@ services:
       - |
         while true; do
           if [ "$$(date -u +%H)" = "06" ]; then
-            python -m lawcheck.tools.send_followups --limit 20 || true
-            python -m lawcheck.tools.send_order_reminders --limit 20 || true
-            python -m lawcheck.tools.send_nurture --limit 20 || true
+            ok=1
+            python -m lawcheck.tools.send_followups --limit 20 || ok=0
+            python -m lawcheck.tools.send_order_reminders --limit 20 || ok=0
+            python -m lawcheck.tools.send_nurture --limit 20 || ok=0
+            # Отметка сторожу heartbeat — только если все три рассылки вышли
+            # с кодом 0. Молчание отметки = алерт в Telegram (notify/heartbeat).
+            if [ "$$ok" = "1" ]; then python -m lawcheck.tools.mark_email_jobs || true; fi
           fi
           # Спим до верха следующего часа, а не ровно 3600: фиксированный sleep
           # накапливает сдвиг на время прогона и однажды перескочит час 06.

@@ -50,6 +50,22 @@
         <label for="magnet-email">Прислать копию на почту, чтобы не потерялась</label>
         <input id="magnet-email" type="email" name="email" required autocomplete="email"
                placeholder="you@example.ru">
+        {% if request.query_params.get('cfail') %}
+        <p class="magnet-err" style="margin:8px 0 0">Нужно отметить согласие на обработку персональных данных.</p>
+        {% endif %}
+        {# Email — персональные данные (ст. 9 152-ФЗ); галочка на письма
+           с предложениями добровольная (ст. 18 ФЗ «О рекламе»). #}
+        <label class="pd-consent" style="margin-top:10px">
+          <input type="checkbox" name="pd_consent" value="1" required>
+          <span>Даю согласие на обработку персональных данных на условиях
+            <a href="/soglasie" target="_blank" rel="noopener">Согласия</a> и
+            <a href="/privacy" target="_blank" rel="noopener">Политики</a></span>
+        </label>
+        <label class="pd-consent">
+          <input type="checkbox" name="ad_consent" value="1">
+          <span>Хочу получать письма о проверках сайта и штрафах по 152-ФЗ.
+            Отписка – по ссылке в любом письме</span>
+        </label>
         <button type="submit">{{ magnet.button }}</button>
       </form>
     {% endif %}

@@ -18,9 +18,10 @@ from lawcheck.config import settings
 from lawcheck.db import repo
 from lawcheck.notify import telegram
 from lawcheck.reporting import fines, gating, policy_draft, rkn_notification_draft
+from lawcheck.utils import consent
 from lawcheck.utils.contact import mask_contact
 from lawcheck.utils.email import valid_email
-from lawcheck.web import deps
+from lawcheck.web import deps, ratelimit
 
 log = logging.getLogger(__name__)
 
@@ -296,15 +297,26 @@ async def report(request: Request, scan_id: str, sub: int = 0, order: str = ""):
 
 @router.post("/report/{scan_id}/subscribe", response_class=HTMLResponse)
 async def report_subscribe(request: Request, scan_id: str, bg: BackgroundTasks,
-                           email: str = Form(...)):
+                           email: str = Form(...),
+                           pd_consent: str = Form(""), ad_consent: str = Form("")):
     scan = await asyncio.to_thread(repo.get_scan, scan_id)
     if scan is None:
         raise HTTPException(status_code=404, detail="scan not found")
     email = email.strip().lower()
+    # Email — персональные данные: без активного согласия хранить нельзя
+    # (ст. 9 152-ФЗ), а `required` в форме обходится POST'ом мимо браузера.
+    if not consent.checked(pd_consent):
+        return RedirectResponse(url=f"/report/{scan_id}?cfail=1", status_code=303)
     if valid_email(email):
+        await asyncio.to_thread(repo.log_consent, "report_subscribe", scan_id,
+                                ratelimit.client_ip(request))
         if await asyncio.to_thread(repo.create_lead, scan_id, scan.url, email):
             log.info("lead: %s (скан %s, %s)", mask_contact(email), scan_id[:8], scan.url)
-            await asyncio.to_thread(repo.nurture_subscribe, email)
+            # Nurture-цепочка — реклама (оффер Pro в письмах 7–8): только с
+            # отдельной добровольной галочкой, как в inquiry-форме (ст. 18
+            # ФЗ «О рекламе»). Догонялка по отчёту остаётся сервисной.
+            if consent.checked(ad_consent):
+                await asyncio.to_thread(repo.nurture_subscribe, email)
             bg.add_task(telegram.notify_owner,
                         f"📩 Новый лид: <b>{telegram.esc(email)}</b>\nсайт: {telegram.esc(scan.url)}\n"
                         f"отчёт: {settings.site_base_url}/report/{scan_id}")

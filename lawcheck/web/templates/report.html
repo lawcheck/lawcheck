@@ -141,6 +141,23 @@
                aria-label="Email для отправки отчёта">
         <button type="submit">Получить PDF</button>
       </div>
+      {% if request.query_params.get('cfail') %}
+      <p class="magnet-err">Нужно отметить согласие на обработку персональных данных.</p>
+      {% endif %}
+      {# Согласие на обработку обязательно (ст. 9 152-ФЗ), галочка на письма
+         с предложениями — добровольная (ст. 18 ФЗ «О рекламе»): без неё
+         nurture-цепочка не подключается, сервисные письма по отчёту идут. #}
+      <label class="pd-consent" style="margin-top:10px">
+        <input type="checkbox" name="pd_consent" value="1" required>
+        <span>Даю согласие на обработку персональных данных на условиях
+          <a href="/soglasie" target="_blank" rel="noopener">Согласия</a> и
+          <a href="/privacy" target="_blank" rel="noopener">Политики</a></span>
+      </label>
+      <label class="pd-consent">
+        <input type="checkbox" name="ad_consent" value="1">
+        <span>Хочу получать письма о проверках сайта и штрафах по 152-ФЗ.
+          Отписка – по ссылке в любом письме</span>
+      </label>
     </form>
     {% endif %}
   {% endif %}
@@ -292,6 +309,19 @@
              aria-label="Email для отправки отчёта">
       <button type="submit">Прислать</button>
     </div>
+    {# Те же два согласия, что и в форме наверху: роут один, а без pd_consent
+       сервер молча возвращает на отчёт с cfail=1. #}
+    <label class="pd-consent" style="margin-top:10px">
+      <input type="checkbox" name="pd_consent" value="1" required>
+      <span>Даю согласие на обработку персональных данных на условиях
+        <a href="/soglasie" target="_blank" rel="noopener">Согласия</a> и
+        <a href="/privacy" target="_blank" rel="noopener">Политики</a></span>
+    </label>
+    <label class="pd-consent">
+      <input type="checkbox" name="ad_consent" value="1">
+      <span>Хочу получать письма о проверках сайта и штрафах по 152-ФЗ.
+        Отписка – по ссылке в любом письме</span>
+    </label>
   </form>
   {% endif %}
 {% endif %}

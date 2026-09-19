@@ -403,6 +403,24 @@ def mark_lead_mailed(lead_id: int) -> None:
             lead.mailed_at = utcnow()
 
 
+def unsubscribe_leads_by_email(email: str) -> int:
+    """Отписывает ВСЕ лиды с этим email. Возвращает число отписанных записей.
+
+    Нужно отписке по nurture-токену: подписчик и лид — разные записи с разными
+    токенами, а ссылка в письме одна и обещает «больше не будем писать».
+    """
+    if not email:
+        return 0
+    with session_scope() as sess:
+        rows = sess.execute(
+            select(Lead).where(Lead.email == email, Lead.unsubscribed_at.is_(None))
+        ).scalars().all()
+        now = utcnow()
+        for row in rows:
+            row.unsubscribed_at = now
+        return len(rows)
+
+
 def unsubscribe_lead(token: str) -> str | None:
     """Отписка по токену из письма. Отписывает ВСЕ лиды с этим email (у человека
     может быть несколько сканов). Возвращает email для страницы-подтверждения
@@ -794,16 +812,20 @@ def nurture_advance(subscriber_id: int) -> None:
             sub.next_send_at = utcnow() + timedelta(days=NURTURE_INTERVAL_DAYS)
 
 
-def nurture_unsubscribe_by_token(token: str) -> bool:
-    """Отписка по токену из письма."""
+def nurture_unsubscribe_by_token(token: str) -> str | None:
+    """Отписка по токену из nurture-письма. Возвращает email для страницы
+    подтверждения или None, если токен неизвестен. Идемпотентна."""
+    if not token:
+        return None
     with session_scope() as sess:
         sub = sess.execute(
             select(NurtureSubscriber).where(NurtureSubscriber.unsub_token == token)
-        ).scalar_one_or_none()
-        if sub and sub.unsubscribed_at is None:
+        ).scalars().first()
+        if sub is None:
+            return None
+        if sub.unsubscribed_at is None:
             sub.unsubscribed_at = utcnow()
-            return True
-        return False
+        return sub.email
 
 
 def nurture_remove_paid(email: str) -> int:

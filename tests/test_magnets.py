@@ -62,7 +62,8 @@ def test_zapros_obrazca_sozdaet_lid(client, monkeypatch):
     monkeypatch.setattr("lawcheck.notify.mailer.send_email",
                         lambda to, subj, html, text=None: sent.append((to, subj)) or True)
     slug = "soglasie-na-obrabotku-personalnyh-dannyh"
-    r = client.post(f"/obrazec/{slug}", data={"email": "Chelovek@Example.RU"})
+    r = client.post(f"/obrazec/{slug}", data={"email": "Chelovek@Example.RU",
+                                               "pd_consent": "1"})
     assert r.status_code == 303
     assert r.headers["location"] == f"/blog/{slug}?msent=1#obrazec"
     leads = repo.list_leads(10)
@@ -74,14 +75,14 @@ def test_zapros_obrazca_sozdaet_lid(client, monkeypatch):
 
 def test_krivoy_email_ne_sozdaet_lid(client):
     slug = "soglasie-na-obrabotku-personalnyh-dannyh"
-    r = client.post(f"/obrazec/{slug}", data={"email": "не-почта"})
+    r = client.post(f"/obrazec/{slug}", data={"email": "не-почта", "pd_consent": "1"})
     assert r.status_code == 303
     assert "mfail=1" in r.headers["location"]
     assert repo.list_leads(10) == []
 
 
 def test_neizvestnyy_obrazec_404(client):
-    r = client.post("/obrazec/vydumannyy", data={"email": "a@b.ru"})
+    r = client.post("/obrazec/vydumannyy", data={"email": "a@b.ru", "pd_consent": "1"})
     assert r.status_code == 404
 
 
@@ -90,7 +91,57 @@ def test_lid_s_magnita_ne_lomaet_rassylku_dogonyalok(client, monkeypatch):
     monkeypatch.setattr("lawcheck.notify.mailer.send_email",
                         lambda *a, **kw: True)
     slug = "soglasie-na-obrabotku-personalnyh-dannyh"
-    client.post(f"/obrazec/{slug}", data={"email": "lead@example.ru"})
+    client.post(f"/obrazec/{slug}", data={"email": "lead@example.ru", "pd_consent": "1"})
     from lawcheck.reporting import followup
     summary = followup.run(limit=10, delay_hours=0, max_age_days=14, dry_run=False)
     assert summary["sent"] == 0
+
+
+def test_bez_pd_soglasiya_lid_ne_sozdaetsya(client, monkeypatch):
+    """Ст. 9 152-ФЗ: email — ПДн, POST в обход браузера без галочки ловит сервер."""
+    sent: list[tuple] = []
+    monkeypatch.setattr("lawcheck.notify.mailer.send_email",
+                        lambda *a, **kw: sent.append(a) or True)
+    slug = "soglasie-na-obrabotku-personalnyh-dannyh"
+    r = client.post(f"/obrazec/{slug}", data={"email": "a@example.ru"})
+    assert r.status_code == 303
+    assert "cfail=1" in r.headers["location"]
+    assert repo.list_leads(10) == []
+    assert sent == []
+
+
+def test_consent_log_pishetsya(client, monkeypatch):
+    from lawcheck.utils.consent import CONSENT_VERSION
+    from lawcheck.db.session import session_scope
+    from lawcheck.db.models import ConsentLog
+    from sqlalchemy import select
+    monkeypatch.setattr("lawcheck.notify.mailer.send_email", lambda *a, **kw: True)
+    slug = "soglasie-na-obrabotku-personalnyh-dannyh"
+    client.post(f"/obrazec/{slug}", data={"email": "a@example.ru", "pd_consent": "1"})
+    with session_scope() as s:
+        rows = s.execute(select(ConsentLog)).scalars().all()
+    assert [(r.form, r.ref, r.version) for r in rows] == [("magnet", slug, CONSENT_VERSION)]
+
+
+def test_nurture_podklyuchaetsya_tolko_s_ad_soglasiem(client, monkeypatch):
+    """Цепочка — реклама (оффер в письмах 7–8): без добровольной галочки не шлём."""
+    monkeypatch.setattr("lawcheck.notify.mailer.send_email", lambda *a, **kw: True)
+    slug = "soglasie-na-obrabotku-personalnyh-dannyh"
+    client.post(f"/obrazec/{slug}", data={"email": "bez-reklamy@example.ru",
+                                          "pd_consent": "1"})
+    client.post(f"/obrazec/{slug}", data={"email": "s-reklamoy@example.ru",
+                                          "pd_consent": "1", "ad_consent": "1"})
+    from lawcheck.db.session import session_scope
+    from lawcheck.db.models import NurtureSubscriber
+    from sqlalchemy import select
+    with session_scope() as s:
+        emails = set(s.execute(select(NurtureSubscriber.email)).scalars())
+    assert emails == {"s-reklamoy@example.ru"}
+
+
+def test_forma_magnita_soderzhit_galochki_soglasiya(client):
+    slug = "soglasie-na-obrabotku-personalnyh-dannyh"
+    r = client.get(f"/blog/{slug}")
+    assert 'name="pd_consent"' in r.text and "required" in r.text
+    assert 'name="ad_consent"' in r.text
+    assert "/soglasie" in r.text

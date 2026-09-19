@@ -451,7 +451,8 @@ async def create_scan_form(request: Request, bg: BackgroundTasks, url: str = For
 
 @router.post("/obrazec/{slug}", response_class=HTMLResponse)
 async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
-                      email: str = Form(...)):
+                      email: str = Form(...),
+                      pd_consent: str = Form(""), ad_consent: str = Form("")):
     """Прислать типовой документ на почту со страницы статьи блога.
 
     Сам текст документа открыт на странице — он и приносит трафик. Почта здесь
@@ -463,12 +464,15 @@ async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
     ratelimit.enforce(request, "magnet", _RL_INQUIRY,
                       message="Слишком много запросов. Попробуйте позже.")
     email = email.strip().lower()
+    if not consent.checked(pd_consent):
+        return RedirectResponse(url=f"/blog/{slug}?cfail=1#obrazec", status_code=303)
     if not valid_email(email):
         return RedirectResponse(url=f"/blog/{slug}?mfail=1#obrazec", status_code=303)
 
     page_url = f"{settings.site_base_url}/blog/{slug}"
     # scan_id у лида с магнита синтетический: скана за ним нет, и письмо-догонялка
     # по отчёту такой лид пропустит (followup.run проверяет get_scan на None).
+    await asyncio.to_thread(repo.log_consent, "magnet", slug, ratelimit.client_ip(request))
     is_new = await asyncio.to_thread(repo.create_lead, f"magnet:{slug}", page_url, email)
     body = (f"<p>Здравствуйте! Вот образец, который вы запросили на "
             f"<a href=\"{page_url}\">{page_url}</a>.</p>"
@@ -479,7 +483,9 @@ async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
     bg.add_task(mailer.send_email, email, magnet.doc_title, body)
     if is_new:
         log.info("magnet: %s запросил %s", mask_contact(email), slug)
-        await asyncio.to_thread(repo.nurture_subscribe, email)
+        # Nurture — реклама: только с добровольной галочкой (ст. 18 ФЗ «О рекламе»).
+        if consent.checked(ad_consent):
+            await asyncio.to_thread(repo.nurture_subscribe, email)
         bg.add_task(telegram.notify_owner,
                     f"📄 Запросили образец: <b>{telegram.esc(email)}</b>\n{telegram.esc(slug)}")
     return RedirectResponse(url=f"/blog/{slug}?msent=1#obrazec", status_code=303)
@@ -489,12 +495,22 @@ async def magnet_send(request: Request, slug: str, bg: BackgroundTasks,
 async def unsubscribe(request: Request, token: str):
     """Отписка от рассылки по токену из письма (ст. 18 ФЗ «О рекламе»).
 
-    Токен ищем и среди лидов с отчёта, и среди заявок из чат-виджета: ссылка
-    в футере письма одна, а откуда человек к нам попал — ему знать незачем.
+    Токен ищем в трёх таблицах: лиды с отчёта, заявки из чат-виджета и
+    подписчики nurture-цепочки. Ссылка в футере письма одна, и откуда человек
+    к нам попал — ему знать незачем; «Ссылка недействительна» на рабочей
+    отписке = нарушение обязанности прекратить рассылку по требованию.
     """
     email = await asyncio.to_thread(repo.unsubscribe_lead, token)
     if not email:
         email = await asyncio.to_thread(repo.unsubscribe_inquiry, token)
+    if not email:
+        email = await asyncio.to_thread(repo.nurture_unsubscribe_by_token, token)
+        if email:
+            # Один человек обычно и лид, и подписчик (nurture_subscribe зовётся
+            # там же, где create_lead), но токены у записей разные. Отписка по
+            # nurture-токену глушит и догонялки по его лидам — иначе «отписался»
+            # не значило бы «больше не пишем».
+            await asyncio.to_thread(repo.unsubscribe_leads_by_email, email)
     if email:
         title = "Вы отписаны"
         message = (f"Больше не будем писать на {email}. "

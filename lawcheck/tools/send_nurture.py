@@ -44,7 +44,8 @@ def main() -> None:
     summary = nurture.run(limit=args.limit, dry_run=args.dry_run)
     mode = "DRY-RUN" if summary["dry_run"] else "ОТПРАВКА"
     print(f"[{mode}] кандидатов: {summary['candidates']}, "
-          f"отправлено: {summary['sent']}, пропущено: {summary['skipped']}")
+          f"отправлено: {summary['sent']}, пропущено: {summary['skipped']}, "
+          f"оплативших отписано: {summary['paid_skipped']}")
 
 
 if __name__ == "__main__":
