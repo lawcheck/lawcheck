@@ -30,8 +30,8 @@ from lawcheck.utils.contact import contact_url, mask_contact
 from lawcheck.utils.domain import is_own_site
 from lawcheck.utils.email import valid_email
 from lawcheck.web import (
-    account, auth, blog, deps, internal, landings, magnets, payments, ratelimit,
-    report, rkn, security,
+    account, auth, blog, deps, generator, internal, landings, magnets, payments,
+    ratelimit, report, rkn, security,
 )
 from lawcheck.web.operator import OPERATOR
 from lawcheck.web.scanning import start_scan
@@ -88,6 +88,8 @@ if settings.seo_enabled:
 # SEO: это цель рекламной кампании, должна жить независимо от флага.
 rkn.templates = templates
 router.include_router(rkn.router)
+generator.templates = templates
+router.include_router(generator.router)
 
 # Аккаунты (регистрация/вход/выход). Сессии всегда включены (SessionMiddleware
 # ставится в create_app с секретом из .env или эфемерным в dev).
@@ -296,7 +298,7 @@ async def sitemap() -> Response:
     # (path, lastmod|None)
     entries: list[tuple[str, str | None]] = [
         ("/", None), ("/pricing", None), ("/privacy", None), ("/oferta", None),
-        ("/uvedomlenie-rkn", None), ("/reestr-rkn", None),
+        ("/uvedomlenie-rkn", None), ("/reestr-rkn", None), (generator.PATH, None),
     ]
     if settings.seo_enabled:
         articles = [

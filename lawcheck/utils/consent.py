@@ -6,7 +6,7 @@
 
 # Версия текста /soglasie. Пишется в consent_log с каждым согласием: по ней
 # видно, на какую редакцию человек согласился. Правишь soglasie.html – меняй дату.
-CONSENT_VERSION = "2026-09-13"
+CONSENT_VERSION = "2026-09-22"
 
 
 def checked(value: str) -> bool:

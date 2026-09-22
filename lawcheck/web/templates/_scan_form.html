@@ -6,7 +6,7 @@
   <form action="/scan" method="post" id="scan-form" novalidate>
     <div class="url-field">
       <span class="scheme">https://</span>
-      <input type="text" name="url" id="scan-url" placeholder="mystore.ru"{% if scan_autofocus %} autofocus{% endif %}
+      <input type="text" name="url" id="scan-url" placeholder="mystore.ru" value="{{ scan_url or '' }}"{% if scan_autofocus %} autofocus{% endif %}
              aria-label="Адрес сайта для проверки" autocomplete="off"
              autocapitalize="off" spellcheck="false">
     </div>
