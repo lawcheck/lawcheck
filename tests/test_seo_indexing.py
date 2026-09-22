@@ -197,3 +197,43 @@ def test_registraciya_v_roskomnadzore_statya(client):
     assert 'href="/reestr-rkn"' in html
     assert 'href="/blog/kak-podat-uvedomlenie-v-rkn"' in html
     assert 'href="/"' in html
+
+
+def test_predpisanie_roskomnadzora_statya(client):
+    """Статья из очереди content-queue.md (кластер «предписание/письмо из
+    роскомнадзора, ответ на запрос ркн, обжалование предписания», 52 gaps):
+    рендерится, ключи в title/H1, нормы сверены с pravo.gov.ru
+    (ч. 4 ст. 20, ч. 3 ст. 21 152-ФЗ; ст. 19.5, 19.7, 30.3 КоАП; ст. 40, 43 248-ФЗ)."""
+    r = client.get("/blog/predpisanie-roskomnadzora-chto-delat")
+    assert r.status_code == 200
+    html = r.text
+    assert ("<title>Предписание Роскомнадзора: что делать, сроки ответа "
+            "и обжалование</title>") in html
+    assert ("<h1>Предписание Роскомнадзора: что делать, сроки ответа "
+            "и обжалование</h1>") in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    # ключевые формулировки кластера (регистронезависимо)
+    assert "письмо из роскомнадзора" in low
+    assert "ответ на запрос роскомнадзора" in low or "запрос информации" in low
+    assert "обжалование" in low
+    assert "предписание роскомнадзора" in low
+    # сверенные нормы: сроки и суммы
+    assert "10 рабочих дней" in html          # ч. 4 ст. 20 152-ФЗ
+    assert "5 рабочих дней" in html           # продление, ч. 4 ст. 20 152-ФЗ
+    assert "3 рабочих дней" in html           # ч. 3 ст. 21 152-ФЗ
+    assert "300–500" in html                  # ч. 1 ст. 19.5 КоАП, граждане
+    assert "1 000–2 000" in html              # ч. 1 ст. 19.5 КоАП, должностные
+    assert "10 000–20 000" in html            # ч. 1 ст. 19.5 КоАП, юрлица
+    assert "3 000–5 000" in html              # ст. 19.7 КоАП, юрлица
+    assert "100 000–300 000" in html          # ч. 10 ст. 13.11 КоАП
+    assert "10 рабочих дней" in html and "ч. 6 ст. 40 248-ФЗ" in html
+    assert "15 рабочих дней" in html          # ч. 2 ст. 43 248-ФЗ
+    assert "10 дней" in html                  # ст. 30.3 КоАП
+    # контакты РКН (сверено с rkn.gov.ru/contacts/ 22.09.2026)
+    assert "+7 (495) 198-65-01" in html
+    assert "rsoc_in@rkn.gov.ru" in html
+    # перелинковка и CTA
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert 'href="/blog/shtrafy-152-fz-2026"' in html
+    assert 'href="/"' in html
