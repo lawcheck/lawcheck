@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Политика обработки персональных данных – образец 2026 для сайта{% endblock %}
+{% block meta_description %}Образец политики обработки персональных данных для сайта по 152-ФЗ: впишите ИНН, домен и что собирают формы – получите готовый текст политики, согласия и cookie-политики. Бесплатно.{% endblock %}
+
+{% block head_extra %}
+<script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Обязательна ли политика обработки персональных данных на сайте?", "acceptedAnswer": {"@type": "Answer", "text": "Да, если сайт собирает персональные данные: форма заявки, заказ, запись, подписка. Оператор, который собирает данные через сайт, обязан опубликовать там политику и дать к ней свободный доступ (ч. 2 ст. 18.1 152-ФЗ)."}},
+    {"@type": "Question", "name": "Чем плох чужой шаблон политики?", "acceptedAnswer": {"@type": "Answer", "text": "В нём чужие реквизиты, цели и сервисы. Политика должна описывать то, что происходит на вашем сайте: какие данные собирают формы, какие счётчики стоят, передаются ли данные за границу. Политика, которая не совпадает с сайтом, требование закона не выполняет."}},
+    {"@type": "Question", "name": "Какой штраф за отсутствие политики?", "acceptedAnswer": {"@type": "Answer", "text": "По ч. 3 ст. 13.11 КоАП РФ – 30–60 тыс ₽ для организаций, 10–20 тыс ₽ для ИП и малых предприятий из реестра МСП."}}
+  ]
+}
+</script>
+<style>
+  #result { scroll-margin-top: 88px; }
+  .gen-form { display: grid; gap: var(--s-5); max-width: 760px; }
+  .gen-form fieldset { border: 1px solid var(--line); border-radius: var(--r-l);
+    padding: var(--s-4) var(--s-5); margin: 0; background: var(--surface); }
+  .gen-form legend { font-weight: 600; font-size: var(--t-l); padding: 0 var(--s-2); }
+  .gen-form label.fld { display: block; font-size: var(--t-m); margin-top: var(--s-3); }
+  .gen-form label.fld span { display: block; color: var(--muted); margin-bottom: var(--s-1); }
+  .gen-form input[type=text], .gen-form input[type=email], .gen-form textarea {
+    width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-m);
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-s); }
+  .gen-form textarea { min-height: 64px; resize: vertical; }
+  .gen-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: var(--s-2) var(--s-4); margin-top: var(--s-3); font-size: var(--t-m); }
+  .gen-checks label { display: flex; gap: var(--s-2); align-items: flex-start; }
+  .gen-checks small { color: var(--muted); }
+  .gen-form .hint { color: var(--muted); font-size: var(--t-m); margin: var(--s-1) 0 0; }
+  .gen-form button { justify-self: start; }
+  .gen-errors { max-width: 760px; background: var(--crit-soft); color: var(--crit);
+    border-radius: var(--r-m); padding: var(--s-3) var(--s-4); font-size: var(--t-m); }
+  .gen-errors ul { margin: 0; padding-left: 18px; }
+  .policy-doc { max-width: 780px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-l); padding: var(--s-6); font-size: var(--t-m); line-height: 1.6; }
+  .policy-doc h2 { font-size: var(--t-xl); margin: var(--s-6) 0 var(--s-2); }
+  .policy-doc h2:first-child { margin-top: 0; }
+  .policy-doc ol { padding-left: 22px; } .policy-doc ol li { margin: 7px 0; }
+  .policy-doc .blank { background: var(--crit-soft); color: var(--crit); font-weight: 600;
+    border-radius: 4px; padding: 0 4px; }
+  .policy-doc .consent { background: var(--page); border-radius: var(--r-m); padding: var(--s-4); }
+  .policy-doc blockquote { margin: 8px 0; padding-left: 12px; border-left: 3px solid var(--line); }
+  .doc-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; margin: var(--s-4) 0; }
+  .doc-actions button { background: var(--ink); color: #fff; border: 0; cursor: pointer;
+    padding: 10px 16px; border-radius: var(--r-m); font-weight: 600; font-size: var(--t-m); }
+  .doc-actions button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .gen-bridge { display: grid; gap: var(--s-6); grid-template-columns: 1fr minmax(280px, 420px);
+    align-items: start; }
+  .gen-bridge > * { min-width: 0; }
+  @media (max-width: 860px) { .gen-bridge { grid-template-columns: 1fr; } }
+  @media print {
+    body * { visibility: hidden; }
+    .policy-doc, .policy-doc * { visibility: visible; }
+    .policy-doc { position: absolute; left: 0; top: 0; border: 0; padding: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="badge-pill"><span class="dot"></span>по 152-ФЗ, редакция 2026</span>
+    <h1>Политика обработки персональных данных для сайта: образец под ваши данные</h1>
+    <p class="sub">Впишите реквизиты и отметьте, что собирают формы и какие счётчики стоят
+      на сайте. Соберём политику, текст согласия для форм и cookie-политику, покажем здесь
+      и пришлём копию на почту.</p>
+    <ul class="hero-proofs">
+      <li>бесплатно</li>
+      <li>реквизиты подтянем по ИНН</li>
+      <li>три документа сразу</li>
+    </ul>
+  </div>
+</section>
+
+{% if document %}
+<section class="section" id="result">
+  <div class="kicker">готово</div>
+  <h2>Политика для {{ domain }}</h2>
+  <p class="sub">Копия ушла на {{ form.email }}. Выделенные места впишите сами, перед
+    публикацией сверьте текст с юристом.</p>
+  <div class="doc-actions">
+    <button type="button" id="doc-copy">Скопировать текст</button>
+    <button type="button" class="ghost" id="doc-print">Сохранить в PDF</button>
+  </div>
+  <div class="policy-doc" id="policy-doc">{{ document|safe }}</div>
+</section>
+
+<section class="section">
+  <div class="gen-bridge">
+    <div>
+      <div class="kicker">следующий шаг</div>
+      <h2>Совпадает ли политика с сайтом?</h2>
+      <p class="sub">Политика описывает то, что вы вписали. Роскомнадзор сравнивает её
+        с тем, что на сайте на самом деле: какие поля в формах, стоит ли галочка согласия,
+        какие счётчики грузятся до согласия на cookie. Проверка сайта покажет расхождения
+        за минуту.</p>
+    </div>
+    {% with scan_url=domain %}{% include "_scan_form.html" %}{% endwith %}
+  </div>
+</section>
+<script nonce="{{ csp_nonce(request) }}">
+  (function () {
+    var doc = document.getElementById('policy-doc');
+    var copy = document.getElementById('doc-copy');
+    copy.addEventListener('click', function () {
+      navigator.clipboard.writeText(doc.innerText).then(function () {
+        copy.textContent = 'Скопировано';
+      });
+    });
+    document.getElementById('doc-print').addEventListener('click', function () {
+      window.print();
+    });
+    document.getElementById('result').scrollIntoView();
+  })();
+</script>
+{% endif %}
+
+<section class="section" id="form">
+  {% if not document %}<div class="kicker">форма</div>
+  <h2>Данные для политики</h2>{% else %}<div class="kicker">ещё раз</div>
+  <h2>Собрать политику для другого сайта</h2>{% endif %}
+  {% if errors %}
+  <div class="gen-errors" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <form class="gen-form" action="/politika-obrabotki-pd" method="post" data-goal="generator_submit" novalidate>
+    <fieldset>
+      <legend>Сайт и оператор</legend>
+      <label class="fld"><span>Адрес сайта</span>
+        <input type="text" name="domain" placeholder="mystore.ru" value="{{ form.domain or '' }}"
+               autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label class="fld"><span>ИНН организации или ИП – наименование и ОГРН подтянем из ЕГРЮЛ</span>
+        <input type="text" name="inn" inputmode="numeric" maxlength="14" value="{{ form.inn or '' }}"></label>
+      <label class="fld"><span>Наименование, если хотите вписать сами</span>
+        <input type="text" name="name" placeholder="ООО «Ромашка» или ИП Иванов И. И." value="{{ form.name or '' }}"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Что собирают формы на сайте</legend>
+      <div class="gen-checks">
+        {% for key, label in categories %}
+        <label><input type="checkbox" name="categories" value="{{ key }}"{% if key in (form.categories or []) %} checked{% endif %}> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Какие сервисы стоят на сайте</legend>
+      <p class="hint">Иностранные сервисы означают трансграничную передачу данных – политика
+        это отразит.</p>
+      <div class="gen-checks">
+        {% for s in services %}
+        <label><input type="checkbox" name="services" value="{{ s.name }}"{% if s.name in (form.services or []) %} checked{% endif %}> <span>{{ s.name }}{% if s.foreign %} <small>зарубежный</small>{% endif %}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Что знаете только вы</legend>
+      <p class="hint">Можно пропустить – оставим пустые места, впишете потом.</p>
+      <label class="fld"><span>Зачем собираете данные</span>
+        <textarea name="purposes" maxlength="300" placeholder="обработка заявок с сайта, связь с клиентом, исполнение договора">{{ form.purposes or '' }}</textarea></label>
+      <label class="fld"><span>Сколько храните</span>
+        <input type="text" name="terms" maxlength="300" placeholder="3 года или до отзыва согласия" value="{{ form.terms or '' }}"></label>
+      <label class="fld"><span>Куда писать по вопросам данных</span>
+        <input type="text" name="contacts" maxlength="300" placeholder="privacy@mystore.ru, почтовый адрес" value="{{ form.contacts or '' }}"></label>
+      <label class="fld"><span>Кто отвечает за обработку данных</span>
+        <input type="text" name="resp" maxlength="300" placeholder="должность и ФИО" value="{{ form.resp or '' }}"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Куда прислать копию</legend>
+      <label class="fld"><span>Почта</span>
+        <input type="email" name="email" autocomplete="email" value="{{ form.email or '' }}"></label>
+      {# Без checked: ст. 9 152-ФЗ требует активного действия. #}
+      <label class="pd-consent">
+        <input type="checkbox" name="pd_consent" value="1" required>
+        <span>Даю согласие на обработку персональных данных на условиях
+          <a href="/soglasie" target="_blank" rel="noopener">Согласия</a> и
+          <a href="/privacy" target="_blank" rel="noopener">Политики</a></span>
+      </label>
+    </fieldset>
+
+    <button type="submit">Собрать политику</button>
+  </form>
+</section>
+
+<section class="section">
+  <div class="kicker">вопросы</div>
+  <h2>Что важно знать про политику</h2>
+  <ul class="checklist">
+    <li><span class="num">1</span><div>
+      <div class="ct">Нужна любому сайту с формой</div>
+      <div class="cd">Заявка, заказ, запись, подписка – это сбор персональных данных. Политику нужно опубликовать на сайте и дать к ней свободный доступ (ч. 2 ст. 18.1 152-ФЗ).</div>
+    </div></li>
+    <li><span class="num">2</span><div>
+      <div class="ct">Чужой шаблон не подходит</div>
+      <div class="cd">В нём чужие реквизиты, цели и сервисы. Политика должна описывать ваш сайт: что собирают формы, какие счётчики стоят, уходят ли данные за границу.</div>
+    </div></li>
+    <li><span class="num">3</span><div>
+      <div class="ct">Штраф – до 60 000 ₽</div>
+      <div class="cd">По ч. 3 ст. 13.11 КоАП РФ: 30–60 тыс ₽ для организаций, 10–20 тыс ₽ для ИП и малых предприятий из реестра МСП.</div>
+    </div></li>
+  </ul>
+</section>
+{% endblock %}

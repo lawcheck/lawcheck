@@ -77,11 +77,28 @@ def _operator_line(facts: dict) -> str:
     return ", ".join(parts)
 
 
-def render(scan) -> str:
-    """Полный самодостаточный HTML: Политика ПДн + текст согласия под сайт."""
-    facts = extract_facts(scan)
+_OWNER_BLANKS = {
+    "purposes": "цели: обработка заявок с сайта; связь с клиентом; "
+                "исполнение договора – перечислите свои",
+    "terms": "срок хранения: до достижения целей / N лет / до отзыва согласия",
+    "contacts": "email и почтовый адрес оператора для обращений субъектов",
+    "resp": "ФИО ответственного за организацию обработки ПДн",
+}
+
+
+def render_document(facts: dict, owner: dict | None = None, from_scan: bool = True) -> str:
+    """HTML-фрагмент: Политика ПДн + текст согласия + cookie-политика.
+
+    `facts` – как у `extract_facts` (из скана или из формы генератора).
+    `owner` – то, что знает только владелец (цели, сроки, контакты,
+    ответственный); чего нет – остаётся бланком [ЗАПОЛНИТЕ: …].
+    `from_scan` – бланки отсылают к блокам отчёта; без скана отсылать некуда.
+    """
+    owner = owner or {}
+    hint_forms = " – сверьтесь с отчётом, блок «Формы»" if from_scan else ""
+    hint_cookies = (" – сверьтесь с отчётом, блок «Cookies и трекеры»"
+                    if from_scan else "")
     op = _operator_line(facts)
-    domain = _esc(facts["domain"])
 
     cats = facts["categories"]
     cats_ru = _categories_ru(cats)
@@ -89,7 +106,7 @@ def render(scan) -> str:
     tech = " и технические данные (cookie, IP-адрес)" if (
         facts["trackers_foreign"] or facts["trackers_ru"]) else ""
     cats_line = (cats_ru + tech) if cats_ru else (
-        _BLANK.format("категории ПДн – сверьтесь с отчётом, блок «Формы»") + tech)
+        _BLANK.format("категории ПДн" + hint_forms) + tech)
 
     # Трансграничная передача
     if facts["trackers_foreign"]:
@@ -112,8 +129,7 @@ def render(scan) -> str:
                             f"аналогичные технологии: <strong>{services}</strong>.")
     else:
         cookies_services = _BLANK.format(
-            "перечислите используемые cookie и сторонние сервисы – сверьтесь с "
-            "отчётом, блок «Cookies и трекеры»")
+            "перечислите используемые cookie и сторонние сервисы" + hint_cookies)
     if facts["trackers_foreign"]:
         foreign = ", ".join(_esc(t) for t in facts["trackers_foreign"])
         cookies_cross = (f"Часть сервисов – иностранные (<strong>{foreign}</strong>): "
@@ -123,16 +139,19 @@ def render(scan) -> str:
         cookies_cross = ("Иностранные сервисы cookie не обнаружены; трансграничная "
                          "передача через cookie не осуществляется.")
 
-    return _PAGE.format(
-        domain=domain, url=_esc(facts["url"]), op=op,
+    filled = {k: (_esc(owner[k]) if owner.get(k) else _BLANK.format(v))
+              for k, v in _OWNER_BLANKS.items()}
+    return _DOC.format(
+        url=_esc(facts["url"]), op=op,
         cats_line=cats_line, cross=cross, consent_fields=consent_fields,
-        purposes=_BLANK.format("цели: обработка заявок с сайта; связь с клиентом; "
-                               "исполнение договора – перечислите свои"),
-        terms=_BLANK.format("срок хранения: до достижения целей / N лет / до отзыва согласия"),
-        contacts=_BLANK.format("email и почтовый адрес оператора для обращений субъектов"),
-        resp=_BLANK.format("ФИО ответственного за организацию обработки ПДн"),
-        cookies_services=cookies_services, cookies_cross=cookies_cross,
+        cookies_services=cookies_services, cookies_cross=cookies_cross, **filled,
     )
+
+
+def render(scan) -> str:
+    """Полный самодостаточный HTML: Политика ПДн + текст согласия под сайт."""
+    facts = extract_facts(scan)
+    return _PAGE.format(domain=_esc(facts["domain"]), doc=render_document(facts))
 
 
 _PAGE = """<!doctype html>
@@ -156,7 +175,13 @@ _PAGE = """<!doctype html>
 впишите. Это черновик; перед публикацией сверьте с юристом. За персональным
 заключением под ваш сайт напишите на juristlawer@gmail.com – входит в тариф.</div>
 
-<h2>Политика обработки персональных данных</h2>
+{doc}
+
+<footer>Черновик подготовлен автоматически сервисом LawCheck по данным проверки сайта и не
+является юридической консультацией. Перед публикацией проверьте с юристом.</footer>
+</body></html>"""
+
+_DOC = """<h2>Политика обработки персональных данных</h2>
 <ol>
   <li><strong>Общие положения.</strong> Настоящая Политика принята {op} (далее – Оператор)
     в соответствии со ст. 18.1 152-ФЗ и определяет порядок обработки персональных данных
@@ -188,7 +213,7 @@ _PAGE = """<!doctype html>
   <p>Разместите у обязательного чекбокса (НЕ отмечен по умолчанию) рядом с каждой формой,
     собирающей ПДн:</p>
   <blockquote>☐ Я даю согласие {op} на обработку моих персональных данных
-    ({consent_fields}) в целях {purposes} в соответствии с
+    ({consent_fields}) для целей: {purposes} – в соответствии с
     <u>Политикой обработки персональных данных</u>.</blockquote>
   <p>Слова «Политикой обработки персональных данных» – ссылка на вашу Политику.
     Если планируете рассылки – добавьте <b>отдельный</b> второй чекбокс на согласие
@@ -210,8 +235,4 @@ _PAGE = """<!doctype html>
     браузера или отклонить необязательные в баннере. Часть функций сайта при этом может быть
     недоступна.</li>
   <li><strong>Срок хранения и контакты.</strong> {terms}. Вопросы – {contacts}.</li>
-</ol>
-
-<footer>Черновик подготовлен автоматически сервисом LawCheck по данным проверки сайта и не
-является юридической консультацией. Перед публикацией проверьте с юристом.</footer>
-</body></html>"""
+</ol>"""
