@@ -89,7 +89,7 @@ def test_generates_policy_sends_copy_and_saves_lead(client, sent):
     with session_scope() as s:
         leads = s.execute(select(Lead)).scalars().all()
         consents = s.execute(select(ConsentLog)).scalars().all()
-    assert [(l.scan_id, l.email) for l in leads] == [("generator:politika", "owner@fistashki.org")]
+    assert [(lead.scan_id, lead.email) for lead in leads] == [("generator:politika", "owner@fistashki.org")]
     assert [c.form for c in consents] == ["policy_generator"]
 
 
