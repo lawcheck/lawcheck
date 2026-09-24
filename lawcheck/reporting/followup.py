@@ -60,6 +60,7 @@ def build_context(lead: Lead, scan: Scan) -> dict:
     locked = gating.locked_fix_count(scan.findings)
     base = settings.site_base_url.rstrip("/")
     contact = settings.reply_to or settings.smtp_user or "maxim@lawchek.ru"
+    risk = fines.risk_total(scan.findings)
     return {
         "site": _host(lead.url or scan.url),
         "problems": len(problems),
@@ -70,7 +71,10 @@ def build_context(lead: Lead, scan: Scan) -> dict:
         "report_url": _with_utm(f"{base}/report/{scan.id}"),
         "pricing_url": _with_utm(f"{base}/pricing?scan={scan.id}"),
         "unsub_url": f"{base}/unsubscribe/{lead.unsub_token}",
-        "risk": fines.risk_total(scan.findings),
+        "risk": risk,
+        # Главный продукт тот же, что на отчёте и /pricing?scan= — письмо не
+        # должно спорить со страницей, на которую ведёт.
+        "offer": gating.primary_offer(scan.findings, risk),
         "contact_email": contact,
         "contact_subject": f"Аудит {_host(lead.url or scan.url)}",
     }
@@ -103,6 +107,7 @@ def build_batch_context(pairs: list[tuple[Lead, Scan]]) -> dict:
         "locked": sum(c["locked"] for c in sites),
         "laws": _unique_laws(problems),
         "risk": risk,
+        "offer": gating.primary_offer(all_findings, risk),
         "contact_subject": f"Аудит: {', '.join(names)}"[:120],
     }
 
@@ -119,6 +124,51 @@ def _as_batch(ctx: dict) -> dict:
     if "sites" in ctx:
         return ctx
     return {**ctx, "sites": [ctx], "sites_label": ctx["site"]}
+
+
+def _offer_order(offer: str) -> list[str]:
+    """Главный оффер первым: тот же выбор, что на отчёте и на /pricing?scan=."""
+    return ["docs", "pro"] if offer == "docs" else ["pro", "docs"]
+
+
+def _offer_card(key: str, featured: bool, whose: str, url: str) -> str:
+    """Карточка тарифа. Состав — строго как в сравнительной таблице /pricing:
+    PDF-заключение только в «Документах под сайт», мониторинг только в Pro."""
+    e = html.escape
+    if key == "docs":
+        name, price, icon = "Документы под сайт", "8 000 ₽ разово", "✍"
+        desc = (f"Работу делаю я: читаю отчёт, собираю Политику, согласия и "
+                f"уведомление в РКН под {e(whose)}, подписываю PDF-заключение и пишу "
+                f"список правок для верстальщика. Срок – 5 рабочих дней.")
+        cta = "Заказать за 8 000 ₽ →"
+    else:
+        name, price, icon = "Pro", "990 ₽/мес", "⚡"
+        desc = (f"Правки вносите сами: готовые тексты исправлений под {e(whose)}, "
+                f"шаблоны Политики, согласий и уведомления в РКН, еженедельный "
+                f"мониторинг. Без автопродления.")
+        cta = "Подключить за 990 ₽ →"
+    box = ("background:#F0F5FF;border:2px solid #0B5CFF" if featured
+           else "background:#F8FAFC;border:1px solid #E2E8F0")
+    accent = "#0B5CFF" if featured else "#00053D"
+    return f"""\
+    <a href="{e(url)}" style="display:block;text-decoration:none;color:inherit">
+    <table width="100%" cellpadding="0" cellspacing="0" style="{box};border-radius:12px;margin-bottom:12px">
+    <tr><td style="padding:20px 24px">
+      <table cellpadding="0" cellspacing="0" width="100%"><tr>
+        <td style="vertical-align:top;padding-right:16px">
+          <span style="display:inline-block;width:40px;height:40px;background:{accent};border-radius:10px;text-align:center;line-height:40px;font-size:20px">{icon}</span>
+        </td>
+        <td>
+          <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:{accent}">{name}</p>
+          <p style="margin:0 0 6px;font-size:26px;font-weight:700;color:#1E293B">{price}</p>
+          <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#475569">{desc}</p>
+          <span style="font-size:13px;color:#0B5CFF;font-weight:600">{cta}</span>
+        </td>
+      </tr></table>
+    </td></tr>
+    </table>
+    </a>
+"""
 
 
 def render(ctx: dict) -> tuple[str, str, str]:
@@ -190,23 +240,26 @@ def render(ctx: dict) -> tuple[str, str, str]:
         text_lines.append(
             f"В бесплатном отчёте открыты первые рекомендации. Ещё {locked} "
             f"{locked_word} «Как исправить» (политика ПДн, тексты согласий, "
-            f"cookie-баннер под {under}) откроются на Pro.")
+            f"cookie-баннер под {under}) откроются после оплаты.")
+    whose = "ваши сайты" if many else site
+    offer_text = {
+        "docs": (f"Документы под сайт, 8 000 ₽ разово – работу делаю я: читаю "
+                 f"отчёт, собираю Политику, согласия и уведомление в РКН под "
+                 f"{whose}, подписываю PDF-заключение и пишу список правок для "
+                 f"верстальщика. Срок – 5 рабочих дней."),
+        "pro": (f"Pro, 990 ₽/мес без автопродления – правки вносите сами: "
+                f"открываются готовые тексты исправлений под {whose}, шаблоны "
+                f"Политики, согласий и уведомления в РКН, еженедельный мониторинг."),
+    }
     text_lines += [
         "",
         "Как закрыть найденное – два варианта.",
         "",
-        f"Pro, 990 ₽/мес – готовые тексты исправлений под "
-        f"{'ваши сайты' if many else site}, "
-        f"шаблоны Политики, согласий и уведомления в РКН, "
-        f"еженедельный мониторинг и PDF-заключение с подписью юриста: "
-        f"{ctx['pricing_url']}",
+        *[line for key in _offer_order(ctx["offer"]) for line in (offer_text[key], "")],
+        f"Оба варианта: {ctx['pricing_url']}",
         "",
-        f"Персональный аудит, 35 000 ₽ разово – беру проект руками: "
-        f"разбираю формы, метрики и сторонние скрипты, готовлю документы "
-        f"под ваши процессы, уведомление в РКН и час консультации. "
-        f"Напишите на {ctx['contact_email']}, и я расскажу что войдёт в аудит "
-        f"{'ваших сайтов' if many else site}. "
-        f"Или сразу на странице тарифов: {ctx['pricing_url']}",
+        f"Нужен ручной аудит всех процессов, а не только сайта – 35 000 ₽, "
+        f"напишите на {ctx['contact_email']}.",
         "",
         *([] if many else [f"Открыть отчёт: {ctx['report_url']}", ""]),
         "Не готовы платить – тоже ответьте: подскажу, с чего начать, бесплатно.",
@@ -299,50 +352,18 @@ def render(ctx: dict) -> tuple[str, str, str]:
     if locked:
         html_body += f"""\
   <tr><td style="padding:16px 40px 0;font-size:14px;line-height:1.65;color:#1E293B">
-    <p style="margin:0">В бесплатном отчёте открыты первые рекомендации. Ещё <b>{locked}</b> {locked_word} «Как исправить» (политика ПДн, тексты согласий, cookie-баннер под {e("каждый из них") if many else e(site)}) откроются на <b style="color:#0B5CFF">Pro</b>.</p>
+    <p style="margin:0">В бесплатном отчёте открыты первые рекомендации. Ещё <b>{locked}</b> {locked_word} «Как исправить» (политика ПДн, тексты согласий, cookie-баннер под {e("каждый из них") if many else e(site)}) откроются после оплаты.</p>
   </td></tr>"""
 
+    offers_html = "".join(
+        _offer_card(key, featured=(i == 0), whose=whose, url=ctx["pricing_url"])
+        for i, key in enumerate(_offer_order(ctx["offer"])))
     html_body += f"""\
   <!-- Тарифы -->
   <tr><td style="padding:28px 40px 8px">
     <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#00053D">Как закрыть найденное – два варианта</p>
 
-    <!-- Pro -->
-    <a href="{e(ctx['pricing_url'])}" style="display:block;text-decoration:none;color:inherit">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F5FF;border-radius:12px;border:2px solid #0B5CFF;margin-bottom:12px">
-    <tr><td style="padding:20px 24px">
-      <table cellpadding="0" cellspacing="0" width="100%"><tr>
-        <td style="vertical-align:top;padding-right:16px">
-          <span style="display:inline-block;width:40px;height:40px;background:#0B5CFF;border-radius:10px;text-align:center;line-height:40px;font-size:20px">⚡</span>
-        </td>
-        <td>
-          <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#0B5CFF">Pro</p>
-          <p style="margin:0 0 6px;font-size:26px;font-weight:700;color:#1E293B">990 ₽/мес</p>
-          <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#475569">Готовые тексты исправлений под {e("ваши сайты") if many else e(site)}, шаблоны Политики, согласий и уведомления в РКН, еженедельный мониторинг и PDF-заключение с подписью юриста.</p>
-          <span style="font-size:13px;color:#0B5CFF;font-weight:600">Подключить за 990 ₽ →</span>
-        </td>
-      </tr></table>
-    </td></tr>
-    </table>
-    </a>
-
-    <!-- Аудит -->
-    <a href="{e(ctx['pricing_url'])}" style="display:block;text-decoration:none;color:inherit">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;border-radius:12px;border:1px solid #E2E8F0">
-    <tr><td style="padding:20px 24px">
-      <table cellpadding="0" cellspacing="0" width="100%"><tr>
-        <td style="vertical-align:top;padding-right:16px">
-          <span style="display:inline-block;width:40px;height:40px;background:#00053D;border-radius:10px;text-align:center;line-height:40px;font-size:20px">✍</span>
-        </td>
-        <td>
-          <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#00053D">Персональный аудит</p>
-          <p style="margin:0 0 6px;font-size:26px;font-weight:700;color:#1E293B">35 000 ₽ разово</p>
-          <p style="margin:0;font-size:14px;line-height:1.6;color:#475569">Беру проект руками: разбираю формы, метрики и сторонние скрипты, готовлю документы под ваши процессы, уведомление в РКН и час консультации.</p>
-        </td>
-      </tr></table>
-    </td></tr>
-    </table>
-    </a>
+{offers_html}
   </td></tr>
 
   <!-- Кнопки -->
@@ -353,6 +374,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
 
   <!-- Мягкий CTA -->
   <tr><td style="padding:0 40px 32px;font-size:14px;color:#64748B;text-align:center">
+    Нужен ручной аудит всех процессов, а не только сайта – 35 000 ₽, напишите мне.<br>
     Не готовы платить – тоже ответьте: подскажу, с чего начать, бесплатно.
   </td></tr>
 

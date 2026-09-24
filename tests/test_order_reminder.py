@@ -27,9 +27,10 @@ def isolated_db(monkeypatch):
 
 
 def _add_order(oid: str, email: str, *, status: str = "pending", days_ago: float = 2,
-               reminded: bool = False, scan_id: str = "", amount: int = 990) -> None:
+               reminded: bool = False, scan_id: str = "", amount: int = 990,
+               plan: str = "pro") -> None:
     with session_scope() as s:
-        order = Order(id=oid, plan="pro", amount=amount, email=email, status=status,
+        order = Order(id=oid, plan=plan, amount=amount, email=email, status=status,
                       scan_id=scan_id, payment_link="https://bank/old",
                       created_at=utcnow() - timedelta(days=days_ago))
         if reminded:
@@ -140,6 +141,18 @@ def test_letter_stays_transactional():
         assert pitch not in html_body
         assert pitch not in text_body
 
+
+
+def test_sostav_po_tarifu():
+    """Письмо обещало всем «мониторинг и PDF-заключение»: у пакета нет
+    мониторинга, у Pro нет заключения (таблица на /pricing)."""
+    _add_order("o1", "a@x.ru")
+    _add_order("o2", "b@x.ru", plan="docs", amount=8000)
+    by_id = {o.id: o for o in repo.orders_to_remind()}
+    pro = order_reminder.render(order_reminder.build_context(by_id["o1"]))[2]
+    docs = order_reminder.render(order_reminder.build_context(by_id["o2"]))[2]
+    assert "мониторинг" in pro and "PDF" not in pro
+    assert "PDF-заключение" in docs and "мониторинг" not in docs
 
 def test_report_link_only_when_scan_known():
     _add_order("o1", "a@x.ru", scan_id="s1")

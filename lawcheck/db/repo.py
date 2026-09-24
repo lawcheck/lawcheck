@@ -403,6 +403,21 @@ def mark_lead_mailed(lead_id: int) -> None:
             lead.mailed_at = utcnow()
 
 
+def latest_report_scan_id(email: str) -> str | None:
+    """Скан самого свежего отчёта, на котором этот email оставил адрес.
+
+    Нужен nurture: подписчик своего scan_id не хранит, а лид с отчёта создаётся
+    той же формой. Лиды с магнитов (`magnet:<slug>`) — не сканы, их пропускаем.
+    """
+    if not email:
+        return None
+    with session_scope() as sess:
+        return sess.execute(
+            select(Lead.scan_id).where(
+                Lead.email == email, Lead.scan_id.not_like("magnet:%"))
+            .order_by(Lead.created_at.desc()).limit(1)
+        ).scalar_one_or_none()
+
 def unsubscribe_leads_by_email(email: str) -> int:
     """Отписывает ВСЕ лиды с этим email. Возвращает число отписанных записей.
 

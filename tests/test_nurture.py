@@ -161,12 +161,85 @@ def test_offer_soopadaet_s_tarifami():
     assert "990" in html8 and "990" in subject8
 
 
-def test_educational_shagi_vedut_na_glavnuyu():
-    for step in range(1, 7):
-        _, html_body, _ = nurture._render_email(step, "tok")
-        cta = [h for h in html_body.split('href="')[1:] if "utm_content" in h][0]
-        assert cta.startswith("https://lawchek.ru/?utm"), f"шаг {step}: {cta[:60]}"
+def test_cta_vedyot_tuda_chto_obeshchaet_knopka():
+    """Кнопки «Как мы находим скрытые трекеры» вели на главную. Теперь каждый
+    CTA — на свою страницу, и эта страница существует."""
+    blog_dir = Path(nurture.__file__).resolve().parents[1] / "content" / "blog"
+    for data in nurture._EMAILS:
+        _, html_body, _ = nurture._render_email(data["step"], "tok")
+        path = data["cta_path"]
+        assert f'href="https://lawchek.ru{path}?utm' in html_body
+        if path.startswith("/blog/"):
+            slug = path.removeprefix("/blog/")
+            assert (blog_dir / f"{slug}.md").exists(), f"шаг {data['step']}: нет статьи {slug}"
+        else:
+            assert path in ("/", "/pricing", "/politika-obrabotki-pd")
 
+
+def test_net_obeshchaniy_kotoryh_net_v_skanere():
+    """Ревью 24.09: письма обещали то, чего сканер не делает."""
+    for step in range(1, 9):
+        subject, html_body, text_body = nurture._render_email(step, "tok")
+        blob = f"{subject} {html_body} {text_body}".lower()
+        for zapret in ["fingerprint", "localstorage", "договорах с третьими",
+                       "email-рассыл", "мгновенн", "при каждом изменении",
+                       "оплата разовая"]:
+            assert zapret not in blob, f"шаг {step}: «{zapret}»"
+
+
+def test_pismo_8_nazyvaet_oba_tarifa():
+    subject, html_body, text_body = nurture._render_email(8, "tok")
+    assert "990 ₽ за месяц" in text_body and "без автопродления" in text_body
+    assert "8 000 ₽" in subject and "8 000 ₽ разово" in text_body
+
+
+def test_tekstovaya_versiya_po_abzacam():
+    """Текстовая версия склеивала все абзацы в одну строку."""
+    _, _, text_body = nurture._render_email(1, "tok")
+    assert "\n\nНачните с пяти пунктов:" in text_body
+    assert "\n– Галочку согласия" in text_body
+
+
+
+def _scan_with_lead(email: str, sid: str, *, magnet: bool = False) -> None:
+    from lawcheck.db.models import Finding, Scan
+    with session_scope() as s:
+        s.add(Scan(id=sid, url="https://www.mysite.ru", status="done", pages_crawled=2))
+        for cid, sev in [("B2", "critical"), ("D2", "warning"), ("A1", "ok")]:
+            s.add(Finding(scan_id=sid, check_id=cid, severity=sev, title=cid,
+                          evidence="e", recommendation="r"))
+    repo.create_lead("magnet:obrazec" if magnet else sid, "https://www.mysite.ru", email)
+
+
+def test_latest_report_scan_id_propuskaet_magnity():
+    _scan_with_lead("a@example.ru", "s1")
+    _scan_with_lead("a@example.ru", "s2", magnet=True)
+    assert repo.latest_report_scan_id("a@example.ru") == "s1"
+    assert repo.latest_report_scan_id("net@example.ru") is None
+
+
+def test_pismo_8_pro_sayt_podpischika(monkeypatch):
+    """Письмо-оффер называет сайт и число нарушений, CTA — на /pricing?scan=,
+    где страница сама выберет главный вариант под этот отчёт."""
+    letters: list[tuple[str, str]] = []
+    monkeypatch.setattr("lawcheck.notify.mailer.send_email",
+                        lambda to, subj, html_body, text_body: letters.append((html_body, text_body)) or True)
+    _scan_with_lead("a@example.ru", "s1")
+    _sub("a@example.ru", step=8, token="tok")
+    with session_scope() as s:
+        from sqlalchemy import select
+        sub = s.execute(select(NurtureSubscriber)).scalars().one()
+        s.expunge(sub)
+    assert nurture.send_one(sub)
+    html_body, text_body = letters[0]
+    assert "На mysite.ru проверка нашла 2 нарушения." in text_body
+    assert "/pricing?scan=s1&utm_source=email" in html_body
+
+
+def test_pismo_8_bez_otcheta_obshchee():
+    """Подписчик с магнита: сайта нет — письмо общее, CTA на /pricing без scan."""
+    _, html_body, text_body = nurture._render_email(8, "tok", None)
+    assert "проверка нашла" not in text_body and "?scan=" not in html_body
 
 # --- шаг и интервал ---
 

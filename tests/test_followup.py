@@ -181,6 +181,29 @@ def test_render_contains_key_parts():
     assert "990" in html  # апселл Pro присутствует
 
 
+
+def test_sostav_tarifov_kak_na_pricing():
+    """Письмо обещало в Pro «PDF-заключение с подписью юриста», а на /pricing
+    его там нет. Заключение — только у «Документов», мониторинг — только у Pro."""
+    pro = followup._offer_card("pro", featured=True, whose="x.ru", url="u")
+    docs = followup._offer_card("docs", featured=False, whose="x.ru", url="u")
+    assert "PDF" not in pro and "990" in pro
+    assert "мониторинг" not in docs and "8 000" in docs and "PDF-заключение" in docs
+
+
+@pytest.mark.parametrize("offer,first", [("docs", "8 000"), ("pro", "990 ₽/мес")])
+def test_glavnyy_offer_pervym(offer, first):
+    """Порядок вариантов — тот же, что выбирает отчёт (gating.primary_offer)."""
+    _add_scan("s1")
+    _add_lead("a@x.ru", "s1")
+    lead = repo.leads_to_followup()[0]
+    ctx = {**followup.build_context(lead, repo.get_scan("s1")), "offer": offer}
+    _, html, text = followup.render(ctx)
+    other = "990 ₽/мес" if offer == "docs" else "8 000"
+    assert text.index(first) < text.index(other)
+    assert html.index(first) < html.index(other)
+    assert "35 000" in text and "35 000" in html  # аудит остался строкой
+
 # --- отправка отмечает mailed_at, dry-run — нет ---
 
 def test_send_marks_mailed(monkeypatch):
