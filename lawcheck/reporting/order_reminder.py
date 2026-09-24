@@ -34,6 +34,17 @@ def _with_utm(url: str, campaign: str = "order_reminder") -> str:
     return f"{url}{sep}{params}"
 
 
+_INCLUDES = {
+    "pro": ("После оплаты откроются готовые тексты исправлений под ваш сайт, "
+            "шаблоны Политики обработки ПДн, согласий и уведомления в РКН "
+            "и еженедельный мониторинг."),
+    "docs": ("После оплаты Максим Подольский прочитает ваш отчёт, соберёт "
+             "Политику, согласия и уведомление в РКН под ваши формы, подпишет "
+             "PDF-заключение и пришлёт список правок для сайта. "
+             "Срок – 5 рабочих дней."),
+}
+
+
 def build_context(order: Order) -> dict:
     base = settings.site_base_url.rstrip("/")
     return {
@@ -41,6 +52,9 @@ def build_context(order: Order) -> dict:
         # «docs» — разовый пакет, а не подписка Pro: capitalize() дал бы «Docs».
         "plan_title": "Pro" if order.plan == "pro" else "Документы под сайт",
         "amount": order.amount,
+        # Состав — по тарифу, как в таблице /pricing: у пакета нет мониторинга,
+        # у Pro нет PDF-заключения. Общий текст обещал обоим всё сразу.
+        "includes": _INCLUDES.get(order.plan, _INCLUDES["pro"]),
         "created": order.created_at.strftime("%d.%m") if order.created_at else "",
         # Ссылка ведёт на перевыпуск: сохранённая в заказе ссылка банка к этому
         # моменту, скорее всего, протухла — см. web/routes.py::pay_retry.
@@ -64,9 +78,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
         "картой или через СБП:",
         ctx["pay_url"],
         "",
-        f"После оплаты на {title} открываются готовые тексты исправлений под ваш "
-        "сайт, шаблоны Политики обработки ПДн, согласий и уведомления в РКН, "
-        "еженедельный мониторинг и PDF-заключение.",
+        ctx["includes"],
     ]
     if ctx["report_url"]:
         text_lines += ["", f"Ваш отчёт: {ctx['report_url']}"]
@@ -89,9 +101,7 @@ def render(ctx: dict) -> tuple[str, str, str]:
         f'<p><a href="{e(ctx["pay_url"])}" style="display:inline-block;'
         'background:#1a1a1a;color:#fff;text-decoration:none;padding:12px 22px;'
         f'border-radius:6px">Оплатить {amount} ₽</a></p>',
-        f"<p>После оплаты на {e(title)} открываются готовые тексты исправлений "
-        "под ваш сайт, шаблоны Политики обработки ПДн, согласий и уведомления "
-        "в РКН, еженедельный мониторинг и PDF-заключение.</p>",
+        f"<p>{e(ctx['includes'])}</p>",
     ]
     if ctx["report_url"]:
         parts.append(f'<p><a href="{e(ctx["report_url"])}">Открыть ваш отчёт →</a></p>')
