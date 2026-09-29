@@ -20,6 +20,8 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 _CONTENT_DIR = Path(__file__).parent.parent / "content" / "blog"
+# Обложки рисует ops/build_blog_covers.py; статья без файла живёт без обложки.
+_COVERS_DIR = Path(__file__).parent / "static" / "blog"
 
 # templates задаётся из routes.py при подключении, чтобы переиспользовать
 # единый экземпляр Jinja2Templates с общими globals (operator, metrika_id).
@@ -33,6 +35,7 @@ class Article:
     description: str
     date: date
     html: str  # отрендеренное тело (только для страницы статьи)
+    cover: str | None = None  # путь от корня сайта, /static/blog/<slug>.jpg
 
 
 def _parse_file(path: Path) -> Article | None:
@@ -56,6 +59,8 @@ def _parse_file(path: Path) -> Article | None:
         description=meta.get("description", ""),
         date=parsed_date,
         html=html,
+        cover=f"/static/blog/{path.stem}.jpg"
+        if (_COVERS_DIR / f"{path.stem}.jpg").is_file() else None,
     )
 
 

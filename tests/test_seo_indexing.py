@@ -1,4 +1,5 @@
 """Директивы для поисковых роботов: robots.txt, sitemap.xml, индексация отчётов."""
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -270,3 +271,30 @@ def test_kak_podat_uvedomlenie_otvechaet_pro_chernovik(client):
     assert "Где найти черновик уведомления на портале РКН" in html
     assert "Сохранить черновик" in html
     assert 'href="/blog/informacionnoe-pismo-ob-izmeneniyah-rkn"' in html
+
+
+def test_u_kazhdoy_stati_svoya_oblozhka(client):
+    """Обложки рисует ops/build_blog_covers.py. Новая статья без обложки
+    уронит тест – значит, забыли дописать её в COVERS и перегенерировать."""
+    from lawcheck.web import blog as blog_web
+
+    missing = [a.slug for a in blog_web.list_articles() if a.cover is None]
+    assert missing == []
+    html = client.get("/blog/informacionnoe-pismo-ob-izmeneniyah-rkn").text
+    cover = "/static/blog/informacionnoe-pismo-ob-izmeneniyah-rkn.jpg"
+    # Домен в шаблонах фиксируется на импорте routes.py и зависит от порядка
+    # тестов, поэтому сверяем путь к обложке, а не полный URL.
+    assert re.search(r'<meta property="og:image" content="[^"]*' + re.escape(cover) + '">', html)
+    assert re.search(r'"image": "[^"]*' + re.escape(cover) + '"', html)
+    assert f'<img class="article-cover" src="{cover}"' in html
+    assert client.get(cover).status_code == 200
+
+
+def test_statya_bez_oblozhki_beret_obshchuyu_kartinku(client, monkeypatch, tmp_path):
+    from lawcheck.web import blog as blog_web
+
+    monkeypatch.setattr(blog_web, "_COVERS_DIR", tmp_path)
+    html = client.get("/blog/informacionnoe-pismo-ob-izmeneniyah-rkn").text
+    assert "/static/lawyer-podolskiy.jpg" in html
+    assert "article-cover" not in html.split("</style>")[-1]
+    assert '"image":' not in html
