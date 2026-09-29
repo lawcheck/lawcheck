@@ -237,3 +237,36 @@ def test_predpisanie_roskomnadzora_statya(client):
     assert 'href="/uvedomlenie-rkn"' in html
     assert 'href="/blog/shtrafy-152-fz-2026"' in html
     assert 'href="/"' in html
+
+
+def test_informacionnoe_pismo_ob_izmeneniyah_statya(client):
+    """Статья под интент «изменения в уведомление / информационное письмо в РКН»
+    (раунд 28.09): рендерится, ключи в title/H1, нормы сверены с pravo.gov.ru
+    (ч. 3 и 7 ст. 22, ч. 3 ст. 12 152-ФЗ; ч. 10 ст. 13.11 и ст. 19.7 КоАП)."""
+    r = client.get("/blog/informacionnoe-pismo-ob-izmeneniyah-rkn")
+    assert r.status_code == 200
+    html = r.text
+    assert "<title>Информационное письмо в РКН об изменениях: сроки и как подать</title>" in html
+    assert "<h1>Информационное письмо в РКН об изменениях: сроки и как подать</h1>" in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    assert "информационным письмом об изменениях" in low
+    assert "прекращение обработки" in low
+    # сверенные нормы: сроки и суммы
+    assert "15-го числа" in html              # ч. 7 ст. 22 152-ФЗ
+    assert "10 рабочих дней" in html          # ч. 7 ст. 22 152-ФЗ
+    assert "ч. 3 ст. 12 152-ФЗ" in html       # отдельное уведомление о трансграничке
+    assert "100 000–300 000" in html          # ч. 10 ст. 13.11 КоАП — только первичное
+    assert "3 000–5 000" in html              # ст. 19.7 КоАП, юрлица
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/blog/kak-podat-uvedomlenie-v-rkn"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи, а не ссылка в шапке
+
+
+def test_kak_podat_uvedomlenie_otvechaet_pro_chernovik(client):
+    """Живой запрос из Вебмастера (28.09): «где черновик уведомления в роскомнадзор»."""
+    html = client.get("/blog/kak-podat-uvedomlenie-v-rkn").text
+    assert "Где найти черновик уведомления на портале РКН" in html
+    assert "Сохранить черновик" in html
+    assert 'href="/blog/informacionnoe-pismo-ob-izmeneniyah-rkn"' in html
