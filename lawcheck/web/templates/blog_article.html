@@ -4,6 +4,7 @@
 {% block title %}{{ article.title }}{% endblock %}
 {% block meta_description %}{{ article.description }}{% endblock %}
 {% block og_type %}article{% endblock %}
+{% block og_image %}{% if article.cover %}{{ article.cover }}{% else %}{{ super() }}{% endif %}{% endblock %}
 {% block nav_blog %}active{% endblock %}
 {% block head_extra %}
 <script type="application/ld+json" nonce="{{ csp_nonce(request) }}">
@@ -15,6 +16,7 @@
   {% if article.date and article.date.year > 1 %}"datePublished": "{{ article.date.isoformat() }}",{% endif %}
   "author": {"@type": "Person", "name": {{ operator.name|tojson }}},
   "publisher": {"@type": "Organization", "name": "LawCheck"},
+  {% if article.cover %}"image": "{{ site_base_url }}{{ article.cover }}",{% endif %}
   "mainEntityOfPage": "{{ site_base_url }}/blog/{{ article.slug }}"
 }
 </script>
@@ -29,6 +31,10 @@
   <p class="article-meta">
     {% if article.date and article.date.year > 1 %}{{ article.date.strftime('%d.%m.%Y') }} · {% endif %}16+
   </p>
+  {% if article.cover %}
+  {# Первый экран статьи: грузим сразу, размеры заданы – без сдвига вёрстки. #}
+  <img class="article-cover" src="{{ article.cover }}" alt="{{ article.title }}" width="1200" height="630" fetchpriority="high">
+  {% endif %}
 
   {{ article.html|safe }}
 

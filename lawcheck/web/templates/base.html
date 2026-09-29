@@ -19,7 +19,7 @@
   <meta property="og:title" content="{{ self.title() }}">
   <meta property="og:description" content="{{ self.meta_description() }}">
   <meta property="og:url" content="{{ _canonical }}">
-  <meta property="og:image" content="{{ site_base_url }}/static/lawyer-podolskiy.jpg">
+  <meta property="og:image" content="{{ site_base_url }}{% block og_image %}/static/lawyer-podolskiy.jpg{% endblock %}">
   <meta name="twitter:card" content="summary_large_image">
   <!-- Шрифты самохостятся: без запросов к Google → нет передачи IP за рубеж -->
   <link href="/static/fonts/fonts.css" rel="stylesheet">
@@ -1224,6 +1224,7 @@
 
     /* --- Блог: страница статьи --- */
     .article-meta { font-family: var(--mono); font-size: var(--t-s); color: var(--faint); margin: 0 0 24px; }
+    .article-cover { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--r-m); margin: 0 0 24px; }
     .cta-inline { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: var(--s-8) 0 8px; padding: var(--s-6); background: var(--navy); color: #fff; border-radius: var(--r-l); }
     .cta-inline .ci-text { font-size: var(--t-l); font-weight: 600; min-width: 0; }
     .cta-inline a { flex-shrink: 0; background: var(--brand); color: #fff; padding: 11px 20px; border-radius: var(--r-m); text-decoration: none; font-weight: 600; font-size: var(--t-m); }
