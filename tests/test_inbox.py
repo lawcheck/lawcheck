@@ -142,3 +142,75 @@ def test_cli_entrypoint_forces_ipv4():
         assert socket.getaddrinfo is not net._orig_getaddrinfo
     finally:
         net.force_ipv4()
+
+
+_BOUNCE_RAW = (
+    b"From: Mail Delivery System <Mailer-Daemon@timeweb.ru>\r\n"
+    b"Subject: Mail delivery failed: returning message to sender\r\n"
+    b"Date: Fri, 02 Oct 2026 06:12:05 +0300\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/report; report-type=delivery-status; boundary="B"\r\n\r\n'
+    b"--B\r\nContent-Type: text/plain; charset=us-ascii\r\n\r\n"
+    b"A message that you sent could not be delivered to one or more of its\r\n"
+    b"recipients. This is a permanent error. The following address(es) failed:\r\n\r\n"
+    b"  nobody@gmail.com\r\n"
+    b"    host gmail-smtp-in.l.google.com [173.194.221.26]\r\n"
+    b"    SMTP error from remote mail server after RCPT TO:<nobody@gmail.com>:\r\n"
+    b"    550-5.1.1 The email account that you tried to reach does not exist.\r\n\r\n"
+    b"%(dsn)s"
+    b"--B\r\nContent-Type: message/rfc822\r\n\r\n"
+    b"From: noreply@lawchek.ru\r\nTo: nobody@gmail.com\r\n"
+    b"Subject: =?utf-8?b?0J/QvtC00YLQstC10YDQttC00LXQvdC40LUgZW1haWw=?=\r\n\r\nbody\r\n"
+    b"--B--\r\n"
+)
+_DSN_PART = (
+    b"--B\r\nContent-Type: message/delivery-status\r\n\r\n"
+    b"Reporting-MTA: dns; smtp.timeweb.ru\r\n\r\n"
+    b"Action: failed\r\nFinal-Recipient: rfc822;nobody@gmail.com\r\nStatus: 5.0.0\r\n"
+    b"Diagnostic-Code: smtp; 550 5.1.1 <no> such user\r\n\r\n"
+)
+
+
+def _bounce(dsn: bytes):
+    import email
+    return inbox._parse_bounce(email.message_from_bytes(_BOUNCE_RAW % {b"dsn": dsn}))
+
+
+def test_bounce_parsed_from_delivery_status():
+    b = _bounce(_DSN_PART)
+    assert b.recipient == "nobody@gmail.com"
+    assert b.subject == "Подтверждение email"
+    assert b.reason == "550 5.1.1 <no> such user"
+
+
+def test_bounce_reason_falls_back_to_exim_text():
+    """Без Diagnostic-Code (получатель не ответил вовсе) причина есть только
+    в тексте отбойника."""
+    b = _bounce(b"")
+    assert b.recipient == "nobody@gmail.com"
+    assert b.reason.startswith("host gmail-smtp-in.l.google.com")
+    assert "does not exist" in b.reason
+
+
+def test_bounce_alert_names_letter_and_escapes_reason():
+    text = inbox._format("Mailer-Daemon@timeweb.ru", "Mail delivery failed", "", _bounce(_DSN_PART))
+    assert "кому: nobody@gmail.com" in text
+    assert "письмо: Подтверждение email" in text
+    assert "&lt;no&gt;" in text and "<no>" not in text
+    assert "тема:" not in text
+
+
+class _FakeBounceIMAP(_FakeIMAP):
+    def fetch(self, msg_id, parts):
+        return "OK", [(b"1", _BOUNCE_RAW % {b"dsn": _DSN_PART})]
+
+
+def test_run_sends_bounce_details(monkeypatch):
+    fake = _FakeBounceIMAP()
+    out: list[str] = []
+    monkeypatch.setattr(inbox.imaplib, "IMAP4_SSL", lambda *a, **kw: fake)
+    monkeypatch.setattr(telegram, "send_message", lambda chat, text: out.append(text) or True)
+
+    assert inbox.run()["notified"] == 1
+    assert "кому: nobody@gmail.com" in out[0]
+    assert "причина: 550 5.1.1" in out[0]

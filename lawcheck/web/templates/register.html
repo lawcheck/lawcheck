@@ -7,6 +7,10 @@
   <p class="sub">Аккаунт, чтобы все ваши отчёты и заказы были в одном месте.</p>
   {% if error %}<div class="auth-error">{{ error }}</div>{% endif %}
   <form action="/register" method="post">
+    {# Защита от ботов: метка времени выдачи формы и скрытое поле-ловушка. #}
+    <input type="hidden" name="form_token" value="{{ form_token }}">
+    <input type="text" name="website" tabindex="-1" autocomplete="off"
+           style="position:absolute;left:-9999px" aria-hidden="true">
     <div class="field">
       <label for="email">Email</label>
       <input id="email" type="email" name="email" required autocomplete="email"
