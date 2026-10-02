@@ -5,10 +5,12 @@
 """
 import asyncio
 import logging
+import secrets
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from itsdangerous import BadSignature, TimestampSigner
 
 from lawcheck.config import settings
 from lawcheck.db import repo
@@ -36,8 +38,35 @@ _RL_REGISTER = ratelimit.Limit(limit=5, window_sec=_HOUR)
 _RL_LOGIN = ratelimit.Limit(limit=10, window_sec=15 * 60)
 _RL_RESET = ratelimit.Limit(limit=3, window_sec=_HOUR)
 
+# Лимит по IP не держит ботов, которые ходят с сотни адресов: 1–2.10.2026 они
+# завели 46 аккаунтов на чужие ящики, и письма подтверждения пошли в отбойники
+# и жалобы на спам. Форма несёт подписанную метку времени выдачи: POST без
+# метки или быстрее, чем человек успевает заполнить три поля, аккаунт не создаёт.
+_FORM_MIN_FILL_SEC = 3
+_FORM_MAX_AGE_SEC = 24 * _HOUR
+_FORM_KEY_FALLBACK = secrets.token_hex(32)  # дев без SESSION_SECRET
 
 
+def _form_signer() -> TimestampSigner:
+    return TimestampSigner(settings.session_secret or _FORM_KEY_FALLBACK, salt="register-form")
+
+
+def _form_token() -> str:
+    return _form_signer().sign("r").decode()
+
+
+def _form_token_ok(token: str) -> bool:
+    signer = _form_signer()
+    try:
+        _, issued = signer.unsign(token, max_age=_FORM_MAX_AGE_SEC, return_timestamp=True)
+    except BadSignature:  # сюда же попадает просроченная метка
+        return False
+    return signer.get_timestamp() - int(issued.timestamp()) >= _FORM_MIN_FILL_SEC
+
+
+def _register_page(request: Request, status: int = 200, **ctx):
+    return templates.TemplateResponse(request, "register.html",
+                                      {**ctx, "form_token": _form_token()}, status_code=status)
 
 def _base() -> str:
     return settings.site_base_url.rstrip("/")
@@ -81,18 +110,28 @@ def _message(request: Request, title: str, message: str,
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_form(request: Request):
-    return templates.TemplateResponse(request, "register.html", {})
+    return _register_page(request)
 
 
 @router.post("/register", response_class=HTMLResponse)
 async def register(request: Request, email: str = Form(...), password: str = Form(...),
-                   pd_consent: str = Form("")):
+                   pd_consent: str = Form(""), website: str = Form(""),
+                   form_token: str = Form("")):
     # Регистрация шлёт письмо на любой введённый адрес — без лимита это рассылка
     # с нашего домена по чужим ящикам.
     ratelimit.enforce(request, "register", _RL_REGISTER,
                       message="Слишком много регистраций с этого адреса. "
                               "Попробуйте через час.")
     email = email.strip().lower()
+    if website:  # honeypot: бот заполнил скрытое поле — тихо игнорируем
+        log.info("account: регистрация %s отсечена ловушкой", mask_contact(email))
+        return RedirectResponse(url="/", status_code=303)
+    if not _form_token_ok(form_token):
+        # Не молчим: сюда попадает и человек, продержавший вкладку сутки.
+        # Ему достаточно нажать кнопку ещё раз — метка в форме уже новая.
+        log.info("account: регистрация %s отсечена по метке формы", mask_contact(email))
+        return _register_page(request, 422, email=email,
+                              error="Не получилось отправить форму. Попробуйте ещё раз.")
     err = None
     if not valid_email(email):
         err = "Проверьте адрес email."
@@ -102,13 +141,11 @@ async def register(request: Request, email: str = Form(...), password: str = For
         # Email – персональные данные: без согласия аккаунт не заводим (ст. 9 152-ФЗ).
         err = "Нужно согласие на обработку персональных данных."
     if err:
-        return templates.TemplateResponse(request, "register.html",
-                                          {"error": err, "email": email}, status_code=422)
+        return _register_page(request, 422, error=err, email=email)
     user = await asyncio.to_thread(repo.create_user, email, security.hash_password(password))
     if user is None:
-        return templates.TemplateResponse(request, "register.html",
-                                          {"error": "На этот email уже есть аккаунт – войдите.",
-                                           "email": email}, status_code=409)
+        return _register_page(request, 409, email=email,
+                              error="На этот email уже есть аккаунт – войдите.")
     await asyncio.to_thread(repo.log_consent, "register", str(user.id), ratelimit.client_ip(request))
     deps.login_user(request, user)
     log.info("account: зарегистрирован %s (#%s)", mask_contact(email), user.id)
