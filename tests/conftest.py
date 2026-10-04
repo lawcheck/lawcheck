@@ -1,7 +1,7 @@
 """Общие фикстуры тестов."""
 import pytest
 
-from lawcheck.web import ratelimit
+from lawcheck.web import auth, ratelimit
 
 
 @pytest.fixture(autouse=True)
@@ -15,3 +15,11 @@ def _reset_ratelimit():
     ratelimit.reset()
     yield
     ratelimit.reset()
+
+
+@pytest.fixture(autouse=True)
+def _skip_register_form_token(monkeypatch):
+    """Десятки тестов заводят пользователя прямым POST /register, не открывая
+    форму: метки времени у них нет, и ждать три секунды им незачем. Сама метка
+    проверяется в test_register_bot_trap.py — там она включена обратно."""
+    monkeypatch.setattr(auth, "_form_token_ok", lambda token: True)
