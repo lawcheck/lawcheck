@@ -265,6 +265,39 @@ def test_informacionnoe_pismo_ob_izmeneniyah_statya(client):
     assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи, а не ссылка в шапке
 
 
+def test_zhaloba_v_roskomnadzor_na_sajt_statya(client):
+    """Статья о жалобах в РКН: точное вхождение ключа, один H1, сверенные штрафы, перелинковка."""
+    r = client.get("/blog/zhaloba-v-roskomnadzor-na-sajt")
+    assert r.status_code == 200
+    html = r.text
+    assert "<title>Жалоба в Роскомнадзор на сайт: как подать и что делать владельцу</title>" in html
+    assert html.count("<h1>") == 1
+    assert "<h1>Жалоба в Роскомнадзор на сайт: как подать и что делать владельцу</h1>" in html
+    low = html.lower()
+    # главный запрос кластера + связанные формулировки
+    assert "жалоба в роскомнадзор на сайт" in low
+    assert "как подать жалобу в ркн" in low
+    assert "жалоба на сайт в роскомнадзор" in low
+    assert "что делать владельцу сайта" in low
+    assert "срок рассмотрения жалобы" in low
+    # срок рассмотрения обращения — 30 дней (ч. 1 ст. 12 59-ФЗ), продление до 30
+    assert "30 дней со дня регистрации" in low
+    # штрафы ст. 13.11 КоАП в действующей редакции (с 30.11.2024, 420-ФЗ)
+    assert "150 000–300 000" in html          # ч. 1 ст. 13.11, юрлица
+    assert "300 000–700 000" in html          # ч. 2 ст. 13.11, юрлица (без согласия)
+    assert "30 000–60 000" in html            # ч. 3 ст. 13.11, юрлица (нет политики)
+    assert "100 000–300 000" in html          # ч. 10 ст. 13.11, юрлица (нет уведомления)
+    assert "3 000–5 000" in html              # ст. 19.7 КоАП, юрлица
+    # ответ на запрос РКН — 10 рабочих дней (ч. 4 ст. 20 152-ФЗ)
+    assert "10 рабочих дней" in html
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert 'href="/blog/registraciya-v-roskomnadzore-ip-ooo"' in html
+    assert 'href="/blog/shtrafy-152-fz-2026"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи, а не ссылка в шапке
+
+
 def test_kak_podat_uvedomlenie_otvechaet_pro_chernovik(client):
     """Живой запрос из Вебмастера (28.09): «где черновик уведомления в роскомнадзор»."""
     html = client.get("/blog/kak-podat-uvedomlenie-v-rkn").text
