@@ -88,7 +88,11 @@ def _pick_telegram_ip() -> str | None:
             _tg_ip_cache = _tg_last_good = ip
             _tg_ip_cached_at = time.monotonic()
             return ip
-    return None
+    # Никто не ответил. Если рабочий адрес уже был — идём на него, без кеша:
+    # единственный живой адрес теряет часть SYN (замер 09.10.2026 — 3 из 12),
+    # и одна неудачная проба не повод уходить на адрес из DNS, который
+    # заблокирован наверняка.
+    return _tg_last_good
 
 
 def _ipv4_only(host, port, family=0, *args, **kwargs):
