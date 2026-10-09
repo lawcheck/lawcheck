@@ -52,12 +52,12 @@ def test_myortvyy_kanal_shlyot_alert_s_zhivymi_adresami(client, monkeypatch):
     body = r.json()
     assert body["ok"] is False
     assert body["reachable_ips"] == ["149.154.167.220"]
-    # В алерте должен быть и диагноз, и адрес, на который менять пин: без него
-    # чинить придётся перебором руками.
+    # В алерте должен быть и диагноз, и живые адреса. Совета про extra_hosts
+    # быть не должно: пин убран, адрес выбирает перебор в net.py.
     assert len(alerts) == 1
     assert "ConnectError" in alerts[0]
     assert "149.154.167.220" in alerts[0]
-    assert "extra_hosts" in alerts[0]
+    assert "extra_hosts" not in alerts[0]
 
 
 def test_kogda_ne_otvechaet_ni_odin_adres(client, monkeypatch):

@@ -14,6 +14,11 @@ from lawcheck.utils.contact import contact_url
 
 log = logging.getLogger(__name__)
 
+# httpx на INFO печатает URL запроса целиком, а токен бота — часть пути
+# (/bot<TOKEN>/sendMessage). Глушим здесь, а не в точках входа: модуль зовут
+# и api, и cron-утилиты, и у каждой свой basicConfig(INFO).
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 _API = "https://api.telegram.org/bot{token}/{method}"
 
 

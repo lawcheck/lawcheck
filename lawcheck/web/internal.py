@@ -78,8 +78,8 @@ async def telegram_health(request: Request):
 
     Если канал не отвечает, алерт уходит через notify_owner: Telegram там не
     получится, и сработает почтовый дубль. В сообщение кладём список адресов,
-    которые сейчас отвечают, — чинится это правкой пина в extra_hosts, и без
-    подсказки пришлось бы перебирать адреса руками.
+    которые сейчас отвечают: по нему видно, сбой это единственного живого
+    адреса или не осталось ни одного и список в net.py пора пополнять.
     """
     if not _internal_key_ok(request):
         raise HTTPException(status_code=403, detail="forbidden")
@@ -97,7 +97,8 @@ async def telegram_health(request: Request):
         telegram.notify_owner,
         f"🔴 Канал уведомлений не отвечает: {telegram.esc(detail)}\n"
         f"Отвечают на 443: {telegram.esc(', '.join(alive) or 'ни один из известных')}.\n"
-        f"Чинится пином в extra_hosts (api и worker) в docker-compose.yml.")
+        f"Адрес выбирает перебор в net.py. Если список пуст – нужны новые "
+        f"адреса в _TELEGRAM_FALLBACK_IPS.")
     return {"ok": False, "detail": detail, "reachable_ips": alive}
 
 

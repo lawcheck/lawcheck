@@ -232,3 +232,18 @@ def test_hudshiy_sluchay_ogranichen():
                                   * len(net._TELEGRAM_FALLBACK_IPS))
     assert t.connect <= 5, "подключение упирается в DPI — ждать долго бессмысленно"
     assert worst < 45
+
+
+def test_kogda_proby_ne_proshli_idyom_na_posledniy_rabochiy(monkeypatch):
+    """Единственный живой адрес теряет часть SYN. Одна неудачная проба не
+    должна уводить запрос на адрес из DNS, который заблокирован наверняка."""
+    _fake_dns(monkeypatch, ["149.154.166.110"])
+    net._tg_last_good = "149.154.167.220"
+
+    def dead(addr, timeout=None):
+        raise OSError("blocked")
+
+    monkeypatch.setattr(socket, "create_connection", dead)
+    assert net._pick_telegram_ip() == "149.154.167.220"
+    assert net._tg_ip_cache is None, "непроверенный адрес в кеш не кладём"
+    assert net._ipv4_only("api.telegram.org", 443)[0][4] == ("149.154.167.220", 443)
