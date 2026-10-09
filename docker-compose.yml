@@ -67,6 +67,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       # Диффы мониторинга клиентам (notify/monitoring.py) и ссылка на отчёт в них.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_RELAY_URL: ${TELEGRAM_RELAY_URL:-}
       SITE_BASE_URL: ${SITE_BASE_URL:-https://lawchek.ru}
       CRAWLER_MAX_PAGES: ${CRAWLER_MAX_PAGES:-30}
       CRAWLER_TIMEOUT_SEC: ${CRAWLER_TIMEOUT_SEC:-30}
@@ -111,6 +112,7 @@ services:
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       REPLY_TO: ${REPLY_TO:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_RELAY_URL: ${TELEGRAM_RELAY_URL:-}
       TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID:-}
     depends_on:
       postgres:
@@ -155,6 +157,7 @@ services:
       IMAP_HOST: ${IMAP_HOST:-}
       IMAP_PORT: ${IMAP_PORT:-993}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_RELAY_URL: ${TELEGRAM_RELAY_URL:-}
       TELEGRAM_OWNER_CHAT_ID: ${TELEGRAM_OWNER_CHAT_ID:-}
     networks: [data_job]
     cap_drop: [ALL]

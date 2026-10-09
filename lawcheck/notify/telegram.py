@@ -6,6 +6,8 @@ Best-effort: ошибки отправки никогда не ломают по
 """
 import html
 import logging
+import ssl
+from pathlib import Path
 
 import httpx
 
@@ -20,6 +22,9 @@ log = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 _API = "https://api.telegram.org/bot{token}/{method}"
+# Сертификат ретранслятора — самоподписанный, на его IP. Сверяем по этой копии:
+# публичному УЦ взяться неоткуда, а без проверки токен бота ушёл бы кому угодно.
+_RELAY_CERT = Path(__file__).with_name("telegram_relay.crt")
 
 
 def esc(value) -> str:
@@ -119,10 +124,39 @@ _ATTEMPTS = 3
 _TIMEOUT = httpx.Timeout(connect=5.0, read=8.0, write=8.0, pool=5.0)
 
 
+def _via_relay(method: str, **kwargs) -> httpx.Response | None:
+    """Попытка через ретранслятор за пределами РФ. None — идти напрямую.
+
+    С VPS отвечает один прямой адрес Telegram, и тот теряет соединения
+    (замер 09.10.2026 — 3 из 12), а TLS с SNI api.telegram.org на чужой адрес
+    хостер режет. Поэтому ретранслятор завершает TLS сам и ходит в Telegram
+    обычным HTTPS. Любой его отказ, включая 5xx, — не ошибка, а повод пойти
+    напрямую: прямой путь остаётся рабочим запасным.
+    """
+    if not settings.telegram_relay_url:
+        return None
+    url = f"{settings.telegram_relay_url.rstrip('/')}/bot{settings.telegram_bot_token}/{method}"
+    try:
+        r = httpx.post(url, timeout=_TIMEOUT,
+                       verify=ssl.create_default_context(cafile=str(_RELAY_CERT)), **kwargs)
+    except (httpx.TransportError, OSError, ssl.SSLError) as e:
+        # Только тип: в тексте ошибки бывает URL, а в нём токен.
+        log.warning("telegram: ретранслятор не ответил (%s), идём напрямую", type(e).__name__)
+        return None
+    if r.status_code >= 500 or r.status_code == 403:
+        log.warning("telegram: ретранслятор вернул %s, идём напрямую", r.status_code)
+        return None
+    r.raise_for_status()
+    return r
+
+
 def _request_with_retry(method: str, **kwargs) -> httpx.Response:
-    """POST к Bot API с повтором по сетевой ошибке и сменой адреса."""
+    """POST к Bot API: сначала ретранслятор, затем напрямую с повтором и сменой адреса."""
     from lawcheck import net
 
+    r = _via_relay(method, **kwargs)
+    if r is not None:
+        return r
     last: Exception | None = None
     for attempt in range(1, _ATTEMPTS + 1):
         try:
