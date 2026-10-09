@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     # вебхука (проверяем заголовок X-Telegram-Bot-Api-Secret-Token).
     telegram_bot_username: str = "LawCheckMonitor_bot"
     telegram_webhook_secret: str = ""
+    # Ретранслятор Bot API за пределами РФ, вида https://<ip>. Первая попытка
+    # идёт через него, при отказе — напрямую (notify/telegram.py). Пусто = только
+    # напрямую.
+    telegram_relay_url: str = ""
 
     # Публиковать SEO-раздел (блог, нишевые лендинги). Пока контент сырой — False:
     # роуты /blog и /proverka/* отдают 404, ссылки в навигации скрыты.
