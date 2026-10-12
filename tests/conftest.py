@@ -1,7 +1,15 @@
 """Общие фикстуры тестов."""
-import pytest
+import os
+import tempfile
 
-from lawcheck.web import auth, ratelimit
+# До любого импорта lawcheck: настройки читают окружение один раз. Без подмены
+# тесты пишут в рабочую `lawcheck.db` из корня и видят следы прошлых прогонов —
+# так сторож расписаний падал на отметках недельной давности.
+os.environ["DATABASE_URL"] = f"sqlite:///{tempfile.mkdtemp()}/tests.db"
+
+import pytest  # noqa: E402
+
+from lawcheck.web import auth, ratelimit  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

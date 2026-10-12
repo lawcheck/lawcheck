@@ -167,6 +167,11 @@ def create_app() -> FastAPI:
         title="LawCheck API",
         description="Проверка сайтов на соответствие 152-ФЗ и смежному законодательству РФ",
         version="0.1.0",
+        # Swagger наружу не нужен: карта маршрутов, включая /internal и вебхуки,
+        # читалась бы любым. Сама страница /docs под нашим CSP всё равно пустая.
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
 
     # Cookie-сессии для аккаунтов. В проде секрет задаётся в .env (SESSION_SECRET);

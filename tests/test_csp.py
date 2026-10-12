@@ -122,3 +122,9 @@ def test_json_ld_tozhe_s_nonce(client):
     html = client.get("/pricing").text
     for tag in re.findall(r'<script[^>]*application/ld\+json[^>]*>', html, re.I):
         assert "nonce=" in tag
+
+
+@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+def test_swagger_zakryt(client, path):
+    """Карта маршрутов наружу не отдаётся."""
+    assert client.get(path).status_code == 404
