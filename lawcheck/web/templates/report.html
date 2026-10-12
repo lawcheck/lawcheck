@@ -60,7 +60,7 @@
 <div class="card">
   <div class="scan-head">
     <div>
-      <div class="url">{{ scan.url }}{% if is_https %}<span class="badge https">HTTPS</span>{% endif %}</div>
+      <h1 class="url">{{ scan.url }}{% if is_https %}<span class="badge https">HTTPS</span>{% endif %}</h1>
       <div class="stamp">
         scan {{ scan.id[:8] }} · {{ scan.created_at.strftime('%d.%m.%Y %H:%M') }}
         {% if scan.pages_crawled %}· обработано страниц: {{ scan.pages_crawled }}{% endif %}
