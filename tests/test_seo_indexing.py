@@ -298,6 +298,40 @@ def test_zhaloba_v_roskomnadzor_na_sajt_statya(client):
     assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи, а не ссылка в шапке
 
 
+def test_status_uvedomleniya_roskomnadzor_statya(client):
+    """Статья из очереди content-queue.md (кластер «статус уведомления в
+    роскомнадзоре», 7 gaps + 2 живых показа про черновик): рендерится, ключи
+    в title/H1, нормы сверены с pravo.gov.ru (ч. 4, 6, 7, 4.1 ст. 22 152-ФЗ),
+    нет «рассмотрения» у уведомления, черновик живёт только по ссылке."""
+    r = client.get("/blog/status-uvedomleniya-roskomnadzor")
+    assert r.status_code == 200
+    html = r.text
+    assert ("<title>Статус уведомления в Роскомнадзоре: как узнать, "
+            "когда внесут в реестр</title>") in html
+    assert ("<h1>Статус уведомления в Роскомнадзоре: как узнать, "
+            "когда внесут в реестр</h1>") in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    # главный запрос кластера + живые формулировки (регистронезависимо)
+    assert "статус уведомления в роскомнадзоре" in low
+    assert "как узнать статус уведомления" in low
+    assert "рассмотрено ли уведомление" in low or "рассмотрения" in low
+    assert "черновик уведомления на сайте ркн" in low or "хранятся ли черновики" in low
+    # сверенные нормы: сроки ч. 4, 6, 7, 4.1 ст. 22 152-ФЗ
+    assert "30 дней" in html                 # ч. 4 ст. 22 152-ФЗ
+    assert "15-го числа месяца" in html      # ч. 7 ст. 22 152-ФЗ
+    assert "10 рабочих дней" in html         # ч. 7 ст. 22 152-ФЗ (прекращение)
+    assert "ч. 6 ст. 22" in html or "ч. 6 ст. 22 152-ФЗ" in html  # уточнения
+    assert "ч. 4.1 ст. 22" in html           # исключение из реестра
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert 'href="/blog/informacionnoe-pismo-ob-izmeneniyah-rkn"' in html
+    assert 'href="/blog/kak-podat-uvedomlenie-v-rkn"' in html
+    assert 'href="/"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи
+
+
 def test_kak_podat_uvedomlenie_otvechaet_pro_chernovik(client):
     """Живой запрос из Вебмастера (28.09): «где черновик уведомления в роскомнадзор»."""
     html = client.get("/blog/kak-podat-uvedomlenie-v-rkn").text
