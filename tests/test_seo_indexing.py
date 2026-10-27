@@ -298,6 +298,37 @@ def test_zhaloba_v_roskomnadzor_na_sajt_statya(client):
     assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи, а не ссылка в шапке
 
 
+def test_markirovka_reklamy_vk_statya(client):
+    """Статья из очереди content-queue.md (кластер «маркировка рекламы в вк
+    для самозанятых / сообществ / блогеров», 12 gaps): рендерится, ключи в
+    title/H1, штрафы сверены с pravo.gov.ru (ч. 1, 15, 16 ст. 14.3 КоАП;
+    ст. 18.1 38-ФЗ), перелинковка с markirovka-internet-reklamy."""
+    r = client.get("/blog/markirovka-reklamy-vk")
+    assert r.status_code == 200
+    html = r.text
+    assert "<title>Маркировка рекламы в ВК: для самозанятых, блогеров и сообществ</title>" in html
+    assert "<h1>Маркировка рекламы в ВК: для самозанятых, блогеров и сообществ</h1>" in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    # ключевые формулировки кластера (регистронезависимо)
+    assert "маркировка рекламы в вк" in low
+    assert "самозанят" in low
+    assert "сообществ" in low
+    assert "блогер" in low
+    assert "ерid" in low or "erid" in low
+    # сверенные штрафы ст. 14.3 КоАП
+    assert "30 000–100 000" in html          # ч. 16 ст. 14.3 КоАП, граждане (без erid)
+    assert "200 000–500 000" in html         # ч. 16 ст. 14.3 КоАП, юрлица
+    assert "10 000–30 000" in html           # ч. 15 ст. 14.3 КоАП, граждане (ЕРИР)
+    assert "2 000–2 500" in html             # ч. 1 ст. 14.3 КоАП, граждане
+    assert "ст. 18.1" in html                # реклама в интернете, 38-ФЗ
+    # перелинковка и CTA
+    assert 'href="/blog/markirovka-internet-reklamy"' in html
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи, а не ссылка в шапке
+
+
 def test_status_uvedomleniya_roskomnadzor_statya(client):
     """Статья из очереди content-queue.md (кластер «статус уведомления в
     роскомнадзоре», 7 gaps + 2 живых показа про черновик): рендерится, ключи
