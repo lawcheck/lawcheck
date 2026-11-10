@@ -396,3 +396,36 @@ def test_statya_bez_oblozhki_beret_obshchuyu_kartinku(client, monkeypatch, tmp_p
     assert "/static/lawyer-podolskiy.jpg" in html
     assert "article-cover" not in html.split("</style>")[-1]
     assert '"image":' not in html
+
+
+def test_soglasie_2026_blank_statya(client):
+    """Апдейт из очереди content-queue.md (кластер «согласие на обработку
+    персональных данных 2026 бланк скачать», 12 gaps): рендерится, главный
+    запрос в title/H1, нормы сверены с pravo.gov.ru (ч. 1 и 2 ст. 9 152-ФЗ;
+    ч. 1 и 2 ст. 13.11 КоАП)."""
+    r = client.get("/blog/soglasie-na-obrabotku-personalnyh-dannyh")
+    assert r.status_code == 200
+    html = r.text
+    assert ("<title>Согласие на обработку персональных данных 2026 бланк скачать</title>") in html
+    assert ("<h1>Согласие на обработку персональных данных 2026 бланк скачать</h1>") in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    # ключевые формулировки кластера (регистронезависимо)
+    assert "согласие на обработку персональных данных 2026 бланк скачать" in low
+    assert "шаблон согласия на обработку персональных данных" in low
+    assert "скачать бесплатно" in low
+    # сверенные нормы: ст. 9 152-ФЗ и штрафы ст. 13.11 КоАП (ред. 420-ФЗ/589-ФЗ)
+    assert "части 1 статьи 9" in html or "ч. 1 ст. 9" in html
+    assert "часть 2 статьи 9" in html or "ч. 2 ст. 9" in html
+    assert "10 000–15 000" in html          # ч. 1 и 2 ст. 13.11, граждане
+    assert "300 000–700 000" in html        # ч. 2 ст. 13.11, юрлица (без согласия)
+    assert "150 000–300 000" in html        # ч. 1 ст. 13.11, юрлица
+    # упоминается ст. 18 ФЗ «О рекламе» — отдельное согласие на рассылку
+    assert "статьёй 18" in html or "ст. 18" in html
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert 'href="/blog/politika-konfidencialnosti-na-sajte"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи
+    # лид-магнит — бланк согласия уже привязан к этой статье
+    assert "Прислать образец на почту" in html
