@@ -429,3 +429,38 @@ def test_soglasie_2026_blank_statya(client):
     assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи
     # лид-магнит — бланк согласия уже привязан к этой статье
     assert "Прислать образец на почту" in html
+
+
+def test_proverka_sajta_na_sootvetstvie_152_fz_statya(client):
+    """Статья из очереди content-queue.md (кластер «проверка сайта на
+    соответствие 152-ФЗ», 3 gaps): рендерится, главный запрос в title/H1,
+    нормы сверены с pravo.gov.ru (ч. 2 ст. 18.1, ч. 1 и 4 ст. 22 152-ФЗ;
+    ч. 1, 2, 3, 8, 10 ст. 13.11 КоАП в ред. 420-ФЗ)."""
+    r = client.get("/blog/proverka-sajta-na-sootvetstvie-152-fz")
+    assert r.status_code == 200
+    html = r.text
+    assert ("<title>Проверка сайта на соответствие 152-ФЗ: чек-лист самопроверки</title>") in html
+    assert ("<h1>Проверка сайта на соответствие 152-ФЗ: чек-лист самопроверки</h1>") in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    # главный запрос кластера + связанные формулировки (регистронезависимо)
+    assert "проверка сайта на соответствие 152-фз" in low
+    assert "сайт не соответствует 152-фз" in low
+    assert "чек-лист самопроверки" in low
+    # сверенные нормы 152-ФЗ
+    assert "части 2 статьи 18.1" in html or "ч. 2 ст. 18.1" in html  # политика на сайте
+    assert "части 1 статьи 22" in html or "ч. 1 ст. 22" in html      # уведомление
+    assert "реестр операторов" in low
+    # сверенные штрафы ст. 13.11 КоАП (ред. 420-ФЗ, юрлица)
+    assert "30 000 до 60 000" in html      # ч. 3, нет политики
+    assert "300 000 до 700 000" in html    # ч. 2, без письменного согласия
+    assert "150 000 до 300 000" in html    # ч. 1, без законного основания
+    assert "100 000 до 300 000" in html    # ч. 10, не подано уведомление
+    assert "1 000 000 до 6 000 000" in html  # ч. 8, локализация
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert 'href="/blog/kak-projti-proverku-roskomnadzora"' in html
+    assert 'href="/blog/shtrafy-152-fz-2026"' in html
+    assert 'href="/"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи
