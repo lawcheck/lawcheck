@@ -351,7 +351,13 @@ async def telegram_webhook(request: Request):
     msg = upd.get("message") or {}
     text = (msg.get("text") or "").strip()
     chat_id = str((msg.get("chat") or {}).get("id") or "")
-    if not chat_id or not text.startswith("/start"):
+    if not chat_id:
+        return {"ok": True}
+    if chat_id == settings.telegram_owner_chat_id and not text.startswith("/start"):
+        await _owner_reply(msg, text)
+        return {"ok": True}
+    if not text.startswith("/start"):
+        await _client_question(chat_id, text)
         return {"ok": True}
     parts = text.split(maxsplit=1)
     order_id = parts[1].strip() if len(parts) > 1 else ""
@@ -364,16 +370,76 @@ async def telegram_webhook(request: Request):
             if order.monitored_url:
                 lines.append(f"\nБуду присылать сюда изменения по сайту "
                              f"<b>{order.monitored_url}</b> после еженедельных проверок.")
+            lines.append("\nВопросы по сайту и документам пишите прямо сюда – ответит юрист.")
             await asyncio.to_thread(telegram.send_message, chat_id, "\n".join(lines))
         else:
             await asyncio.to_thread(
                 telegram.send_message, chat_id,
                 "Не нашёл заказ. Откройте ссылку из кабинета ещё раз.")
     else:
+        await asyncio.to_thread(telegram.send_message, chat_id, _WELCOME)
+    return {"ok": True}
+
+
+_WELCOME = (
+    "Здравствуйте! Это бот LawCheck.\n\n"
+    "Здесь можно задать вопрос юристу о проверке сайта, политике и согласиях "
+    "по 152-ФЗ – просто напишите его следующим сообщением.\n\n"
+    "Если у вас тариф Pro, подключите бота кнопкой «Подключить Telegram» "
+    "в личном кабинете: сюда будут приходить изменения по сайту после "
+    "еженедельных проверок."
+)
+
+# Метка чата клиента в пересланном владельцу вопросе. Ответ владельца — reply
+# на это сообщение, и Telegram возвращает текст оригинала в reply_to_message:
+# по метке находим, кому отвечать, без отдельной таблицы переписки.
+_CHAT_TAG = re.compile(r"#chat(-?\d+)")
+
+
+async def _client_question(chat_id: str, text: str) -> None:
+    """Сообщение клиента боту — владельцу, клиенту — подтверждение.
+
+    До этого бот молча глотал всё, кроме /start, а на тарифе Pro обещана
+    поддержка в Telegram: клиент писал вопрос и не получал ничего.
+    """
+    if not text:
         await asyncio.to_thread(
             telegram.send_message, chat_id,
-            "Это бот уведомлений LawCheck. Подключите его кнопкой в кабинете заказа.")
-    return {"ok": True}
+            "Пока принимаю только текст – опишите вопрос словами.")
+        return
+    order = await asyncio.to_thread(repo.order_by_client_chat, chat_id)
+    who = (f"{telegram.esc(order.email)}, заказ {order.id[:8]} ({order.plan})"
+           if order else "без заказа")
+    await asyncio.to_thread(
+        telegram.notify_owner,
+        f"💬 Вопрос в боте – {who}\n\n{telegram.esc(text[:3500])}\n\n"
+        f"#chat{chat_id}\nОтветьте на это сообщение (reply) – ответ уйдёт клиенту.")
+    await asyncio.to_thread(
+        telegram.send_message, chat_id,
+        "Передал вопрос юристу. Ответ придёт сюда же.")
+
+
+async def _owner_reply(msg: dict, text: str) -> None:
+    """Reply владельца на пересланный вопрос → тому клиенту, чей это вопрос."""
+    owner = settings.telegram_owner_chat_id
+    original = (msg.get("reply_to_message") or {}).get("text") or ""
+    # Берём последнюю метку: наша стоит после текста клиента, а клиент может
+    # вписать в вопрос свою «#chat…» и увести ответ в чужой чат.
+    tags = _CHAT_TAG.findall(original)
+    if not tags:
+        await asyncio.to_thread(
+            telegram.send_message, owner,
+            "Чтобы ответить клиенту, ответьте (reply) на сообщение с его вопросом.")
+        return
+    if not text:
+        await asyncio.to_thread(telegram.send_message, owner,
+                                "Клиенту уходит только текст – напишите ответ словами.")
+        return
+    sent = await asyncio.to_thread(telegram.send_message, tags[-1],
+                                   telegram.esc(text))
+    await asyncio.to_thread(
+        telegram.send_message, owner,
+        "✓ Ответ отправлен клиенту." if sent else "⚠️ Не удалось отправить ответ клиенту.")
 
 
 @router.get("/pricing", response_class=HTMLResponse)
