@@ -614,6 +614,16 @@ def set_client_chat_id(order_id: str, chat_id: str) -> Order | None:
         return order
 
 
+def order_by_client_chat(chat_id: str) -> Order | None:
+    """Последний заказ, к которому привязан этот Telegram-чат. Нужен, чтобы
+    вопрос в боте пришёл владельцу с email и номером заказа, а не анонимно."""
+    with session_scope() as sess:
+        return sess.execute(
+            select(Order).where(Order.client_chat_id == chat_id)
+            .order_by(Order.created_at.desc()).limit(1)
+        ).scalars().first()
+
+
 def clients_subscribed_to_url(url: str) -> list[tuple[str, str]]:
     """(order_id, client_chat_id) для подтверждённых заказов, мониторящих url
     и подключивших Telegram. Для рассылки diff после скана."""
