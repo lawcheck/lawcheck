@@ -69,8 +69,11 @@ _METRIKA = "https://mc.yandex.ru https://mc.yandex.com"
 # источник сравнивается вместе со схемой, поэтому `https://…` его не покрывает
 # и домены приходится перечислять второй раз под `wss://`.
 _METRIKA_WS = "wss://mc.yandex.ru wss://mc.yandex.com"
-# Страница оплаты Точки — единственный внешний адресат наших форм.
-_BANK = "https://merch.tochka.com"
+# Страница оплаты Точки — единственный внешний адресат наших форм. Домен
+# кассы выбирает банк, а не мы: к ноябрю 2026 ссылки из API пошли на
+# merch.securepaytb.ru вместо merch.tochka.com, и оплата снова молча легла.
+# Старый домен держим — по ранее выписанным ссылкам банк ещё может вести туда.
+_BANK = "https://merch.tochka.com https://merch.securepaytb.ru"
 
 
 def _csp(nonce: str) -> str:
