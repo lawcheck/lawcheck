@@ -60,6 +60,8 @@ def test_form_action_puskaet_na_kassu_banka(client):
     csp = client.get("/pricing").headers["content-security-policy"]
     form_action = [d for d in csp.split(";") if d.strip().startswith("form-action")][0]
     assert "https://merch.tochka.com" in form_action
+    # С ноября 2026 API Точки выписывает ссылки на этот домен.
+    assert "https://merch.securepaytb.ru" in form_action
 
 
 def test_metrika_puskaetsya_na_oba_svoih_domena(client):
