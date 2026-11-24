@@ -464,3 +464,40 @@ def test_proverka_sajta_na_sootvetstvie_152_fz_statya(client):
     assert 'href="/blog/shtrafy-152-fz-2026"' in html
     assert 'href="/"' in html
     assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи
+
+
+def test_shtraf_za_nepredostavlenie_svedenij_rkn_statya(client):
+    """Статья из очереди content-queue.md (кластер «штраф за непредоставление
+    сведений в роскомнадзор», 4 gaps): рендерится, главный запрос в title,
+    один H1, суммы сверены с pravo.gov.ru (ст. 19.7 КоАП; ч. 10 ст. 13.11 КоАП
+    в ред. 420-ФЗ, примечание о ИП как юрлицах)."""
+    r = client.get("/blog/shtraf-za-nepredostavlenie-svedenij-rkn")
+    assert r.status_code == 200
+    html = r.text
+    assert ("<title>Штраф за непредоставление сведений в Роскомнадзор: "
+            "суммы 2026</title>") in html
+    assert html.count("<h1") == 1
+    low = html.lower()
+    # главный запрос кластера + связанные формулировки (регистронезависимо)
+    assert "штраф за непредоставление сведений в роскомнадзор" in low
+    assert "ркн штрафует сайты" in low
+    assert "штраф за неуведомление" in low
+    assert "ст. 19.7 коап" in low or "ст. 19.7" in low
+    # сверенные штрафы: ст. 19.7 КоАП (юрлица 3 000–5 000, должностные 300–500)
+    assert "3 000–5 000" in html          # ст. 19.7 КоАП, юрлица
+    assert "300–500" in html              # ст. 19.7 КоАП, должностные
+    assert "100–300" in html              # ст. 19.7 КоАП, граждане
+    # ч. 10 ст. 13.11 КоАП: граждане 5 000–10 000, должностные 30 000–50 000,
+    # юрлица 100 000–300 000; ИП как юрлица (примечание)
+    assert "5 000–10 000" in html         # ч. 10 ст. 13.11, граждане
+    assert "30 000–50 000" in html        # ч. 10 ст. 13.11, должностные
+    assert "100 000–300 000" in html      # ч. 10 ст. 13.11, юрлица
+    assert "как юридические лица" in html  # примечание к ст. 13.11
+    assert "10 рабочих дней" in html and "ч. 4 ст. 20" in html  # ответ на запрос
+    # перелинковка и CTA
+    assert 'href="/reestr-rkn"' in html
+    assert 'href="/uvedomlenie-rkn"' in html
+    assert 'href="/blog/predpisanie-roskomnadzora-chto-delat"' in html
+    assert 'href="/blog/shtrafy-152-fz-2026"' in html
+    assert 'href="/"' in html
+    assert "Проверить свой сайт за 60 секунд" in html  # CTA статьи
